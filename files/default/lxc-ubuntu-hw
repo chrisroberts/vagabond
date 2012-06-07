@@ -541,9 +541,20 @@ do_bindhome()
     echo "$h $h2 none bind 0 0" >> $path/fstab
 
     # Make sure the group exists in container
+
     grp=`echo $pwd | cut -d: -f 4`  # group number for $user
     grpe=`getent group $grp` || return 0  # if host doesn't define grp, ignore in container
     chroot $rootfs getent group "$grpe" || echo "$grpe" >> $rootfs/etc/group
+}
+
+install_ipwriter()
+{
+  echo '#!/bin/sh' > $rootfs/etc/network/if-up.d/ipwriter
+  echo "ifconfig | grep 'inet ' | grep -v '127' | awk -F: '{ print \$2 }' | awk '{ print \$1 }' >> /tmp/.my_ip" >> $rootfs/etc/network/if-up.d/ipwriter
+  chmod a+x $rootfs/etc/network/if-up.d/ipwriter
+  echo '#!/bin/sh' > $rootfs/etc/network/if-up.d/ipunwriter
+  echo "rm -f /tmp/.my_ip" >> $rootfs/etc/network/if-up.d/ipunwriter
+  chmod a+x $rootfs/etc/network/if-up.d/ipunwriter
 }
 
 install_chef()
@@ -704,6 +715,8 @@ if [ -n "$bindhome" ]; then
 else
     finalize_user ubuntu
 fi
+
+install_ipwriter
 
 install_chef
 if [ $? -ne 0 ]; then
