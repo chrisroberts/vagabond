@@ -47,19 +47,61 @@ class Lxc
       res = {}
       list.each do |item|
         item_info = info(item)
-        res[item_info.state] ||= []
-        res[item_info.state] << item
+        res[item_info[:state]] ||= []
+        res[item_info[:state]] << item
       end
       res
     end
 
-    # Because I'm lazy
-    def next_ip(base)
-      parts = base.split('.')
-      n_bit = parts.last.to_i + 1
-      n_bit = 2 if n_bit > 254
-      parts[parts.size - 1] = n_bit
-      parts.join('.')
+    # NOTE: This sleep business needs to be removed once
+    #   retries are working correctly 
+    def container_ip(name, retries=0)
+      ip_file = File.join(container_path(name), 'rootfs', 'tmp', '.my_ip')
+      (retries.to_i + 1).times do
+        if(File.exists?(ip_file))
+          ip = File.read(ip_file).strip
+          return ip unless ip.empty?
+        end
+        Chef::Log.info "LXC IP discovery: Waiting to see if container shows up"
+        sleep(3)
+      end
+      raise "Container (#{name}) is currently not running!" unless Lxc.running?(name)
+      nil
     end
+
+    def container_path(name)
+      "/var/lib/lxc/#{name}"
+    end
+
+    def start(name)
+      run_command("lxc-start -n #{name} -d")
+      run_command("lxc-wait -n #{name} -s RUNNING")
+    end
+
+    def stop(name)
+      run_command("lxc-stop -n #{name}")
+      run_command("lxc-wait -n #{name} -s STOPPED")
+    end
+
+    def freeze(name)
+      run_command("lxc-freeze -n #{name}")
+      run_command("lxc-wait -n #{name} -s FROZEN")
+    end
+
+    def unfreeze(name)
+      run_command("lxc-unfreeze -n #{name}")
+      run_command("lxc-wait -n #{name} -s RUNNING")
+    end
+
+    def shutdown(name)
+      run_command("lxc-shutdown -n #{name}")
+      run_command("lxc-wait -n #{name} -s STOPPED")
+    end
+
+    def run_command(cmd)
+      @cmd_proxy ||= Class.new.send(:include, Chef::Mixin::ShellOut).new
+      @cmd_proxy.shell_out!(cmd)
+    end
+
   end
 end

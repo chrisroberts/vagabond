@@ -5,32 +5,36 @@ def load_current_resource
 end
 
 action :start do
-  execute "lxc start[#{new_resource.service_name}]" do
-    command "lxc-start -n #{new_resource.service_name} -d"
-    only_if do
-      Lxc.exists?(new_resource.service_name) &&
-      Lxc.stopped?(new_resource.service_name)
+
+  ruby_block "lxc start[#{new_resource.service_name}]" do
+    block do
+      Lxc.start(new_resource.service_name)
+    end
+    not_if do
+      Lxc.running?(new_resource.service_name)
     end
   end
+
   new_resource.updated_by_last_action(true)
 end
 
 action :stop do
-  execute "lxc stop[#{new_resource.service_name}]" do
-    command "lxc-stop -n #{new_resource.service_name}"
+  ruby_block "lxc stop[#{new_resource.service_name}]" do
+    block do
+      Lxc.stop(new_resource.service_name)
+    end
     only_if do
-      Lxc.exists?(new_resource.service_name) &&
       Lxc.running?(new_resource.service_name)
     end
   end
   new_resource.updated_by_last_action(true)
 end
 
+# TODO: Should we wait for stop and then wait for start here?
 action :restart do
   execute "lxc restart[#{new_resource.service_name}]" do
     command "lxc-restart -n #{new_resource.service_name}"
     only_if do
-      Lxc.exists?(new_resource.service_name) &&
       Lxc.running?(new_resource.service_name)
     end
   end
@@ -38,10 +42,11 @@ action :restart do
 end
 
 action :shutdown do
-  execute "lxc shutdown[#{new_resource.service_name}]" do
-    command "lxc-shutdown -n #{new_resource.service_name}"
+  ruby_block "lxc shutdown[#{new_resource.service_name}]" do
+    block do
+      Lxc.shutdown(new_resource.service_name)
+    end
     only_if do
-      Lxc.exists?(new_resource.service_name) &&
       Lxc.running?(new_resource.service_name)
     end
   end
@@ -49,10 +54,11 @@ action :shutdown do
 end
 
 action :freeze do
-  execute "lxc freeze[#{new_resource.service_name}]" do
-    command "lxc-freeze -n #{new_resource.service_name}"
+  ruby_block "lxc freeze[#{new_resource.service_name}]" do
+    ruby_block do
+      Lxc.freeze(new_resource.service_name)
+    end
     only_if do
-      Lxc.exists?(new_resource.service_name) &&
       Lxc.running?(new_resource.service_name)
     end
   end
@@ -60,10 +66,11 @@ action :freeze do
 end
 
 action :unfreeze do
-  execute "lxc unfreeze[#{new_resource.service_name}]" do
-    command "lxc-unfreeze -n #{new_resource.service_name}"
+  ruby_block "lxc unfreeze[#{new_resource.service_name}]" do
+    block do
+      Lxc.unfreeze(new_resource.service_name)
+    end
     only_if do
-      Lxc.exists?(new_resource.service_name) &&
       Lxc.frozen?(new_resource.service_name)
     end
   end
