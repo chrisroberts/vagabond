@@ -53,14 +53,15 @@ class Lxc
       res
     end
 
-    # NOTE: This sleep business needs to be removed once
-    #   retries are working correctly 
     def container_ip(name, retries=0)
       ip_file = File.join(container_path(name), 'rootfs', 'tmp', '.my_ip')
       (retries.to_i + 1).times do
         if(File.exists?(ip_file))
           ip = File.read(ip_file).strip
-          return ip unless ip.empty?
+          unless(ip.empty?)
+            Chef::Log.info "LXC IP discovery: Found container IP!"
+            return ip
+          end
         end
         Chef::Log.info "LXC IP discovery: Waiting to see if container shows up"
         sleep(3)
@@ -69,8 +70,13 @@ class Lxc
       nil
     end
 
+    # TODO: The base path needs to be configurable at some point
     def container_path(name)
       "/var/lib/lxc/#{name}"
+    end
+
+    def container_config(name)
+      File.join(container_path(name), 'config')
     end
 
     def start(name)
@@ -98,6 +104,21 @@ class Lxc
       run_command("lxc-wait -n #{name} -s STOPPED")
     end
 
+    def generate_config(name, options={})
+      config = []
+      options.each_pair do |key, value|
+        if(value.is_a?(Array))
+          value.each do |val|
+            config << "#{key} = #{val}"
+          end
+        else
+          config << "#{key} = #{value}"
+        end
+      end
+      options.sort
+    end
+
+    # Simple helper to shell out
     def run_command(cmd)
       @cmd_proxy ||= Class.new.send(:include, Chef::Mixin::ShellOut).new
       @cmd_proxy.shell_out!(cmd)
