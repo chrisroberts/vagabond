@@ -124,5 +124,24 @@ class Lxc
       @cmd_proxy.shell_out!(cmd)
     end
 
+    def container_command(name, cmd, retries=1)
+      base = "ssh -o StrictHostKeyChecking=no -i /opt/hw-lxc-config/id_rsa #{Lxc.container_ip(name, 5)} "
+      begin
+        run_command(
+          base << "chef-client -K /etc/chef/validator.pem -c /etc/chef/client.rb -j /etc/chef/first_run.json"
+        )
+      rescue => e
+        if(retries.to_i > 0)
+          Chef::Log.info "Encountered error running container command (#{cmd}): #{e}"
+          Chef::Log.info "Retrying command..."
+          retries = retries.to_i - 1
+          sleep(1)
+          retry
+        else
+          raise e
+        end
+      end
+    end
+
   end
 end
