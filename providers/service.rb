@@ -32,8 +32,11 @@ end
 
 # TODO: Should we wait for stop and then wait for start here?
 action :restart do
-  execute "lxc restart[#{new_resource.service_name}]" do
-    command "lxc-restart -n #{new_resource.service_name}"
+  ruby_block "lxc restart[#{new_resource.service_name}]" do
+    block do
+      Lxc.shutdown(new_resource.service_name)
+      Lxc.start(new_resource.service_name)
+    end
     only_if do
       Lxc.running?(new_resource.service_name)
     end
