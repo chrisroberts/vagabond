@@ -10,9 +10,18 @@ action :create do
     end
   end
 
+  lxc_service "lxc config_restart[#{new_resource.name}]" do
+    service_name new_resource.name
+    action :nothing
+    only_if do
+      Lxc.running?(new_resource.name)
+    end
+  end
+  
   lxc_config new_resource.name do
     config new_resource.config
     action :create
+    notifies :restart, resources(:lxc_service => "lxc config_restart[#{new_resource.name}]"), :delayed
   end
 
   if(new_resource.chef_enabled)
@@ -116,6 +125,20 @@ action :clone do
     end
   end
 
+  lxc_service "lxc config_restart[#{new_resource.name}]" do
+    service_name new_resource.name
+    action :nothing
+    only_if do
+      Lxc.running?(new_resource.name)
+    end
+  end
+  
+  lxc_config new_resource.name do
+    config new_resource.config
+    action :create
+    notifies :restart, resources(:lxc_service => "lxc config_restart[#{new_resource.name}]"), :delayed
+  end
+  
   if(new_resource.static_ip)
     execute "lxc set_address_sub[#{new_resource.name}]" do
       command "sed -i 's/lxc\.network\.ipv4.*/lxc.network.ipv4 = #{new_resource.static_ip}/' /var/lib/lxc/#{new_resource.name}/config"
