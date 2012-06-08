@@ -559,9 +559,8 @@ install_ipwriter()
 
 install_chef()
 {
-    chroot $rootfs apt-get install -y curl
-    chroot $rootfs curl -L http://www.opscode.com/chef/install.sh | chroot $rootfs bash
-    echo 'PATH=$PATH:/opt/opscode/bin' > $rootfs/etc/profile.d/opcode_bin.sh
+    cp /opt/chef*.deb $rootfs/opt/
+    chroot $rootfs dpkg -i `ls /opt/chef*.deb`
 }
 
 install_key()
