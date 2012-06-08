@@ -10,6 +10,11 @@ action :create do
     end
   end
 
+  lxc_config new_resource.name do
+    config new_resource.config
+    action :create
+  end
+
   if(new_resource.chef_enabled)
     
     directory "/var/lib/lxc/#{new_resource.name}/rootfs/etc/chef" do
