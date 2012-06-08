@@ -14,3 +14,4 @@ attribute :run_list, :kind_of => Array
 attribute :chef_enabled, :kind_of => [TrueClass, FalseClass], :default => true
 attribute :static_ip, :kind_of => String, :default => false
 attribute :config, :kind_of => Hash
+attribute :container_commands, :kind_of => Array, :default => []

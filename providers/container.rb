@@ -24,38 +24,40 @@ action :create do
     notifies :restart, resources(:lxc_service => "lxc config_restart[#{new_resource.name}]"), :delayed
   end
 
-  if(new_resource.chef_enabled)
-    
-    directory "/var/lib/lxc/#{new_resource.name}/rootfs/etc/chef" do
-      action :nothing
-      subscribes :create, resources(:execute => "lxc create[#{new_resource.name}]"), :immediately
-    end
+  if(new_resource.chef_enabled || !new_resource.container_commands.empty?)
+  
+    if(new_resource.chef_enabled)
+      directory "/var/lib/lxc/#{new_resource.name}/rootfs/etc/chef" do
+        action :nothing
+        subscribes :create, resources(:execute => "lxc create[#{new_resource.name}]"), :immediately
+      end
 
-    template "lxc chef-config[#{new_resource.name}]" do
-      source 'client.rb.erb'
-      cookbook 'lxc'
-      path "/var/lib/lxc/#{new_resource.name}/rootfs/etc/chef/client.rb"
-      variables(
-        :validation_client => new_resource.validation_client,
-        :node_name => new_resource.node_name || "#{node.name}-#{new_resource.name}",
-        :server_uri => new_resource.server_uri
-      )
-      action :nothing
-      subscribes :create, resources(:execute => "lxc create[#{new_resource.name}]"), :immediately
-    end
+      template "lxc chef-config[#{new_resource.name}]" do
+        source 'client.rb.erb'
+        cookbook 'lxc'
+        path "/var/lib/lxc/#{new_resource.name}/rootfs/etc/chef/client.rb"
+        variables(
+          :validation_client => new_resource.validation_client,
+          :node_name => new_resource.node_name || "#{node.name}-#{new_resource.name}",
+          :server_uri => new_resource.server_uri
+        )
+        action :nothing
+        subscribes :create, resources(:execute => "lxc create[#{new_resource.name}]"), :immediately
+      end
 
-    file "lxc chef-validator[#{new_resource.name}]" do
-      path "/var/lib/lxc/#{new_resource.name}/rootfs/etc/chef/validator.pem"
-      content new_resource.validator_pem || node[:lxc][:validator_pem]
-      action :nothing
-      subscribes :create, resources(:template => "lxc chef-config[#{new_resource.name}]"), :immediately
-    end
+      file "lxc chef-validator[#{new_resource.name}]" do
+        path "/var/lib/lxc/#{new_resource.name}/rootfs/etc/chef/validator.pem"
+        content new_resource.validator_pem || node[:lxc][:validator_pem]
+        action :nothing
+        subscribes :create, resources(:execute => "lxc create[#{new_resource.name}]"), :immediately
+      end
 
-    file "lxc chef-runlist[#{new_resource.name}]" do
-      path "/var/lib/lxc/#{new_resource.name}/rootfs/etc/chef/first_run.json"
-      content({:run_list => new_resource.run_list}.to_json)
-      action :nothing
-      subscribes :create, resources(:template => "lxc chef-config[#{new_resource.name}]"), :immediately
+      file "lxc chef-runlist[#{new_resource.name}]" do
+        path "/var/lib/lxc/#{new_resource.name}/rootfs/etc/chef/first_run.json"
+        content({:run_list => new_resource.run_list}.to_json)
+        action :nothing
+        subscribes :create, resources(:execute => "lxc create[#{new_resource.name}]"), :immediately
+      end
     end
 
     ruby_block "lxc start[#{new_resource.name}]" do
@@ -63,17 +65,36 @@ action :create do
         Lxc.start(new_resource.name)
       end
       action :nothing
-      subscribes :create, resources(:template => "lxc chef-config[#{new_resource.name}]"), :immediately
+      subscribes :create, resources(:execute => "lxc create[#{new_resource.name}]"), :immediately
     end
 
-    ruby_block "lxc run_chef[#{new_resource.name}]" do
-      block do
-        Class.new.send(:include, Chef::Mixin::ShellOut).new.shell_out!(
-          "ssh -o StrictHostKeyChecking=no -i /opt/hw-lxc-config/id_rsa #{Lxc.container_ip(new_resource.name, 5)} chef-client -K /etc/chef/validator.pem -c /etc/chef/client.rb -j /etc/chef/first_run.json"
-        )
+    if(new_resource.chef_enabled)
+      ruby_block "lxc run_chef[#{new_resource.name}]" do
+        block do
+          Lxc.container_command(
+            new_resource.name,
+            "chef-client -K /etc/chef/validator.pem -c /etc/chef/client.rb -j /etc/chef/first_run.json",
+            3
+          )
+        end
+        action :nothing
+        subscribes :create, resources(:execute => "lxc create[#{new_resource.name}]"), :immediately
       end
-      action :nothing
-      subscribes :create, resources(:template => "lxc chef-config[#{new_resource.name}]"), :immediately
+    end
+
+    unless(new_resource.container_commands.empty?)
+      ruby_block "lxc container_commands[#{new_resource.name}]" do
+        block do
+          new_resource.container_commands.each do |cmd|
+            Lxc.container_command(
+              new_resource.name,
+              cmd,
+              2
+            )
+          end
+        end
+        subscribes :create, resources(:execute => "lxc create[#{new_resource.name}]"), :immediately
+      end
     end
 
     ruby_block "lxc shutdown[#{new_resource.name}]" do
@@ -81,17 +102,19 @@ action :create do
         Lxc.shutdown(new_resource.name)
       end
       action :nothing
-      subscribes :create, resources(:template => "lxc chef-config[#{new_resource.name}]"), :immediately
+      subscribes :create, resources(:execute => "lxc create[#{new_resource.name}]"), :immediately
     end
 
-    file "/var/lib/lxc/#{new_resource.name}/rootfs/etc/chef/first_run.json" do
-      action :nothing
-      subscribes :delete, resources(:template => "lxc chef-config[#{new_resource.name}]"), :immediately
-    end
-    
-    file "/var/lib/lxc/#{new_resource.name}/rootfs/etc/chef/validation.pem" do
-      action :nothing
-      subscribes :delete, resources(:template => "lxc chef-config[#{new_resource.name}]"), :immediately
+    if(new_resource.chef_enabled)
+      file "/var/lib/lxc/#{new_resource.name}/rootfs/etc/chef/first_run.json" do
+        action :nothing
+        subscribes :delete, resources(:execute => "lxc create[#{new_resource.name}]"), :immediately
+      end
+      
+      file "/var/lib/lxc/#{new_resource.name}/rootfs/etc/chef/validation.pem" do
+        action :nothing
+        subscribes :delete, resources(:execute => "lxc create[#{new_resource.name}]"), :immediately
+      end
     end
   end
 
