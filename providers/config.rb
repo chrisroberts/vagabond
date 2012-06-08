@@ -1,11 +1,19 @@
 require 'securerandom'
 
 def load_current_resource
+  if(::File.exists?(Lxc.container_config(new_resource.name)))
+    mac_addr = ::File.readlines(Lxc.container_config(new_resource.name)).detect{|line|
+      line.include?('hwaddr')
+    }.split('=').last.strip
+  end
+  unless(mac_addr.to_s.empty?)
+    mac_addr = "00:16:3e#{SecureRandom.hex(3).gsub(/(..)/, ':\1')}" 
+  end
   base_config = {
     'lxc.network.type' => 'veth',
     'lxc.network.link' => 'lxcbr0',
     'lxc.network.flags' => 'up',
-    'lxc.network.hwaddr' => "00:16:3e:#{SecureRandom.hex(3).gsub(/(..)/, ':\1')}",
+    'lxc.network.hwaddr' => mac_addr,
     'lxc.utsname' => new_resource.name,
     'lxc.devttydir' => 'lxc',
     'lxc.tty' => 4,
@@ -38,24 +46,9 @@ def load_current_resource
 end
 
 action :create do
-  ruby_block "lxc update_config[#{new_resource.name}]" do
-    block do
-      File.open(Lxc.container_config(new_resource.name), 'w') do |file|
-        file.write(
-          Lxc.generate_config(
-            new_resource.name, 
-            new_resource.config
-          ).join("\n")
-        )
-      end
-    end
-    not_if do
-      Lxc.generate_config(
-        new_resource.name, 
-        new_resource.config
-      ) == File.readlines(
-        Lxc.container_config(new_resource.name)
-      ).sort
-    end
+  file "lxc update_config[#{new_resource.name}]" do
+    path Lxc.container_config(new_resource.name)
+    content Lxc.generate_config(new_resource.name, new_resource.config).join("\n")
   end
+  new_resource.updated_by_last_action(true)
 end
