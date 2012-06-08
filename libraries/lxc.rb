@@ -115,7 +115,7 @@ class Lxc
           config << "#{key} = #{value}"
         end
       end
-      options.sort
+      config
     end
 
     # Simple helper to shell out
