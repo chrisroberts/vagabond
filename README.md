@@ -29,14 +29,11 @@ and attributes:
 
 override_attributes(
   :lxc => {
-    :start_ipaddress => '10.0.3.2',
     :validator_pem => "PEM HERE"
   }
 )
 
 ```
 
-Right now the start_ipaddress is required because stuff is lazy and uses
-what ubuntu provides up front to get things working. The validator pem is
-required to register containers. This can be encrypted via bag_config, or
-we can just keep it in a specific data bag, or something else.
+The validator pem is required to register containers. This can be encrypted via 
+bag_config, or we can just keep it in a specific data bag, or something else.
