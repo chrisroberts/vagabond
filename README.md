@@ -9,11 +9,13 @@ lxc_container 'chef_test' do
   validation_client 'chrisroberts-validator'
   server_uri 'https://api.opscode.com/organizations/chrisroberts'
   run_list %w(role[precise])
+  chef_enabled true
 end
 
 lxc_container 'chef_test_next' do
   action :clone
   base_container 'chef_test'
+  chef_enabled true
 end
 
 lxc_service 'chef_test_next' do
