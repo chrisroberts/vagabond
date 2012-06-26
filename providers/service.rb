@@ -18,8 +18,8 @@ action :start do
   new_resource.updated_by_last_action(true)
 end
 
-action :stop do
-  ruby_block "lxc stop[#{new_resource.service_name}]" do
+action :halt do
+  ruby_block "lxc halt[#{new_resource.service_name}]" do
     block do
       Lxc.stop(new_resource.service_name)
     end
@@ -44,8 +44,8 @@ action :restart do
   new_resource.updated_by_last_action(true)
 end
 
-action :shutdown do
-  ruby_block "lxc shutdown[#{new_resource.service_name}]" do
+action :stop do
+  ruby_block "lxc stop[#{new_resource.service_name}]" do
     block do
       Lxc.shutdown(new_resource.service_name)
     end

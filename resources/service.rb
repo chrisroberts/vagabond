@@ -1,3 +1,3 @@
-actions :start, :stop, :shutdown, :restart, :freeze, :unfreeze
+actions :start, :stop, :halt, :restart, :freeze, :unfreeze
 
 attribute :service_name, :kind_of => String
