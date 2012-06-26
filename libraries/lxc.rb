@@ -1,6 +1,8 @@
 class Lxc
   class << self
 
+    # TODO: Add configurable bits for this (paths and the like)
+
     def running?(name)
       info(name)[:state] == :running
     end
@@ -54,20 +56,33 @@ class Lxc
     end
 
     def container_ip(name, retries=0)
-      ip_file = File.join(container_path(name), 'rootfs', 'tmp', '.my_ip')
-      (retries.to_i + 1).times do
-        if(File.exists?(ip_file))
-          ip = File.read(ip_file).strip
-          unless(ip.empty?)
-            Chef::Log.info "LXC IP discovery: Found container IP!"
-            return ip
-          end
-        end
+      retries.to_i.times do
+        ip = leased_address || lxc_stored_address
+        return ip if ip
         Chef::Log.info "LXC IP discovery: Waiting to see if container shows up"
         sleep(3)
       end
-      raise "Container (#{name}) is currently not running!" unless Lxc.running?(name)
-      nil
+    end
+
+    def lxc_stored_address(name)
+      ip_file = File.join(container_path(name), 'rootfs', 'tmp', '.my_ip')
+      if(File.exists?(ip_file))
+        ip = File.read(ip_file).strip
+      end
+      ip.to_s.empty? ? nil : ip
+    end
+
+    def leased_address(name)
+      lease_file = '/var/lib/misc/dnsmasq.leases'
+      if(File.exists?(lease_file))
+        leases = File.readlines(lease_file).map{|line| line.split(' ')}
+        leases.each do |lease|
+          if(lease.include?(name))
+            ip = lease[2]
+          end
+        end
+      end
+      ip.to_s.empty? ? nil : ip
     end
 
     # TODO: The base path needs to be configurable at some point
@@ -127,9 +142,7 @@ class Lxc
     def container_command(name, cmd, retries=1)
       base = "ssh -o StrictHostKeyChecking=no -i /opt/hw-lxc-config/id_rsa #{Lxc.container_ip(name, 5)} "
       begin
-        run_command(
-          base << "chef-client -K /etc/chef/validator.pem -c /etc/chef/client.rb -j /etc/chef/first_run.json"
-        )
+        run_command("#{base} #{cmd}")
       rescue => e
         if(retries.to_i > 0)
           Chef::Log.info "Encountered error running container command (#{cmd}): #{e}"
