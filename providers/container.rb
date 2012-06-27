@@ -1,4 +1,5 @@
 def load_current_resource
+  new_resource.new_container !Lxc.exists?(new_resource.name)
 end
 
 action :create do
@@ -26,7 +27,7 @@ action :create do
 
   if(new_resource.chef_enabled || !new_resource.container_commands.empty?)
   
-    if(new_resource.chef_enabled)
+    if(new_resource.chef_enabled && new_resource.new_container)
       directory "/var/lib/lxc/#{new_resource.name}/rootfs/etc/chef" do
         action :nothing
         subscribes :create, resources(:execute => "lxc create[#{new_resource.name}]"), :immediately
@@ -68,7 +69,7 @@ action :create do
       subscribes :create, resources(:execute => "lxc create[#{new_resource.name}]"), :immediately
     end
 
-    if(new_resource.chef_enabled)
+    if(new_resource.chef_enabled && new_resource.new_container)
       ruby_block "lxc run_chef[#{new_resource.name}]" do
         block do
           Lxc.container_command(
@@ -78,6 +79,21 @@ action :create do
           )
         end
         action :nothing
+        subscribes :create, resources(:execute => "lxc create[#{new_resource.name}]"), :immediately
+      end
+    end
+
+    if(new_resource.new_container && !new_resource.initialize_commands.empty?)
+      ruby_block "lxc initialize_commands[#{new_resource.name}]" do
+        block do
+          new_resource.container_commands.each do |cmd|
+            Lxc.container_command(
+              new_resource.name,
+              cmd,
+              2
+            )
+          end
+        end
         subscribes :create, resources(:execute => "lxc create[#{new_resource.name}]"), :immediately
       end
     end
@@ -159,29 +175,9 @@ action :clone do
   lxc_config new_resource.name do
     config new_resource.config
     action :create
-    notifies :restart, resources(:lxc_service => "lxc config_restart[#{new_resource.name}]"), :delayed
+    notifies :restart, resources(:lxc_service => "lxc config_restart[#{new_resource.name}]"), :immediately
   end
   
-  if(new_resource.static_ip)
-    execute "lxc set_address_sub[#{new_resource.name}]" do
-      command "sed -i 's/lxc\.network\.ipv4.*/lxc.network.ipv4 = #{new_resource.static_ip}/' /var/lib/lxc/#{new_resource.name}/config"
-      action :nothing
-      only_if do
-        File.read(File.join(Lxc.container_path(new_resource.name), 'config')).include?('lxc.network.ipv4')
-      end
-      subscribes :run, resources(:execute => "lxc clone[#{new_resource.base_container} -> #{new_resource.name}]"), :immediately
-    end
-
-    execute "lxc set_address_direct[#{new_resource.name}]" do
-      command "echo 'lxc.network.ipv4 = #{new_resource.static_ip}' >> #{File.join(Lxc.container_path(new_resource.name), 'config')}"
-      action :nothing
-      not_if do
-        File.read(File.join(Lxc.container_path(new_resource.name), 'config')).include?('lxc.network.ipv4')
-      end
-      subscribes :run, resources(:execute => "lxc clone[#{new_resource.base_container} -> #{new_resource.name}]"), :immediately
-    end
-  end
-
   if(new_resource.chef_enabled)
     ruby_block "lxc start[#{new_resource.name}]" do
       block do
