@@ -57,22 +57,33 @@ class Lxc
 
     def container_ip(name, retries=0)
       retries.to_i.times do
-        ip = leased_address || lxc_stored_address
-        return ip if ip
-        Chef::Log.info "LXC IP discovery: Waiting to see if container shows up"
+        ip = leased_address(name) || lxc_stored_address(name)
+        return ip if ip && connection_alive?(ip)
+        Chef::Log.warn "LXC IP discovery: Failed to detect live IP"
         sleep(3)
       end
+      nil
+    end
+
+    def connection_alive?(ip)
+      %x{ping -c 1 -W 1 #{ip}}
+      $?.exitstatus == 0
     end
 
     def lxc_stored_address(name)
-      ip_file = File.join(container_path(name), 'rootfs', 'tmp', '.my_ip')
-      if(File.exists?(ip_file))
-        ip = File.read(ip_file).strip
+      ip = File.readlines(container_config(name)).detect{|line|
+        line.include?('ipv4')
+      }.to_s.split('=').last.to_s.strip
+      if(ip.to_s.empty?)
+        nil
+      else
+        Chef::Log.info "LXC Discovery: Found container address via storage: #{ip}"
+        ip
       end
-      ip.to_s.empty? ? nil : ip
     end
 
     def leased_address(name)
+      ip = nil
       lease_file = '/var/lib/misc/dnsmasq.leases'
       if(File.exists?(lease_file))
         leases = File.readlines(lease_file).map{|line| line.split(' ')}
@@ -82,7 +93,12 @@ class Lxc
           end
         end
       end
-      ip.to_s.empty? ? nil : ip
+      if(ip.to_s.empty?)
+        nil
+      else
+        Chef::Log.info "LXC Discovery: Found container address via DHCP lease: #{ip}"
+        ip
+      end
     end
 
     # TODO: The base path needs to be configurable at some point
@@ -120,14 +136,14 @@ class Lxc
     end
 
     def generate_config(name, options={})
-      config = []
+      config = ''
       options.each_pair do |key, value|
         if(value.is_a?(Array))
           value.each do |val|
-            config << "#{key} = #{val}"
+            config << "#{key} = #{val}\n"
           end
         else
-          config << "#{key} = #{value}"
+          config << "#{key} = #{value}\n"
         end
       end
       config
@@ -135,8 +151,12 @@ class Lxc
 
     # Simple helper to shell out
     def run_command(cmd)
-      @cmd_proxy ||= Class.new.send(:include, Chef::Mixin::ShellOut).new
-      @cmd_proxy.shell_out!(cmd)
+      cmd = Mixlib::ShellOut.new(cmd, 
+        :logger => Chef::Log.logger, 
+        :live_stream => Chef::Log.logger
+      )
+      cmd.run_command
+      cmd.error!
     end
 
     def container_command(name, cmd, retries=1)
