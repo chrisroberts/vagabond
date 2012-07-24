@@ -17,6 +17,11 @@ file '/etc/knife-lxc/config.json' do
   )
 end
 
+cookbook_file '/usr/local/bin/knife_cloner' do
+  source 'knife_cloner'
+  mode 0755
+end
+
 package 'bridge-utils'
 
 execute "restart networking" do
@@ -55,13 +60,15 @@ ruby_block 'add bridge' do
     File.read('/etc/network/interfaces').include?('auto br0')
   end
   notifies :run, 'execute[restart networking]', :immediately
+  action :nothing
 end
-
+if(false)
 unless(node[:lxc][:bridge] == 'br0')
   node[:lxc][:bridge] = 'br0'
   service 'lxc' do
     action :restart
   end
+end
 end
 
 lxc_container 'knife_base' do
