@@ -17,3 +17,4 @@ attribute :config, :kind_of => Hash
 attribute :container_commands, :kind_of => Array, :default => []
 attribute :initialize_commands, :kind_of => Array, :default => []
 attribute :new_container, :kind_of => [TrueClass, FalseClass], :default => false
+attribute :template, :equal_to => %w(busybox debian fedora opensuse sshd ubuntu ubuntu-cloud ubuntu-hw), :default => 'ubuntu-hw'
