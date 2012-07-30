@@ -4,7 +4,7 @@ def load_current_resource
   if(::File.exists?(Lxc.container_config(new_resource.name)))
     mac_addr = ::File.readlines(Lxc.container_config(new_resource.name)).detect{|line|
       line.include?('hwaddr')
-    }.to_s.split('=').last.strip
+    }.to_s.split('=').last.to_s.strip
   end
   if(mac_addr.to_s.empty?)
     mac_addr = "00:16:3e#{SecureRandom.hex(3).gsub(/(..)/, ':\1')}" 
