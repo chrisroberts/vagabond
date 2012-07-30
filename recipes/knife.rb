@@ -1,3 +1,10 @@
+
+# This shuts down the default lxcbr0
+node[:lxc][:use_bridge] = false
+service 'lxc' do
+  action :stop
+end
+
 include_recipe 'lxc'
 
 directory '/etc/knife-lxc' do
@@ -17,61 +24,18 @@ file '/etc/knife-lxc/config.json' do
   )
 end
 
-cookbook_file '/usr/local/bin/knife_cloner' do
-  source 'knife_cloner'
+cookbook_file '/usr/local/bin/knife_lxc' do
+  source 'knife_lxc'
   mode 0755
 end
 
-package 'bridge-utils'
-
-execute "restart networking" do
-  command "service networking restart"
-  action :nothing
-end
-
-# Setup bridge. Should be done differently, but lazy up front,
-# optimize after working
-ruby_block 'add bridge' do
-  block do
-    contents = File.readlines('/etc/network/interfaces')
-    idx = contents.find_index do |line|
-      line.include?('iface') && line.include?(node[:lxc][:knife][:device_to_bridge])
-    end
-    if(idx)
-      removed = []
-      remains = contents.slice(idx + 1, contents.size)
-      removed.push(remains.shift) while !remains.empty? && remains.first.to_s =~ /^\s/
-      contents.slice!(idx, removed.size + 1)
-      contents.delete_if{|line| line.include?("auto #{node[:lxc][:knife][:device_to_bridge]}")}
-    end
-    [
-      'auto br0',
-      "iface br0 inet #{node[:lxc][:knife][:bridge_address]}",
-      '  bridge_ports eth1',
-      '  bridge_stp off',
-      '  bridge_maxwait 0',
-      '  bridge_fd 0'
-    ].each{|line| contents << line}
-    f_r = Chef::Resource::File.new('/etc/network/interfaces')
-    f_r.content contents.join("\n")
-    f_r.run_action(:create)
+node[:lxc][:allowed_types].each do |type|
+  lxc_container "#{type}_base" do
+    config(
+      'lxc.network.link' => node[:lxc][:bridge][:name]
+    )
+    template type
+    chef_enabled false
+    action :create
   end
-  not_if do
-    File.read('/etc/network/interfaces').include?('auto br0')
-  end
-  notifies :run, 'execute[restart networking]', :immediately
-  action :nothing
-end
-if(false)
-unless(node[:lxc][:bridge] == 'br0')
-  node[:lxc][:bridge] = 'br0'
-  service 'lxc' do
-    action :restart
-  end
-end
-end
-
-lxc_container 'knife_base' do
-  action :create
-  chef_enabled false
 end

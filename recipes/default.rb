@@ -1,5 +1,8 @@
 package 'lxc'
 
+include_recipe 'lxc::install_dependencies'
+include_recipe 'lxc::setup_bridge' unless node[:lxc][:bridge][:setup]
+
 cookbook_file "/usr/lib/lxc/templates/lxc-ubuntu-hw" do
   source 'lxc-ubuntu-hw'
   mode 0755
@@ -12,7 +15,7 @@ template '/etc/default/lxc' do
     :config => {
       :lxc_auto => node[:lxc][:auto_start],
       :use_lxc_bridge => node[:lxc][:use_bridge],
-      :lxc_bridge => node[:lxc][:bridge],
+      :lxc_bridge => node[:lxc][:bridge][:interface],
       :lxc_addr => node[:lxc][:addr],
       :lxc_netmask => node[:lxc][:netmask],
       :lxc_network => node[:lxc][:network],
