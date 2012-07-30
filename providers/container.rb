@@ -1,11 +1,14 @@
 def load_current_resource
   new_resource.new_container !Lxc.exists?(new_resource.name)
+  if(new_resource.chef_enabled && new_resource.template != 'ubuntu-hw')
+    raise 'Chef enabled containers currently only supported on ubuntu-hw container'
+  end
 end
 
 action :create do
 
   execute "lxc create[#{new_resource.name}]" do
-    command "lxc-create -n #{new_resource.name} -t ubuntu-hw #{"-- --ipaddress #{new_resource.static_ip}" if new_resource.static_ip}"
+    command "lxc-create -n #{new_resource.name} -t #{new_resource.template} #{"-- --ipaddress #{new_resource.static_ip}" if new_resource.static_ip}"
     not_if do
       Lxc.exists?(new_resource.name)
     end
