@@ -1,11 +1,10 @@
+include_recipe 'lxc'
 
 # This shuts down the default lxcbr0
 node[:lxc][:use_bridge] = false
 service 'lxc' do
   action :stop
 end
-
-include_recipe 'lxc'
 
 directory '/etc/knife-lxc' do
   action :create
