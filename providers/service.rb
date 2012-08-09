@@ -10,12 +10,12 @@ action :start do
     block do
       Lxc.start(new_resource.service_name)
     end
-    not_if do
-      Lxc.running?(new_resource.service_name)
+    only_if do
+      !Lxc.running?(new_resource.service_name) &&
+      new_resource.updated_by_last_action(true)
     end
   end
 
-  new_resource.updated_by_last_action(true)
 end
 
 action :halt do
@@ -24,10 +24,10 @@ action :halt do
       Lxc.stop(new_resource.service_name)
     end
     only_if do
-      Lxc.running?(new_resource.service_name)
+      Lxc.running?(new_resource.service_name) &&
+      new_resource.updated_by_last_action(true)
     end
   end
-  new_resource.updated_by_last_action(true)
 end
 
 # TODO: Should we wait for stop and then wait for start here?
@@ -38,10 +38,10 @@ action :restart do
       Lxc.start(new_resource.service_name)
     end
     only_if do
-      Lxc.running?(new_resource.service_name)
+      Lxc.running?(new_resource.service_name) &&
+      new_resource.updated_by_last_action(true)
     end
   end
-  new_resource.updated_by_last_action(true)
 end
 
 action :stop do
@@ -50,10 +50,10 @@ action :stop do
       Lxc.shutdown(new_resource.service_name)
     end
     only_if do
-      Lxc.running?(new_resource.service_name)
+      Lxc.running?(new_resource.service_name) &&
+      new_resource.updated_by_last_action(true)
     end
   end
-  new_resource.updated_by_last_action(true)
 end
 
 action :freeze do
@@ -62,10 +62,10 @@ action :freeze do
       Lxc.freeze(new_resource.service_name)
     end
     only_if do
-      Lxc.running?(new_resource.service_name)
+      Lxc.running?(new_resource.service_name) &&
+      new_resource.updated_by_last_action(true)
     end
   end
-  new_resource.updated_by_last_action(true)
 end
 
 action :unfreeze do
@@ -74,8 +74,8 @@ action :unfreeze do
       Lxc.unfreeze(new_resource.service_name)
     end
     only_if do
-      Lxc.frozen?(new_resource.service_name)
+      Lxc.frozen?(new_resource.service_name) &&
+      new_resource.updated_by_last_action(true)
     end
   end
-  new_resource.updated_by_last_action(true)
 end

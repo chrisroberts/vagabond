@@ -9,8 +9,9 @@ action :create do
 
   execute "lxc create[#{new_resource.name}]" do
     command "lxc-create -n #{new_resource.name} -t #{new_resource.template} #{"-- --ipaddress #{new_resource.static_ip}" if new_resource.static_ip}"
-    not_if do
-      Lxc.exists?(new_resource.name)
+    only_if do
+      !Lxc.exists?(new_resource.name) &&
+      new_resource.updated_by_last_action(true)
     end
   end
 
@@ -137,7 +138,6 @@ action :create do
     end
   end
 
-  new_resource.updated_by_last_action(true)
 end
 
 action :delete do
@@ -153,17 +153,18 @@ action :delete do
   execute "lxc delete[#{new_resource.name}]" do
     command "lxc-destroy -n #{new_resource.name}"
     only_if do
-      Lxc.exists?(new_resource.name)
+      Lxc.exists?(new_resource.name) &&
+      new_resource.updated_by_last_action(true)
     end
   end
-  new_resource.updated_by_last_action(true)
 end
 
 action :clone do
   execute "lxc clone[#{new_resource.base_container} -> #{new_resource.name}]" do
     command "lxc-clone -o #{new_resource.base_container} -n #{new_resource.name}"
-    not_if do
-      Lxc.exists?(new_resource.name)
+    only_if do
+      !Lxc.exists?(new_resource.name) &&
+      new_resource.updated_by_last_action(true)
     end
   end
 
@@ -219,6 +220,4 @@ action :clone do
       subscribes :create, resources(:execute => "lxc clone[#{new_resource.base_container} -> #{new_resource.name}]"), :immediately
     end
   end
-
-  new_resource.updated_by_last_action(true)
 end
