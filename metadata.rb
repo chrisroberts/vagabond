@@ -8,4 +8,4 @@ version          "0.0.1"
 supports 'ubuntu', '12.04'
 
 depends 'omnibus_updater'
-depends 'bridger'
+suggests 'bridger'
