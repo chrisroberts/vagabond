@@ -36,4 +36,4 @@ that will be run after the container is created.
 
 Repository:
 
-* https://github.com/heavywater/chef-lxc
+* https://github.com/hw-cookbooks/lxc
