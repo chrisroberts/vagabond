@@ -69,7 +69,7 @@ action :create do
   end
 
   file ::File.join(new_resource._lxc.rootfs, 'root', '.ssh', 'authorized_keys') do
-    content "# Chef generated key file\n#{File.read('/opt/hw-lxc-config/id_rsa.pub')}\n"
+    content "# Chef generated key file\n#{::File.read('/opt/hw-lxc-config/id_rsa.pub')}\n"
   end
 
 
@@ -80,13 +80,13 @@ action :create do
       if(%w(debian ubuntu).include?(new_resource.template) && system('ls /opt/chef-full*.deb 2>1 > /dev/null'))
         execute "lxc copy_chef_full[#{new_resource.name}]" do
           action :nothing
-          command "cp /opt/chef-full*.deb /var/lib/lxc/#{new_resource.name}/opt"
+          command "cp /opt/chef-full*.deb #{::File.join(new_resource._lxc.rootfs, 'opt')}"
           subscribes :create, resources(:execute => "lxc create[#{new_resource.name}]"), :immediately
         end
 
         execute "lxc install_chef_full[#{new_resource.name}]" do
           action :nothing
-          command "chroot #{new_resource._lxc.rootfs} dpkg -i `ls #{File.join(new_resource._lxc.rootfs, 'opt', 'chef*.deb')}`"
+          command "chroot #{new_resource._lxc.rootfs} dpkg -i `ls #{::File.join(new_resource._lxc.rootfs, 'opt', 'chef*.deb')}`"
           subscribes :create, resources(:execute => "lxc create[#{new_resource.name}]"), :immediately
         end
         @chef_installed = true
@@ -95,7 +95,7 @@ action :create do
       # TODO: Add resources for RPM install
 
       #### Setup chef related bits within container
-      directory "/var/lib/lxc/#{new_resource.name}/rootfs/etc/chef" do
+      directory ::File.join(new_resource._lxc.rootfs, 'etc', 'chef')
         action :nothing
         subscribes :create, resources(:execute => "lxc create[#{new_resource.name}]"), :immediately
       end
@@ -103,7 +103,7 @@ action :create do
       template "lxc chef-config[#{new_resource.name}]" do
         source 'client.rb.erb'
         cookbook 'lxc'
-        path "/var/lib/lxc/#{new_resource.name}/rootfs/etc/chef/client.rb"
+        path ::File.join(new_resource._lxc.rootfs, 'etc', 'chef', 'client.rb')
         variables(
           :validation_client => new_resource.validation_client,
           :node_name => new_resource.node_name || "#{node.name}-#{new_resource.name}",
@@ -114,14 +114,14 @@ action :create do
       end
 
       file "lxc chef-validator[#{new_resource.name}]" do
-        path "/var/lib/lxc/#{new_resource.name}/rootfs/etc/chef/validator.pem"
+        path ::File.join(new_resource._lxc.rootfs, 'etc', 'chef', 'validator.pem')
         content new_resource.validator_pem || node[:lxc][:validator_pem]
         action :nothing
         subscribes :create, resources(:execute => "lxc create[#{new_resource.name}]"), :immediately
       end
 
       file "lxc chef-runlist[#{new_resource.name}]" do
-        path "/var/lib/lxc/#{new_resource.name}/rootfs/etc/chef/first_run.json"
+        path ::File.join(new_resource._lxc.rootfs, 'etc', 'chef', 'first_run.json')
         content({:run_list => new_resource.run_list}.to_json)
         action :nothing
         subscribes :create, resources(:execute => "lxc create[#{new_resource.name}]"), :immediately
@@ -131,7 +131,7 @@ action :create do
       if(new_resource.copy_data_bag_secret_file)
         if ::File.readable?(new_resource.data_bag_secret_file)
           file "lxc chef-data-bag-secret[#{new_resource.name}]" do
-            path "/var/lib/lxc/#{new_resource.name}/rootfs/etc/chef/encrypted_data_bag_secret"
+            path ::File.join(new_resource._lxc.rootfs, 'etc', 'chef', 'encrypted_data_bag_secret')
             content ::File.open(new_resource.data_bag_secret_file, "rb").read
             mode 0600
             action :nothing
@@ -157,7 +157,7 @@ action :create do
         # Use remote file to remove curl dep
         remote_file "lxc chef_install_script[#{new_resource.name}]" do
           source "http://opscode.com/chef/install.sh"
-          path File.join(new_resource._lxc.rootfs, 'opt', 'chef-install.sh')
+          path ::File.join(new_resource._lxc.rootfs, 'opt', 'chef-install.sh')
           action :nothing
           subscribes :create_if_missing, resources(:execute => "lxc create[#{new_resource.name}]"), :immediately
         end
@@ -220,12 +220,12 @@ action :create do
 
     #### Clean up after chef if it's enabled
     if(new_resource.chef_enabled)
-      file "/var/lib/lxc/#{new_resource.name}/rootfs/etc/chef/first_run.json" do
+      file ::File.join(new_resource._lxc.rootfs, 'etc', 'chef', 'first_run.json') do
         action :nothing
         subscribes :delete, resources(:execute => "lxc create[#{new_resource.name}]"), :immediately
       end
       
-      file "/var/lib/lxc/#{new_resource.name}/rootfs/etc/chef/validation.pem" do
+      file ::File.join(new_resource._lxc.rootfs, 'etc', 'chef', 'validator.pem') do
         action :nothing
         subscribes :delete, resources(:execute => "lxc create[#{new_resource.name}]"), :immediately
       end
