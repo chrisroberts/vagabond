@@ -9,6 +9,17 @@ end
 
 action :create do
 
+  #### Add custom key for host based interactions
+  directory '/opt/hw-lxc-config' do
+    action :create
+  end
+
+  execute "lxc host_ssh_key" do
+    command "ssh-keygen -P '' -f /opt/hw-lxc-config/id_rsa"
+    creates "/opt/hw-lxc-config/id_rsa"
+  end
+
+  #### Create container
   execute "lxc create[#{new_resource.name}]" do
     command "lxc-create -n #{new_resource.name} -t #{new_resource.template}"
     only_if do
@@ -16,6 +27,7 @@ action :create do
     end
   end
 
+  #### Used by internal resources
   lxc_service "lxc config_restart[#{new_resource.name}]" do
     service_name new_resource.name
     action :nothing
@@ -23,7 +35,8 @@ action :create do
       new_resource._lxc.running?
     end
   end
- 
+
+  #### Create container configuration bits
   if(new_resource.default_config)
     lxc_config new_resource.name do
       action :create
@@ -50,10 +63,20 @@ action :create do
     end
   end
 
+  #### Ensure host has ssh access into container
+  directory ::File.join(new_resource._lxc.rootfs, 'root', '.ssh') do
+    action :create
+  end
+
+  file ::File.join(new_resource._lxc.rootfs, 'root', '.ssh', 'authorized_keys') do
+    content "# Chef generated key file\n#{File.read('/opt/hw-lxc-config/id_rsa.pub')}\n"
+  end
+
+
   if(new_resource.chef_enabled || !new_resource.container_commands.empty?)
-  
     if(new_resource.chef_enabled && new_resource.new_container)
-   
+
+      #### Use cached chef package from host if available
       if(%w(debian ubuntu).include?(new_resource.template) && system('ls /opt/chef-full*.deb 2>1 > /dev/null'))
         execute "lxc copy_chef_full[#{new_resource.name}]" do
           action :nothing
@@ -71,6 +94,7 @@ action :create do
 
       # TODO: Add resources for RPM install
 
+      #### Setup chef related bits within container
       directory "/var/lib/lxc/#{new_resource.name}/rootfs/etc/chef" do
         action :nothing
         subscribes :create, resources(:execute => "lxc create[#{new_resource.name}]"), :immediately
@@ -103,6 +127,7 @@ action :create do
         subscribes :create, resources(:execute => "lxc create[#{new_resource.name}]"), :immediately
       end
 
+      #### Provide data bag secret file if required
       if(new_resource.copy_data_bag_secret_file)
         if ::File.readable?(new_resource.data_bag_secret_file)
           file "lxc chef-data-bag-secret[#{new_resource.name}]" do
@@ -127,6 +152,7 @@ action :create do
     end
 
     if(new_resource.chef_enabled && new_resource.new_container)
+      # Make sure we have chef in the container
       unless(@chef_installed)
         # Use remote file to remove curl dep
         remote_file "lxc chef_install_script[#{new_resource.name}]" do
@@ -146,6 +172,8 @@ action :create do
           subscribes :create, resources(:execute => "lxc create[#{new_resource.name}]"), :immediately
         end
       end
+
+      #### Let chef configure the container
       ruby_block "lxc run_chef[#{new_resource.name}]" do
         block do
           new_resource._lxc.container_command(
@@ -157,6 +185,7 @@ action :create do
       end
     end
 
+    #### Have initialize commands for the container? Run them now
     if(new_resource.new_container && !new_resource.initialize_commands.empty?)
       ruby_block "lxc initialize_commands[#{new_resource.name}]" do
         block do
@@ -168,6 +197,7 @@ action :create do
       end
     end
 
+    #### Have commands for the container? Run them now
     unless(new_resource.container_commands.empty?)
       ruby_block "lxc container_commands[#{new_resource.name}]" do
         block do
@@ -179,6 +209,7 @@ action :create do
       end
     end
 
+    #### NOTE: Creation always leaves the container in a stopped state
     ruby_block "lxc shutdown[#{new_resource.name}]" do
       block do
         new_resource._lxc.shutdown
@@ -187,6 +218,7 @@ action :create do
       subscribes :create, resources(:execute => "lxc create[#{new_resource.name}]"), :immediately
     end
 
+    #### Clean up after chef if it's enabled
     if(new_resource.chef_enabled)
       file "/var/lib/lxc/#{new_resource.name}/rootfs/etc/chef/first_run.json" do
         action :nothing
