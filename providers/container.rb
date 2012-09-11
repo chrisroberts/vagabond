@@ -22,11 +22,12 @@ action :create do
       Lxc.running?(new_resource.name)
     end
   end
-  
-  lxc_config new_resource.name do
-    config new_resource.config
-    action :create
-    notifies :restart, resources(:lxc_service => "lxc config_restart[#{new_resource.name}]"), :delayed
+ 
+  if(new_resource.default_config)
+    lxc_config new_resource.name do
+      action :create
+      notifies :restart, resources(:lxc_service => "lxc config_restart[#{new_resource.name}]"), :delayed
+    end
   end
 
   if(new_resource.chef_enabled || !new_resource.container_commands.empty?)
