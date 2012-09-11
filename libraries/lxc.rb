@@ -135,20 +135,6 @@ class Lxc
       run_command("lxc-wait -n #{name} -s STOPPED")
     end
 
-    def generate_config(name, options={})
-      config = ''
-      options.each_pair do |key, value|
-        if(value.is_a?(Array))
-          value.each do |val|
-            config << "#{key} = #{val}\n"
-          end
-        else
-          config << "#{key} = #{value}\n"
-        end
-      end
-      config
-    end
-
     # Simple helper to shell out
     def run_command(cmd)
       cmd = Mixlib::ShellOut.new(cmd, 
