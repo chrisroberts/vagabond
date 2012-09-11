@@ -53,6 +53,24 @@ action :create do
   if(new_resource.chef_enabled || !new_resource.container_commands.empty?)
   
     if(new_resource.chef_enabled && new_resource.new_container)
+   
+      if(%w(debian ubuntu).include?(new_resource.template) && system('ls /opt/chef-full*.deb 2>1 > /dev/null'))
+        execute "lxc copy_chef_full[#{new_resource.name}]" do
+          action :nothing
+          command "cp /opt/chef-full*.deb /var/lib/lxc/#{new_resource.name}/opt"
+          subscribes :create, resources(:execute => "lxc create[#{new_resource.name}]"), :immediately
+        end
+
+        execute "lxc install_chef_full[#{new_resource.name}]" do
+          action :nothing
+          command "chroot #{new_resource._lxc.rootfs} dpkg -i `ls #{File.join(new_resource._lxc.rootfs, 'opt', 'chef*.deb')}`"
+          subscribes :create, resources(:execute => "lxc create[#{new_resource.name}]"), :immediately
+        end
+        @chef_installed = true
+      end
+
+      # TODO: Add resources for RPM install
+
       directory "/var/lib/lxc/#{new_resource.name}/rootfs/etc/chef" do
         action :nothing
         subscribes :create, resources(:execute => "lxc create[#{new_resource.name}]"), :immediately
@@ -109,11 +127,29 @@ action :create do
     end
 
     if(new_resource.chef_enabled && new_resource.new_container)
+      unless(@chef_installed)
+        # Use remote file to remove curl dep
+        remote_file "lxc chef_install_script[#{new_resource.name}]" do
+          source "http://opscode.com/chef/install.sh"
+          path File.join(new_resource._lxc.rootfs, 'opt', 'chef-install.sh')
+          action :nothing
+          subscribes :create_if_missing, resources(:execute => "lxc create[#{new_resource.name}]"), :immediately
+        end
+
+        ruby_block "lxc install_chef[#{new_resource.name}]" do
+          block do
+            new_resource._lxc.container_command(
+              "bash /opt/chef-install.sh"
+            )
+          end
+          action :nothing
+          subscribes :create, resources(:execute => "lxc create[#{new_resource.name}]"), :immediately
+        end
+      end
       ruby_block "lxc run_chef[#{new_resource.name}]" do
         block do
           new_resource._lxc.container_command(
-            "chef-client -K /etc/chef/validator.pem -c /etc/chef/client.rb -j /etc/chef/first_run.json",
-            3
+            "chef-client -K /etc/chef/validator.pem -c /etc/chef/client.rb -j /etc/chef/first_run.json", 3
           )
         end
         action :nothing
@@ -125,10 +161,7 @@ action :create do
       ruby_block "lxc initialize_commands[#{new_resource.name}]" do
         block do
           new_resource.container_commands.each do |cmd|
-            new_resource._lxc.container_command(
-              cmd,
-              2
-            )
+            new_resource._lxc.container_command(cmd, 2)
           end
         end
         subscribes :create, resources(:execute => "lxc create[#{new_resource.name}]"), :immediately
