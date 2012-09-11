@@ -30,6 +30,23 @@ action :create do
     end
   end
 
+  if(new_resource.default_fstab)
+    lxc_fstab "proc[#{new_resource.name}]" do
+      container new_resource.name
+      file_system 'proc'
+      mount_point 'proc'
+      type 'proc'
+      options %w(nodev noexec nosuid)
+    end
+    lxc_fstab "sysfs[#{new_resource.name}]" do
+      container new_resource.name
+      file_system 'sysfs'
+      mount_point 'sys'
+      type 'sysfs'
+      options 'default'
+    end
+  end
+
   if(new_resource.chef_enabled || !new_resource.container_commands.empty?)
   
     if(new_resource.chef_enabled && new_resource.new_container)

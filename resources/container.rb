@@ -12,6 +12,7 @@ attribute :copy_data_bag_secret_file, :kind_of => [TrueClass, FalseClass], :defa
 attribute :data_bag_secret_file, :kind_of => String, :default => Chef::EncryptedDataBagItem::DEFAULT_SECRET_FILE
 attribute :static_ip, :kind_of => String, :default => false
 attribute :default_config, :kind_of => [TrueClass, FalseClass], :default => true
+attribute :default_fstab, :kind_of => [TrueClass, FalseClass], :default => true
 attribute :container_commands, :kind_of => Array, :default => []
 attribute :initialize_commands, :kind_of => Array, :default => []
 attribute :new_container, :kind_of => [TrueClass, FalseClass], :default => false
