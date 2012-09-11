@@ -21,7 +21,7 @@ action :create do
   end
 
   line = "#{new_resource.file_system}\t#{new_resource.mount_point}\t" <<
-    "#{new_resource.type}\t#{Array(new_resource.options).join(' ')}\t" <<
+    "#{new_resource.type}\t#{Array(new_resource.options).join(',')}\t" <<
     "#{new_resource.dump}\t#{new_resource.pass}"
   unless(node[:lxc][:fstabs][new_resource.container].include?(line))
     node[:lxc][:fstabs][new_resource.container] << line
