@@ -137,11 +137,18 @@ class Lxc
   def container_path
     File.join(@base_path, name)
   end
+  alias_method :path, :container_path
 
   # Full path to container configuration file
   def container_config
     File.join(container_path, 'config')
   end
+  alias_method :config, :container_config
+
+  def container_rootfs
+    File.join(container_path, 'rootfs')
+  end
+  alias_method :rootfs, :container_rootfs
 
   # Start the container
   def start
