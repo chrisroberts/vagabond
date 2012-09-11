@@ -19,4 +19,4 @@ default[:lxc][:knife][:static_ips] = []
 
 default[:lxc][:user_pass][:debian] = {:username => 'root', :password => 'root'}
 default[:lxc][:user_pass][:ubuntu] = {:username => 'ubuntu', :password => 'ubuntu'}
-default[:lxc][:user_pass][:centos] = {:username => 'root', :password => 'root'}
+default[:lxc][:user_pass][:fedora] = {:username => 'root', :password => 'root'}
