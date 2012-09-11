@@ -1,10 +1,15 @@
 require 'securerandom'
 
 def load_current_resource
+  new_resource._lxc Lxc.new(
+    new_resource.name,
+    :base_dir => node[:lxc][:container_directory],
+    :dnsmasq_lease_file => node[:lxc][:dnsmasq_lease_file]
+  )
   new_resource.utsname new_resource.name unless new_resource.utsname
   new_resource.rootfs "/var/lib/lxc/#{new_resource.utsname}/rootfs" unless new_resource.rootfs
   new_resource.mount "/var/lib/lxc/#{new_resource.utsname}/fstab" unless new_resource.mount
-  config = LxcFileConfig.new(Lxc.container_config(new_resource.utsname))
+  config = LxcFileConfig.new(new_resource._lxc.container_config)
   if((new_resource.network.nil? || new_resource.network.empty?))
     if(config.network.empty?)
       new_resource.network(
@@ -33,12 +38,12 @@ action :create do
     action :nothing
   end
 
-  directory Lxc.container_path(new_resource.utsname) do
+  directory new_resource._lxc.container_path do
     action :create
   end
 
   file "lxc update_config[#{new_resource.utsname}]" do
-    path Lxc.container_config(new_resource.utsname)
+    path new_resource._lxc.container_config
     content LxcFileConfig.generate_config(new_resource)
     mode 0644
     notifies :create, resources(:ruby_block => "lxc config_updater[#{new_resource.utsname}]"), :immediately

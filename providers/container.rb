@@ -1,17 +1,18 @@
 def load_current_resource
-  new_resource.new_container !Lxc.exists?(new_resource.name)
-  if(new_resource.chef_enabled && new_resource.template != 'ubuntu-hw')
-    raise 'Chef enabled containers currently only supported on ubuntu-hw container'
-  end
+  new_resource._lxc Lxc.new(
+    new_resource.name,
+    :base_dir => node[:lxc][:container_directory],
+    :dnsmasq_lease_file => node[:lxc][:dnsmasq_lease_file]
+  )
+  new_resource.new_container !new_resource._lxc.exists?
 end
 
 action :create do
 
   execute "lxc create[#{new_resource.name}]" do
-    command "lxc-create -n #{new_resource.name} -t #{new_resource.template} #{"-- --ipaddress #{new_resource.static_ip}" if new_resource.static_ip}"
+    command "lxc-create -n #{new_resource.name} -t #{new_resource.template}"
     only_if do
-      !Lxc.exists?(new_resource.name) &&
-      new_resource.updated_by_last_action(true)
+      !new_resource._lxc.exists? && new_resource.updated_by_last_action(true)
     end
   end
 
@@ -19,7 +20,7 @@ action :create do
     service_name new_resource.name
     action :nothing
     only_if do
-      Lxc.running?(new_resource.name)
+      new_resource._lxc.running?
     end
   end
  
@@ -37,6 +38,7 @@ action :create do
       mount_point 'proc'
       type 'proc'
       options %w(nodev noexec nosuid)
+      notifies :restart, resources(:lxc_service => "lxc config_restart[#{new_resource.name}]"), :delayed
     end
     lxc_fstab "sysfs[#{new_resource.name}]" do
       container new_resource.name
@@ -44,6 +46,7 @@ action :create do
       mount_point 'sys'
       type 'sysfs'
       options 'default'
+      notifies :restart, resources(:lxc_service => "lxc config_restart[#{new_resource.name}]"), :delayed
     end
   end
 
@@ -99,7 +102,7 @@ action :create do
 
     ruby_block "lxc start[#{new_resource.name}]" do
       block do
-        Lxc.start(new_resource.name)
+        new_resource._lxc.start
       end
       action :nothing
       subscribes :create, resources(:execute => "lxc create[#{new_resource.name}]"), :immediately
@@ -108,8 +111,7 @@ action :create do
     if(new_resource.chef_enabled && new_resource.new_container)
       ruby_block "lxc run_chef[#{new_resource.name}]" do
         block do
-          Lxc.container_command(
-            new_resource.name,
+          new_resource._lxc.container_command(
             "chef-client -K /etc/chef/validator.pem -c /etc/chef/client.rb -j /etc/chef/first_run.json",
             3
           )
@@ -123,8 +125,7 @@ action :create do
       ruby_block "lxc initialize_commands[#{new_resource.name}]" do
         block do
           new_resource.container_commands.each do |cmd|
-            Lxc.container_command(
-              new_resource.name,
+            new_resource._lxc.container_command(
               cmd,
               2
             )
@@ -138,11 +139,7 @@ action :create do
       ruby_block "lxc container_commands[#{new_resource.name}]" do
         block do
           new_resource.container_commands.each do |cmd|
-            Lxc.container_command(
-              new_resource.name,
-              cmd,
-              2
-            )
+            new_resource._lxc.container_command(cmd, 2)
           end
         end
         subscribes :create, resources(:execute => "lxc create[#{new_resource.name}]"), :immediately
@@ -151,7 +148,7 @@ action :create do
 
     ruby_block "lxc shutdown[#{new_resource.name}]" do
       block do
-        Lxc.shutdown(new_resource.name)
+        new_resource._lxc.shutdown
       end
       action :nothing
       subscribes :create, resources(:execute => "lxc create[#{new_resource.name}]"), :immediately
@@ -175,18 +172,17 @@ end
 action :delete do
   ruby_block "lxc stop[#{new_resource.name}]" do
     block do
-      Lxc.stop(new_resource.name)
+      new_resource._lxc.stop
     end
     only_if do
-      Lxc.running?(new_resource.name)
+      new_resource._lxc.running?
     end
   end
   
   execute "lxc delete[#{new_resource.name}]" do
     command "lxc-destroy -n #{new_resource.name}"
     only_if do
-      Lxc.exists?(new_resource.name) &&
-      new_resource.updated_by_last_action(true)
+      new_resource._lxc.exists? && new_resource.updated_by_last_action(true)
     end
   end
 end
@@ -195,8 +191,7 @@ action :clone do
   execute "lxc clone[#{new_resource.base_container} -> #{new_resource.name}]" do
     command "lxc-clone -o #{new_resource.base_container} -n #{new_resource.name}"
     only_if do
-      !Lxc.exists?(new_resource.name) &&
-      new_resource.updated_by_last_action(true)
+      !new_resource._lxc.exists? && new_resource.updated_by_last_action(true)
     end
   end
 
@@ -204,7 +199,7 @@ action :clone do
     service_name new_resource.name
     action :nothing
     only_if do
-      Lxc.running?(new_resource.name)
+      new_resource._lxc.running?
     end
   end
   
@@ -217,7 +212,7 @@ action :clone do
   if(new_resource.chef_enabled)
     ruby_block "lxc start[#{new_resource.name}]" do
       block do
-        Lxc.start(new_resource.name)
+        new_resource._lxc.start
       end
       action :nothing
       subscribes :create, resources(:execute => "lxc clone[#{new_resource.base_container} -> #{new_resource.name}]"), :immediately
@@ -228,7 +223,7 @@ action :clone do
         first_run = true
         begin
           Class.new.send(:include, Chef::Mixin::ShellOut).new.shell_out!(
-            "ssh -o StrictHostKeyChecking=no -i /opt/hw-lxc-config/id_rsa #{Lxc.container_ip(new_resource.name, 5)} chef-client"
+            "ssh -o StrictHostKeyChecking=no -i /opt/hw-lxc-config/id_rsa #{new_resource._lxc.container_ip(5)} chef-client"
           )
         rescue => e
           if(first_run)
@@ -246,7 +241,7 @@ action :clone do
  
     ruby_block "lxc shutdown[#{new_resource.name}]" do
       block do
-        Lxc.shutdown(new_resource.name)
+        new_resource._lxc.shutdown
       end
       action :nothing
       subscribes :create, resources(:execute => "lxc clone[#{new_resource.base_container} -> #{new_resource.name}]"), :immediately

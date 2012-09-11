@@ -1,22 +1,28 @@
 def load_current_resource
+  new_resource._lxc Lxc.new(
+    new_resource.container,
+    :base_dir => node[:lxc][:container_directory],
+    :dnsmasq_lease_file => node[:lxc][:dnsmasq_lease_file]
+  )
   @loaded ||= {}
+  node[:lxc][:fstabs] ||= Mash.new
   node[:lxc][:fstabs][new_resource.container] ||= []
 end
 
 action :create do
   unless(@loaded[new_resource.container])
     @loaded[new_resource.container] = true
-    template File.join(Lxc.container_path(new_resource.container), 'fstab') do
+    template ::File.join(new_resource._lxc.container_path, 'fstab') do
       source 'fstab.erb'
       mode 0644
-      variable :container => new_resource.container
+      variables :container => new_resource.container
       subscribes :create, resources(:lxc_fstab => new_resource.name), :delayed
     end
   end
 
   line = "#{new_resource.file_system}\t#{new_resource.mount_point}\t" <<
     "#{new_resource.type}\t#{Array(new_resource.options).join(' ')}\t" <<
-    "#{new_resource.dump}\t#{Array(new_resource.pass}"
+    "#{new_resource.dump}\t#{new_resource.pass}"
   unless(node[:lxc][:fstabs][new_resource.container].include?(line))
     node[:lxc][:fstabs][new_resource.container] << line
     new_resource.updated_by_last_action(true)
@@ -27,17 +33,17 @@ end
 action :delete do
   unless(@loaded[new_resource.container])
     @loaded[new_resource.container] = true
-    template File.join(Lxc.container_path(new_resource.container), 'fstab') do
+    template ::File.join(new_resource._lxc.container_path, 'fstab') do
       source 'fstab.erb'
       mode 0644
-      variable :container => new_resource.container
+      variables :container => new_resource.container
       subscribes :create, resources(:lxc_fstab => new_resource.name), :delayed
     end
   end
 
   line = "#{new_resource.file_system}\t#{new_resource.mount_point}\t" <<
     "#{new_resource.type}\t#{Array(new_resource.options).join(' ')}\t" <<
-    "#{new_resource.dump}\t#{Array(new_resource.pass}"
+    "#{new_resource.dump}\t#{new_resource.pass}"
   if(node[:lxc][:fstabs][new_resource.container].include?(line))
     node[:lxc][:fstabs][new_resource.container].delete(line)
     new_resource.updated_by_last_action(true)

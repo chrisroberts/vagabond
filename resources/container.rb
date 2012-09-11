@@ -16,4 +16,7 @@ attribute :default_fstab, :kind_of => [TrueClass, FalseClass], :default => true
 attribute :container_commands, :kind_of => Array, :default => []
 attribute :initialize_commands, :kind_of => Array, :default => []
 attribute :new_container, :kind_of => [TrueClass, FalseClass], :default => false
-attribute :template, :equal_to => %w(busybox debian fedora opensuse sshd ubuntu ubuntu-cloud ubuntu-hw), :default => 'ubuntu-hw'
+attribute :template, :equal_to => %w(fedora debian ubuntu ubuntu-cloud), :default => 'ubuntu'
+attribute :_lxc
+# TODO: We should ultimately have support for all these templates
+#attribute :template, :equal_to => %w(busybox debian fedora opensuse sshd ubuntu ubuntu-cloud), :default => 'ubuntu'
