@@ -10,14 +10,17 @@ end
 action :create do
 
   #### Add custom key for host based interactions
-  directory '/opt/hw-lxc-config' do
-    action :create
+  lxc_dir = directory '/opt/hw-lxc-config' do
+    action :nothing
   end
+  lxc_dir.run_action(:create)
 
-  execute "lxc host_ssh_key" do
+  lxc_key = execute "lxc host_ssh_key" do
     command "ssh-keygen -P '' -f /opt/hw-lxc-config/id_rsa"
     creates "/opt/hw-lxc-config/id_rsa"
+    action :nothing
   end
+  lxc_key.run_action(:run)
 
   #### Create container
   execute "lxc create[#{new_resource.name}]" do
@@ -95,7 +98,7 @@ action :create do
       # TODO: Add resources for RPM install
 
       #### Setup chef related bits within container
-      directory ::File.join(new_resource._lxc.rootfs, 'etc', 'chef')
+      directory ::File.join(new_resource._lxc.rootfs, 'etc', 'chef') do
         action :nothing
         subscribes :create, resources(:execute => "lxc create[#{new_resource.name}]"), :immediately
       end
