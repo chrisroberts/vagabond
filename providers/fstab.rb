@@ -20,6 +20,7 @@ action :create do
       end
     end
     template ::File.join(new_resource._lxc.container_path, 'fstab') do
+      cookbook 'lxc'
       source 'fstab.erb'
       mode 0644
       variables :container => new_resource.container
@@ -50,6 +51,7 @@ action :delete do
     end
 
     template ::File.join(new_resource._lxc.container_path, 'fstab') do
+      cookbook 'lxc'
       source 'fstab.erb'
       mode 0644
       variables :container => new_resource.container

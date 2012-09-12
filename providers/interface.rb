@@ -38,7 +38,8 @@ action :create do
     end
     template ::File.join(@lxc.rootfs, 'etc', 'interfaces') do
       source 'interface.erb'
-      variables
+      cookbook 'lxc'
+      variables :container => new_resource.container
       subscribes :create, resources(:ruby_block => "lxc_interface_notifier[#{new_resource.container}]"), :delayed
     end
   end
@@ -69,7 +70,9 @@ action :delete do
       end
     end
     template ::File.join(@lxc.rootfs, 'etc', 'interfaces') do
+      cookbook 'lxc'
       source 'interface.erb'
+      variables :container => new_resource.container
       subscribes :create, resources(:ruby_block => "lxc_interface_notifier[#{new_resource.container}]"), :delayed
     end
   end
