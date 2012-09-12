@@ -12,11 +12,18 @@ end
 action :create do
   unless(@loaded[new_resource.container])
     @loaded[new_resource.container] = true
+    ruby_block "lxc_fstab_notifier[#{new_resource.container}]" do
+      action :create
+      block{ true }
+      only_if do
+        new_resource.updated_by_last_action?
+      end
+    end
     template ::File.join(new_resource._lxc.container_path, 'fstab') do
       source 'fstab.erb'
       mode 0644
       variables :container => new_resource.container
-      subscribes :create, resources(:lxc_fstab => new_resource.name), :delayed
+      subscribes :create, resources(:ruby_block => "lxc_fstab_notifier[#{new_resource.container}]"), :delayed
     end
   end
 
@@ -33,11 +40,20 @@ end
 action :delete do
   unless(@loaded[new_resource.container])
     @loaded[new_resource.container] = true
+    
+    ruby_block "lxc_fstab_notifier[#{new_resource.container}]" do
+      action :create
+      block{ true }
+      only_if do
+        new_resource.updated_by_last_action?
+      end
+    end
+
     template ::File.join(new_resource._lxc.container_path, 'fstab') do
       source 'fstab.erb'
       mode 0644
       variables :container => new_resource.container
-      subscribes :create, resources(:lxc_fstab => new_resource.name), :delayed
+      subscribes :create, resources(:ruby_block => "lxc_fstab_notifier[#{new_resource.container}]"), :delayed
     end
   end
 
