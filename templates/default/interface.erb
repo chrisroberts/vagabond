@@ -1,0 +1,20 @@
+# Auto config dropped off by chef!
+
+# Always setup loopback
+auto lo
+iface lo inet loopback
+
+<% node[:lxc][:interfaces][@contianer].each do |net_set| -%>
+<% if net_set[:auto] -%>
+auto <%= net_set[:device] %>
+<% end -%>
+<% if net_set[:dynamic] -%>
+iface <%= net_set[:device] %> inet dhcp
+<% else -%>
+iface <%= net_set[:device] %> inet static
+  address <%= net_set[:address] %>
+  gateway <%= net_set[:gateway] %>
+  netmask <%= net_set[:netmask] %>
+<% end -%>
+<% end %>
+
