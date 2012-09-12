@@ -83,9 +83,9 @@ action :create do
     if(new_resource.chef_enabled && new_resource.new_container)
 
       #### Use cached chef package from host if available
-      if(%w(debian ubuntu).include?(new_resource.template) && system('ls /opt/chef-full*.deb 2>1 > /dev/null'))
+      if(%w(debian ubuntu).include?(new_resource.template) && system('ls /opt/chef*.deb 2>1 > /dev/null'))
         file_name = Dir.new('/opt').detect do |item| 
-          item.start_with?('chef-full') && item.end_with?('.deb')
+          item.start_with?('chef') && item.end_with?('.deb')
         end
         if(file_name)
           execute "lxc copy_chef_full[#{new_resource.name}]" do
