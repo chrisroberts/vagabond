@@ -184,12 +184,12 @@ class Lxc
   def run_command(cmd, args={})
     retries = args[:allow_failure_retry].to_i
     begin
-      cmd = Mixlib::ShellOut.new(cmd, 
+      shlout = Mixlib::ShellOut.new(cmd, 
         :logger => Chef::Log.logger, 
         :live_stream => Chef::Log.logger
       )
-      cmd.run_command
-      cmd.error!
+      shlout.run_command
+      shlout.error!
     rescue Mixlib::ShellOut::ShellCommandFailed
       if(args[:allow_failure])
         true
