@@ -103,7 +103,7 @@ class Lxc
 
   # Container address via lxc config file
   def lxc_stored_address
-    ip = File.readlines(container_config(name)).detect{|line|
+    ip = File.readlines(container_config).detect{|line|
       line.include?('ipv4')
     }.to_s.split('=').last.to_s.strip
     if(ip.to_s.empty?)
