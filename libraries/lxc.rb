@@ -153,41 +153,55 @@ class Lxc
   # Start the container
   def start
     run_command("lxc-start -n #{name} -d")
-    run_command("lxc-wait -n #{name} -s RUNNING")
+    run_command("lxc-wait -n #{name} -s RUNNING", :allow_failure_retry => 2)
   end
 
   # Stop the container
   def stop
     run_command("lxc-stop -n #{name}")
-    run_command("lxc-wait -n #{name} -s STOPPED")
+    run_command("lxc-wait -n #{name} -s STOPPED", :allow_failure_retry => 2)
   end
   
   # Freeze the container
   def freeze
     run_command("lxc-freeze -n #{name}")
-    run_command("lxc-wait -n #{name} -s FROZEN")
+    run_command("lxc-wait -n #{name} -s FROZEN", :allow_failure_retry => 2)
   end
 
   # Unfreeze the container
   def unfreeze
     run_command("lxc-unfreeze -n #{name}")
-    run_command("lxc-wait -n #{name} -s RUNNING")
+    run_command("lxc-wait -n #{name} -s RUNNING", :allow_failure_retry => 2)
   end
 
   # Shutdown the container
   def shutdown
     run_command("lxc-shutdown -n #{name}")
-    run_command("lxc-wait -n #{name} -s STOPPED")
+    run_command("lxc-wait -n #{name} -s STOPPED", :allow_failure_retry => 2)
   end
 
   # Simple helper to shell out
-  def run_command(cmd)
-    cmd = Mixlib::ShellOut.new(cmd, 
-      :logger => Chef::Log.logger, 
-      :live_stream => Chef::Log.logger
-    )
-    cmd.run_command
-    cmd.error!
+  def run_command(cmd, args={})
+    retries = args[:allow_failure_retry].to_i
+    begin
+      cmd = Mixlib::ShellOut.new(cmd, 
+        :logger => Chef::Log.logger, 
+        :live_stream => Chef::Log.logger
+      )
+      cmd.run_command
+      cmd.error!
+    rescue Mixlib::ShellOut::ShellCommandFailed
+      if(args[:allow_failure])
+        true
+      elsif(retries > 0)
+        Chef::Log.warn "LXC run command failed: #{cmd}"
+        Chef::Log.warn "Retrying command. #{args[:allow_failure_retry].to_i - retries} of #{args[:allow_failure_retry].to_i} retries remain"
+        retries -= 1
+        retry
+      else
+        raise
+      end
+    end
   end
 
   # cmd:: Shell command string
