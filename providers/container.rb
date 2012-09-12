@@ -68,11 +68,14 @@ action :create do
 
   #### Ensure host has ssh access into container
   directory ::File.join(new_resource._lxc.rootfs, 'root', '.ssh') do
-    action :create
+    action :nothing
+    subscribes :create, resources(:execute => "lxc create[#{new_resource.name}]"), :immediately
   end
 
   file ::File.join(new_resource._lxc.rootfs, 'root', '.ssh', 'authorized_keys') do
     content "# Chef generated key file\n#{::File.read('/opt/hw-lxc-config/id_rsa.pub')}\n"
+    action :nothing
+    subscribes :create, resources(:execute => "lxc create[#{new_resource.name}]"), :immediately
   end
 
 
@@ -81,18 +84,23 @@ action :create do
 
       #### Use cached chef package from host if available
       if(%w(debian ubuntu).include?(new_resource.template) && system('ls /opt/chef-full*.deb 2>1 > /dev/null'))
-        execute "lxc copy_chef_full[#{new_resource.name}]" do
-          action :nothing
-          command "cp /opt/chef-full*.deb #{::File.join(new_resource._lxc.rootfs, 'opt')}"
-          subscribes :create, resources(:execute => "lxc create[#{new_resource.name}]"), :immediately
+        file_name = Dir.new('/opt').detect do |item| 
+          item.start_with?('chef-full') && item.end_with?('.deb')
         end
+        if(file_name)
+          execute "lxc copy_chef_full[#{new_resource.name}]" do
+            action :nothing
+            command "cp /opt/#{file_name} #{::File.join(new_resource._lxc.rootfs, 'opt')}"
+            subscribes :run, resources(:execute => "lxc create[#{new_resource.name}]"), :immediately
+          end
 
-        execute "lxc install_chef_full[#{new_resource.name}]" do
-          action :nothing
-          command "chroot #{new_resource._lxc.rootfs} dpkg -i `ls #{::File.join(new_resource._lxc.rootfs, 'opt', 'chef*.deb')}`"
-          subscribes :create, resources(:execute => "lxc create[#{new_resource.name}]"), :immediately
+          execute "lxc install_chef_full[#{new_resource.name}]" do
+            action :nothing
+            command "chroot #{new_resource._lxc.rootfs} dpkg -i #{::File.join('/opt', file_name)}"
+            subscribes :run, resources(:execute => "lxc create[#{new_resource.name}]"), :immediately
+          end
+          @chef_installed = true
         end
-        @chef_installed = true
       end
 
       # TODO: Add resources for RPM install
