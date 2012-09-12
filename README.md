@@ -13,7 +13,7 @@ lxc_container 'my_container' do
   action :create
   validation_client 'my-validator'
   server_uri 'https://api.opscode.com/organizations/myorg'
-  validation_pem content_from_encrypted_dbag
+  validator_pem content_from_encrypted_dbag
   run_list ['role[base]']
   chef_enabled true
 end
