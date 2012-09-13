@@ -64,7 +64,7 @@ class LxcFileConfig
         if(cur_net)
           cur_net[name] = parts.last.strip
         else
-          raise "ACK! -> #{name}"
+          raise "Expecting 'lxc.network.type' to start network config block. Found: 'lxc.network.#{name}'"
         end
       else
         parts = line.split('=')
