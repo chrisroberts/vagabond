@@ -1,9 +1,5 @@
-def initialize(*args)
-  super
-  @action = :create
-end
-
 actions :create, :delete, :clone
+default_action :create
 
 attribute :base_container, :kind_of => String
 attribute :validation_client, :kind_of => String
@@ -15,8 +11,12 @@ attribute :chef_enabled, :kind_of => [TrueClass, FalseClass], :default => true
 attribute :copy_data_bag_secret_file, :kind_of => [TrueClass, FalseClass], :default => false
 attribute :data_bag_secret_file, :kind_of => String, :default => Chef::EncryptedDataBagItem::DEFAULT_SECRET_FILE
 attribute :static_ip, :kind_of => String, :default => false
-attribute :config, :kind_of => Hash
+attribute :default_config, :kind_of => [TrueClass, FalseClass], :default => true
+attribute :default_fstab, :kind_of => [TrueClass, FalseClass], :default => true
 attribute :container_commands, :kind_of => Array, :default => []
 attribute :initialize_commands, :kind_of => Array, :default => []
 attribute :new_container, :kind_of => [TrueClass, FalseClass], :default => false
-attribute :template, :equal_to => %w(busybox debian fedora opensuse sshd ubuntu ubuntu-cloud ubuntu-hw), :default => 'ubuntu-hw'
+attribute :template, :equal_to => %w(fedora debian ubuntu ubuntu-cloud), :default => 'ubuntu'
+attribute :_lxc
+# TODO: We should ultimately have support for all these templates
+#attribute :template, :equal_to => %w(busybox debian fedora opensuse sshd ubuntu ubuntu-cloud), :default => 'ubuntu'

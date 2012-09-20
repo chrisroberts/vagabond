@@ -30,9 +30,6 @@ end
 
 node[:lxc][:allowed_types].each do |type|
   lxc_container "#{type}_base" do
-    config(
-      'lxc.network.link' => node[:lxc][:bridge]
-    )
     template type
     chef_enabled false
     action :create
