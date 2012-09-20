@@ -1,10 +1,8 @@
-LXC
-===
+## LXC
 
 Manage linux containers with Chef.
 
-Example
---------
+### Example
 
 ```ruby
 include_recipe 'lxc'
@@ -30,10 +28,14 @@ end
 ```
 
 Containers do not have to be chef enabled but it does make them
-extremely easy to configure. The lxc_resource container also provides
+extremely easy to configure. The lxc_container resource also provides
 `initialize_commands` which an array of commands can be provided
 that will be run after the container is created.
 
-Repository:
+### Repository:
 
 * https://github.com/hw-cookbooks/lxc
+
+### Contributors
+
+* Sean Porter (https://github.com/portertech)
