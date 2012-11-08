@@ -1,3 +1,6 @@
+## v0.0.3
+* Remove resource for deprecated template
+
 ## v0.0.2
 * Cleanup current config and container LWRPs
 * Add new LWRPs (fstab and interface)
