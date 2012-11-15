@@ -14,7 +14,7 @@ def load_current_resource
     if(config.network.empty?)
       new_resource.network(
         :type => :veth,
-        :link => node[:lxc][:bridge],
+        :link => new_resource.default_bridge || node[:lxc][:bridge],
         :flags => :up,
         :hwaddr => "00:16:3e#{SecureRandom.hex(3).gsub(/(..)/, ':\1')}"
       )

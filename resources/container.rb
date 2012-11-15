@@ -10,7 +10,10 @@ attribute :run_list, :kind_of => Array
 attribute :chef_enabled, :kind_of => [TrueClass, FalseClass], :default => true
 attribute :copy_data_bag_secret_file, :kind_of => [TrueClass, FalseClass], :default => false
 attribute :data_bag_secret_file, :kind_of => String, :default => Chef::EncryptedDataBagItem::DEFAULT_SECRET_FILE
+attribute :default_bridge, :kind_of => String, :default => node[:lxc][:bridge]
 attribute :static_ip, :kind_of => String, :default => false
+attribute :static_netmask, :kind_of => String, :default => '255.255.255.0'
+attribute :static_gateway, :kind_of => String
 attribute :default_config, :kind_of => [TrueClass, FalseClass], :default => true
 attribute :default_fstab, :kind_of => [TrueClass, FalseClass], :default => true
 attribute :container_commands, :kind_of => Array, :default => []

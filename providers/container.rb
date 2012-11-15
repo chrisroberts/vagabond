@@ -4,6 +4,10 @@ def load_current_resource
     :base_dir => node[:lxc][:container_directory],
     :dnsmasq_lease_file => node[:lxc][:dnsmasq_lease_file]
   )
+  # TODO: Use some actual logic here, sheesh
+  if(new_resource.static_ip && new_resource.static_gateway.nil?)
+    new_resource.static_gateway new_resource.static_ip.sub(/\d+$/, '1')
+  end
   new_resource.new_container !new_resource._lxc.exists?
 end
 
@@ -43,6 +47,7 @@ action :create do
   if(new_resource.default_config)
     lxc_config new_resource.name do
       action :create
+      default_bridge new_resource.default_bridge
       notifies :restart, resources(:lxc_service => "lxc config_restart[#{new_resource.name}]"), :delayed
     end
   end
@@ -66,6 +71,16 @@ action :create do
     end
   end
 
+  if(new_resource.static_ip)
+    lxc_interface "#{new_resource.default_net_device}[#{new_resource.name}]" do
+      container new_resource.name
+      device 'eth0'
+      address new_resource.static_address
+      netmask new_resource.static_netmask
+      gateway new_resource.static_gateway
+    end
+  end
+
   #### Ensure host has ssh access into container
   directory ::File.join(new_resource._lxc.rootfs, 'root', '.ssh') do
     action :nothing
@@ -77,7 +92,6 @@ action :create do
     action :nothing
     subscribes :create, resources(:execute => "lxc create[#{new_resource.name}]"), :immediately
   end
-
 
   if(new_resource.chef_enabled || !new_resource.container_commands.empty?)
     if(new_resource.chef_enabled && new_resource.new_container)

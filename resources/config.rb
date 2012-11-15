@@ -3,6 +3,7 @@ default_action :create
 
 attribute :utsname, :kind_of => String, :default => nil # defaults to resource name
 attribute :network, :kind_of => [Array, Hash]
+attribute :default_bridge, :kind_of => String, :default => node[:lxc][:bridge]
 attribute :pts, :kind_of => Numeric, :default => 1024
 attribute :tty, :kind_of => Numeric, :default => 4
 attribute :arch, :kind_of => String, :default => 'amd64'
