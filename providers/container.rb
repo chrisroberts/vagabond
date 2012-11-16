@@ -8,6 +8,7 @@ def load_current_resource
   if(new_resource.static_ip && new_resource.static_gateway.nil?)
     new_resource.static_gateway new_resource.static_ip.sub(/\d+$/, '1')
   end
+  new_resource.default_bridge node[:lxc][:bridge] unless new_resource.default_bridge
   new_resource.new_container !new_resource._lxc.exists?
 end
 
@@ -310,20 +311,9 @@ action :clone do
 
     ruby_block "lxc run_chef[#{new_resource.name}]" do
       block do
-        first_run = true
-        begin
-          Class.new.send(:include, Chef::Mixin::ShellOut).new.shell_out!(
-            "ssh -o StrictHostKeyChecking=no -i /opt/hw-lxc-config/id_rsa #{new_resource._lxc.container_ip(5)} chef-client"
-          )
-        rescue => e
-          if(first_run)
-            first_run = false
-            sleep(2)
-            retry
-          else
-            raise e
-          end
-        end
+        new_resource._lxc.container_command(
+          "chef-client -K /etc/chef/validator.pem -c /etc/chef/client.rb -j /etc/chef/first_run.json", 3
+        )
       end
       action :nothing
       subscribes :create, resources(:execute => "lxc clone[#{new_resource.base_container} -> #{new_resource.name}]"), :immediately
