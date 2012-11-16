@@ -1,4 +1,7 @@
 class Lxc
+  class CommandFailed < StandardError
+  end
+  
   attr_reader :name
 
   class << self
@@ -180,17 +183,31 @@ class Lxc
     run_command("lxc-wait -n #{name} -s STOPPED", :allow_failure_retry => 2)
   end
 
+  def knife_container(cmd, ip)
+    require 'chef/knife/ssh'
+    Chef::Knife::Ssh.load_deps
+    ary = [
+      ip, '-m', '-i', '/opt/hw-lxc-config/id_rsa', '--no-host-key-verify', cmd
+    ]
+    k = Chef::Knife::Ssh.new(ary)
+    begin
+      k.run
+    rescue SystemExit => e
+      raise CommandFailed.new(cmd) unless e.success?
+    end
+  end
+
   # Simple helper to shell out
   def run_command(cmd, args={})
     retries = args[:allow_failure_retry].to_i
     begin
       shlout = Mixlib::ShellOut.new(cmd, 
         :logger => Chef::Log.logger, 
-        :live_stream => Chef::Log.logger
+        :live_stream => STDOUT
       )
       shlout.run_command
       shlout.error!
-    rescue Mixlib::ShellOut::ShellCommandFailed
+    rescue Mixlib::ShellOut::ShellCommandFailed, CommandFailed
       if(args[:allow_failure])
         true
       elsif(retries > 0)
@@ -208,9 +225,8 @@ class Lxc
   # retries:: Number of retry attempts (1 second sleep interval)
   # Runs command in container via ssh
   def container_command(cmd, retries=1)
-    base = "ssh -o StrictHostKeyChecking=no -i /opt/hw-lxc-config/id_rsa #{container_ip(5)} "
     begin
-      run_command("#{base} #{cmd}")
+      knife_container(cmd, container_ip(5))
     rescue => e
       if(retries.to_i > 0)
         Chef::Log.info "Encountered error running container command (#{cmd}): #{e}"
