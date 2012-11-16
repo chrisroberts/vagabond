@@ -8,6 +8,7 @@ def load_current_resource
   )
   new_resource.utsname new_resource.name unless new_resource.utsname
   new_resource.rootfs new_resource._lxc.rootfs unless new_resource.rootfs
+  new_resource.default_bridge node[:lxc][:bridge] unless new_resource.default_bridge
   new_resource.mount ::File.join(new_resource._lxc.path, 'fstab') unless new_resource.mount
   config = LxcFileConfig.new(new_resource._lxc.container_config)
   if((new_resource.network.nil? || new_resource.network.empty?))
