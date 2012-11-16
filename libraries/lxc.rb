@@ -186,10 +186,9 @@ class Lxc
   def knife_container(cmd, ip)
     require 'chef/knife/ssh'
     Chef::Knife::Ssh.load_deps
-    ary = [
+    k = Chef::Knife::Ssh.new([
       ip, '-m', '-i', '/opt/hw-lxc-config/id_rsa', '--no-host-key-verify', cmd
-    ]
-    k = Chef::Knife::Ssh.new(ary)
+    ])
     begin
       k.run
     rescue SystemExit => e
