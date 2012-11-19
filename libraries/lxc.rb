@@ -189,11 +189,12 @@ class Lxc
     k = Chef::Knife::Ssh.new([
       ip, '-m', '-i', '/opt/hw-lxc-config/id_rsa', '--no-host-key-verify', cmd
     ])
+    e = nil
     begin
-      k.run
+      e = k.run
     rescue SystemExit => e
-      raise CommandFailed.new(cmd) unless e.success?
     end
+    raise CommandFailed.new(cmd) if e.nil? || e != 0
   end
 
   # Simple helper to shell out
