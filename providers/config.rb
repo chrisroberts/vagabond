@@ -13,15 +13,19 @@ def load_current_resource
   config = LxcFileConfig.new(new_resource._lxc.container_config)
   if((new_resource.network.nil? || new_resource.network.empty?))
     if(config.network.empty?)
-      new_resource.network(
+      default_net = {
         :type => :veth,
-        :link => new_resource.default_bridge || node[:lxc][:bridge],
+        :link => new_resource.default_bridge,
         :flags => :up,
         :hwaddr => "00:16:3e#{SecureRandom.hex(3).gsub(/(..)/, ':\1')}"
-      )
+      }
+      default_net.merge!(:ipv4 => new_resource.static_ip) if new_resource.static_ip
     else
-      new_resource.network(config.network.first)
+      default_net = config.network.first
+      default_net.merge!(:link => new_resource.default_bridge)
+      default_net.merge!(:ipv4 => new_resource.static_ip) if new_resource.static_ip
     end
+    new_resource.network(default_net)
   else
     [new_resource.network].flatten.each_with_index do |net_hash, idx|
       if(config.network[idx].nil? || config.network[idx][:hwaddr].nil?)
