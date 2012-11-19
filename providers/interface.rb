@@ -36,11 +36,12 @@ action :create do
         new_resource.updated_by_last_action?
       end
     end
-    template ::File.join(@lxc.rootfs, 'etc', 'interfaces') do
+    template ::File.join(@lxc.rootfs, 'etc', 'network', 'interfaces') do
       source 'interface.erb'
       cookbook 'lxc'
       variables :container => new_resource.container
       subscribes :create, resources(:ruby_block => "lxc_interface_notifier[#{new_resource.container}]"), :delayed
+      mode 0644
     end
   end
 
