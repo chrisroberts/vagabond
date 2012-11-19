@@ -212,7 +212,8 @@ action :create do
       ruby_block "lxc run_chef[#{new_resource.name}]" do
         block do
           new_resource._lxc.container_command(
-            "chef-client -K /etc/chef/validator.pem -c /etc/chef/client.rb -j /etc/chef/first_run.json", 3
+            "chef-client -K /etc/chef/validator.pem -c /etc/chef/client.rb -j /etc/chef/first_run.json",
+            new_resource.chef_retries
           )
         end
         not_if do

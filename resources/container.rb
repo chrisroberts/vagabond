@@ -8,6 +8,7 @@ attribute :server_uri, :kind_of => String
 attribute :node_name, :kind_of => String
 attribute :run_list, :kind_of => Array
 attribute :chef_enabled, :kind_of => [TrueClass, FalseClass], :default => true
+attribute :chef_retries, :kind_of => Fixnum, :default => 0
 attribute :copy_data_bag_secret_file, :kind_of => [TrueClass, FalseClass], :default => false
 attribute :data_bag_secret_file, :kind_of => String, :default => Chef::EncryptedDataBagItem::DEFAULT_SECRET_FILE
 attribute :default_bridge, :kind_of => String
