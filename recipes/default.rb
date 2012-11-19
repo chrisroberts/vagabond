@@ -1,4 +1,7 @@
-package 'lxc'
+# install the server dependencies to run lxc
+node['lxc']['packages'].each do |lxcpkg|
+  package lxcpkg
+end
 
 include_recipe 'lxc::install_dependencies'
 
