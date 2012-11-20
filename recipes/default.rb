@@ -21,5 +21,10 @@ template '/etc/default/lxc' do
       :lxc_shutdown_timeout => node[:lxc][:shutdown_timeout]
     }
   )
-  # notify?
+end
+
+#this just reloads the dnsmasq rules when
+service "lxc-net" do
+  action :enable
+  subscribes :restart, resources("template[/etc/default/lxc]")
 end
