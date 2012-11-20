@@ -42,9 +42,17 @@ end
 ```
 
 Containers do not have to be Chef enabled but it does make them
-extremely easy to configure. The `lxc_container` resource also provides
-`initialize_commands` which an array of commands can be provided
-that will be run after the container is created.
+extremely easy to configure. If you want the Omnibus installer
+cached, you can set the attribute
+
+```ruby
+node['omnibus_updater']['cache_omnibus_installer'] = true
+```
+
+in a role or environment (default is false). The `lxc_container`
+resource also provides `initialize_commands` which an array of
+commands can be provided that will be run after the container is
+created.
 
 ### Repository:
 
