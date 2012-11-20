@@ -12,7 +12,7 @@ attribute :chef_retries, :kind_of => Fixnum, :default => 0
 attribute :copy_data_bag_secret_file, :kind_of => [TrueClass, FalseClass], :default => false
 attribute :data_bag_secret_file, :kind_of => String, :default => Chef::EncryptedDataBagItem::DEFAULT_SECRET_FILE
 attribute :default_bridge, :kind_of => String
-attribute :static_ip, :kind_of => String, :default => false
+attribute :static_ip, :kind_of => String
 attribute :static_netmask, :kind_of => String, :default => '255.255.255.0'
 attribute :static_gateway, :kind_of => String
 attribute :default_config, :kind_of => [TrueClass, FalseClass], :default => true
