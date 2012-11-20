@@ -193,8 +193,7 @@ action :create do
         remote_file "lxc chef_install_script[#{new_resource.name}]" do
           source "http://opscode.com/chef/install.sh"
           path ::File.join(new_resource._lxc.rootfs, 'opt', 'chef-install.sh')
-          action :nothing
-          subscribes :create_if_missing, resources(:execute => "lxc create[#{new_resource.name}]"), :immediately
+          action :create_if_missing
         end
 
         ruby_block "lxc install_chef[#{new_resource.name}]" do
@@ -203,8 +202,9 @@ action :create do
               "bash /opt/chef-install.sh"
             )
           end
-          action :nothing
-          subscribes :create, resources(:execute => "lxc create[#{new_resource.name}]"), :immediately
+          not_if do
+            File.exists?(new_resource._lxc.rootfs, 'usr', 'bin', 'chef-client')
+          end
         end
       end
 
