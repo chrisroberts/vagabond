@@ -85,7 +85,7 @@ action :create do
         )
         file.write_file
       end
-      not_if "route add default gw #{new_resource.static_gateway} #{::File.join(new_resource._lxc.rootfs, 'etc', 'rc.local')}"
+      not_if "grep \"route add default gw #{new_resource.static_gateway}\" #{::File.join(new_resource._lxc.rootfs, 'etc', 'rc.local')}"
     end
   end
 
