@@ -4,7 +4,6 @@ include_recipe "lxc"
 
 node['lxc']['containers'].each do | name, container |
   Chef::Log.info "Creating LXC container name:#{name}"
-  Chef::Log.info "Creating LXC container container:#{container}"
   lxc_container name do
     action :create
     template container['template'] if container['template']
