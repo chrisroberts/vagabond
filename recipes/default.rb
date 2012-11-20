@@ -23,6 +23,3 @@ template '/etc/default/lxc' do
   )
   # notify?
 end
-
-node.set[:omnibus_updater][:cache_omnibus_installer] = true
-include_recipe 'omnibus_updater::deb_downloader'
