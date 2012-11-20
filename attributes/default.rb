@@ -21,4 +21,4 @@ default[:lxc][:user_pass][:debian] = {:username => 'root', :password => 'root'}
 default[:lxc][:user_pass][:ubuntu] = {:username => 'ubuntu', :password => 'ubuntu'}
 default[:lxc][:user_pass][:fedora] = {:username => 'root', :password => 'root'}
 
-default[:lxc][:packages] = %w{ lxc }
+default[:lxc][:packages] = %w(lxc)
