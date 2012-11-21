@@ -9,7 +9,5 @@ node['lxc']['containers'].each do | name, container |
       self.send(meth, param)
     end
     action :create unless container.has_key?(:action)
-    # this is getting refactored out into another recipe eventually
-    chef_enabled false
   end
 end
