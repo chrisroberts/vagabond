@@ -1,5 +1,9 @@
-# Fedora allowed? Need yum
-package 'yum' if node[:lxc][:allowed_types].include?('fedora')
+# Fedora allowed? Needs yum and curl to download packages
+if node[:lxc][:allowed_types].include?('fedora')
+  ['yum', 'curl'].each do |pkg|
+    package pkg
+  end
+end
 
 # OpenSuse allowed? Needs zypper (no package available yet!)
 # package 'zypper' if node[:lxc][:allowed_types].include?('opensuse')

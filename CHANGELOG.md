@@ -1,6 +1,7 @@
 ## v0.1.0
 * Abstracted out packages for cross-platform support later.
 * Added the 'containers' recipe to create containers for the members of the node['lxc']['containers'] hash
+* Add support for use of the apt::cacher-client settings if a proxy is in use.
 
 ## v0.0.3
 * Remove resource for deprecated template
