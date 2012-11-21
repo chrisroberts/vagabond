@@ -1,5 +1,6 @@
 ## v0.1.0
-* abstracted out packages for cross-platform support later.
+* Abstracted out packages for cross-platform support later.
+* Added the 'containers' recipe to create containers for the members of the node['lxc']['containers'] hash
 
 ## v0.0.3
 * Remove resource for deprecated template
