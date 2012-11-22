@@ -6,7 +6,9 @@ Manage linux containers with Chef.
 
 #### default
 
-Installs the packages and configuration files needed for lxc on the server.
+Installs the packages and configuration files needed for lxc on the server. If
+the node uses apt-cacher-ng as a client, the server will be reused when building
+containers.
 
 #### install_dependencies
 
