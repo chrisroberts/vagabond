@@ -20,9 +20,11 @@ This recipe creates all of the containers defined in the `['lxc']['containers']`
 hash. Here is an example of an `example` container:
 
 ```ruby
-node['lxc']['containers']['example'] = { 'template' => 'ubuntu',
-                                         'trim' => , false,
-                                         'debug' => , true }
+node['lxc']['containers']['example'] = { 
+  'template' => 'ubuntu',
+  'trim' => , false,
+  'debug' => , true 
+}
 ```
 
 You may set `trim` and `debug` to `true` if you need them (default is `false`).
@@ -31,7 +33,7 @@ Backing store file system and template options are not yet supported.
 
 #### knife
 
-Install and manage the knife-lxc plugin.
+Install and manage containers via the knife-remotelxc plugin.
 
 ### Example
 
