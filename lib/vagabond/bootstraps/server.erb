@@ -1,0 +1,62 @@
+bash -c '
+
+apt-get install -y -q wget
+curl -L https://www.opscode.com/chef/install.sh | sudo bash
+mkdir -p /var/chef/cache /var/chef/cookbooks/chef-server /var/chef/cookbooks/chef-server-populator
+wget -qO- https://github.com/opscode-cookbooks/chef-server/archive/master.tar.gz | tar xvzC /var/chef/cookbooks/chef-server --strip-components=1
+wget -qO- https://github.com/hw-cookbooks/chef-server-populator/tarball/master | tar xvzC /var/chef/cookbooks/chef-server-populator --strip-components=1
+
+mkdir -p /tmp/chef-server-setup
+(
+cat <<'EOP'
+<%= IO.read(Chef::Config[:validation_key]) %>
+EOP
+) > /tmp/chef-server-setup/validation.pem
+(
+cat <<'EOP'
+<%= %x{openssl rsa -in #{Chef::Config[:validation_key]} -pubout} %>
+EOP
+) > /tmp/chef-server-setup/validation_pub.pem
+(
+cat <<'EOP'
+<%= %x{openssl rsa -in #{Chef::Config[:client_key]} -pubout} %>
+EOP
+) > /tmp/chef-server-setup/client_key_pub.pem
+
+mkdir -p /etc/chef
+cp /tmp/chef-server-setup/validation.pem /etc/chef/validation.pem
+chmod 600 /etc/chef/validation.pem
+
+IPADDR=`ip addr show eth0 | grep "inet " | awk -F" " '\''{print $2}'\'' | sed -e "s/\/24//"`
+(
+echo "
+{
+  \"chef-server\": {
+    \"configuration\": {
+      \"chef_server_webui\": {
+        \"enable\": false
+      }
+    }
+  },
+  \"chef_server_populator\": {
+    \"clients\": {
+      \"<%= Chef::Config[:node_name] %>\": \"client_key_pub.pem\",
+      \"<%= Chef::Config[:validation_client_name] %>\": \"validation_pub.pem\"
+    },
+    \"servername_override\": \"${IPADDR}\",
+    \"base_path\": \"/tmp/chef-server-setup\"
+  },
+  \"run_list\": [ \"recipe[chef-server-populator::solo]\", \"recipe[chef-server]\" ]
+}
+"
+) > /tmp/chef-server.json
+
+chef-solo -j /tmp/chef-server.json
+
+rm -rf /tmp/chef-server-setup
+
+echo "**********************************************"
+echo "* NOTE: Update chef_server_url in knife.rb!  *"
+echo "*   IP: ${IPADDR}                       *"
+echo "**********************************************"
+'

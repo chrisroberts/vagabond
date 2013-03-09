@@ -1,0 +1,7 @@
+cookbook "lxc" do
+  configuration "ubuntu_lxc"
+  configuration "centos_lxc"
+  configuration "lxc_templates"
+  configuration "lxc_files"
+  configuration "chef-bootstrap"
+end
