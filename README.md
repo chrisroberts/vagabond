@@ -84,6 +84,11 @@ _can_ get around this using the setcap stuff, but it's pretty meh. If you
 do go that road, just turn off `sudo` in your Vagabond file by setting
 `:sudo => false`.
 
+## Extra note
+
+This is still very much in alpha testing phase. So if you find bugs, please
+report them!
+
 ## Infos
 
 * Repository: https://github.com/chrisroberts/vagabond
