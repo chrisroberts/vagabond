@@ -65,6 +65,7 @@ $ vagabond status [node]
 
 # ssh to node
 $ vagabond ssh precise
+```
 
 ## Local chef server?
 
