@@ -107,25 +107,27 @@ class Lxc
   # retries:: Number of discovery attempt (3 second sleep intervals)
   # Returns container IP
   def container_ip(retries=0, raise_on_fail=false)
-    retries.to_i.times do
+    (retries.to_i + 1).times do
       ip = hw_detected_address || leased_address || lxc_stored_address
       return ip if ip && self.class.connection_alive?(ip)
       Chef::Log.warn "LXC IP discovery: Failed to detect live IP"
-      sleep(3)
+      sleep(3) if retries > 0
     end
     raise "Failed to detect live IP address for container: #{name}" if raise_on_fail
   end
 
   # Container address via lxc config file
   def lxc_stored_address
-    ip = File.readlines(container_config).detect{|line|
-      line.include?('ipv4')
-    }.to_s.split('=').last.to_s.strip
-    if(ip.to_s.empty?)
-      nil
-    else
-      Chef::Log.info "LXC Discovery: Found container address via storage: #{ip}"
-      ip
+    if(File.exists?(container_config))
+      ip = File.readlines(container_config).detect{|line|
+        line.include?('ipv4')
+      }.to_s.split('=').last.to_s.strip
+      if(ip.to_s.empty?)
+        nil
+      else
+        Chef::Log.info "LXC Discovery: Found container address via storage: #{ip}"
+        ip
+      end
     end
   end
 
@@ -149,18 +151,20 @@ class Lxc
   end
 
   def hw_detected_address
-    hw = File.readlines(container_config).detect{|line|
-      line.include?('hwaddr')
-    }.to_s.split('=').last.to_s.strip
-    running? # need to do a list!
-    ip = File.readlines('/proc/net/arp').detect{|line|
-      line.include?(hw)
-    }.to_s.split(' ').first.to_s.strip
-    if(ip.to_s.empty?)
-      nil
-    else
-      Chef::Log.info "LXC Discovery: Found container address via HW addr: #{ip}"
-      ip
+    if(File.exists?(container_config))
+      hw = File.readlines(container_config).detect{|line|
+        line.include?('hwaddr')
+      }.to_s.split('=').last.to_s.strip
+      running? # need to do a list!
+      ip = File.readlines('/proc/net/arp').detect{|line|
+        line.include?(hw)
+      }.to_s.split(' ').first.to_s.strip
+      if(ip.to_s.empty?)
+        nil
+      else
+        Chef::Log.info "LXC Discovery: Found container address via HW addr: #{ip}"
+        ip
+      end
     end
   end
   
