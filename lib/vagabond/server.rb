@@ -40,6 +40,20 @@ module Vagabond
       end
     end
 
+    def shutdown
+      if(lxc.exists?)
+        if(lxc.running?)
+          ui.info 'Shutting down Chef server container...'
+          lxc.shutdown
+          ui.info 'Chef server container shut down!'
+        else
+          ui.error 'Chef server container not currently running'
+        end
+      else
+        ui.error 'Chef server container has not been created'
+      end
+    end
+
     def do_create
       cmd = Mixlib::ShellOut.new("#{Config[:sudo]}lxc-clone -n #{generated_name} -o #{@base_template}")
       cmd.run_command
