@@ -1,4 +1,9 @@
 
+cookbook_file '/usr/share/lxc/templates/lxc-centos' do
+  source 'lxc-centos'
+  mode 0755
+end
+
 node[:vagabond][:bases].each do |name, options|
 
   lxc_container name do
