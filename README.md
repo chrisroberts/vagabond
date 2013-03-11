@@ -46,32 +46,38 @@ Pretty simple, right?
 
 ```
 # create and provision
-$ vagabond up precise
+$ vagabond up NODE
 
 # provision existing
-$ vagabond provision precise
+$ vagabond provision NODE
 
 # freeze (pause) node
-$ vagabond freeze precise
+$ vagabond freeze NODE
 
 # thaw (unpause) node
-$ vagabond thaw node
+$ vagabond thaw NODE
 
 # destroy node
-$ vagabond destroy precise
+$ vagabond destroy NODE
 
 # status of defined nodes
-$ vagabond status [node]
+$ vagabond status [NODE]
 
 # ssh to node
-$ vagabond ssh precise
+$ vagabond ssh NODE
 ```
 
 ## Local chef server?
 
 Yep, that's right. You can let vagabond set you up with a local chef
 server hanging out in a container, which all your vagabond nodes can
-then run against. Isolated building and test? You betcha!
+then run against. Isolated building and testing? You betcha!
+
+Server containers are isolated by project. This means you will have an
+erchef instance running in an isolated container for every project the
+local server option is enabled. It's just an important bit of information
+to remember so you can make a mental note to stop or freeze it when not
+in use.
 
 Server provides a superset of the commands available for regular
 vagabond nodes. They are accessed using:
