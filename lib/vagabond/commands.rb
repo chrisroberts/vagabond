@@ -10,8 +10,20 @@ module Vagabond
     
     VALID_COMMANDS = %w(
       up destroy provision status freeze thaw ssh server
-    )
+    ).sort
 
+    banner(
+      (
+        VALID_COMMANDS.map{ |cmd|
+          next if cmd == 'server'
+          "vagabond #{cmd} NODE [options]"
+        }.compact + (VALID_COMMANDS + %w(shutdown)).sort.map{ |cmd|
+          next if cmd == 'server'
+          "vagabond server #{cmd} [options]"
+        }.compact
+      ).join("\n")
+    )
+    
     option(:force_solo,
       :long => '--force-solo',
       :boolean => true,
