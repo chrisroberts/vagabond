@@ -60,6 +60,8 @@ module Vagabond
       end
     end
 
+    protected
+
     def setup_ui
       Chef::Config[:color] = true
       @ui = Chef::Knife::UI.new(STDOUT, STDERR, STDIN, {})
@@ -73,10 +75,12 @@ module Vagabond
     end
     
     def execute
-      send(@action)
+      if(public_methods.include?(@action.to_sym))
+        send(@action)
+      else
+        ui.error "Invalid action received: #{@action}"
+      end
     end
-
-    private
 
     def generate_hash
       Digest::MD5.hexdigest(@vagabondfile.path)

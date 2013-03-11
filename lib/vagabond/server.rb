@@ -54,25 +54,6 @@ module Vagabond
       end
     end
 
-    def do_create
-      cmd = Mixlib::ShellOut.new("#{Config[:sudo]}lxc-clone -n #{generated_name} -o #{@base_template}")
-      cmd.run_command
-      cmd.error!
-      @lxc = Lxc.new(generated_name)
-      @internal_config[:mappings][name] = generated_name
-      @internal_config.save
-      ui.info "Chef Server container created!"
-      lxc.start
-      ui.info "Bootstrapping erchef..."
-      tem_file = File.expand_path(File.join(File.dirname(__FILE__), 'bootstraps/server.erb'))
-      com = "#{Config[:sudo]}knife bootstrap #{lxc.container_ip(10, true)} --template-file #{tem_file} -i /opt/hw-lxc-config/id_rsa"
-      cmd = Mixlib::ShellOut.new(com, :live_stream => STDOUT, :timeout => 1200)
-      cmd.run_command
-      cmd.error!
-      ui.info 'Chef Server has been created!'
-      auto_upload if vagabondfile[:local_chef_server][:auto_upload]
-    end
-
     def auto_upload
       ui.info 'Auto uploading all assets to local Chef server...'
       upload_roles
@@ -125,22 +106,7 @@ module Vagabond
       end
     end
 
-    def berks_upload
-      write_berks_config
-      com = "berks upload -c #{File.join(vagabond_dir, 'berks.json')}"
-      cmd = Mixlib::ShellOut.new(com)
-      cmd.run_command
-      cmd.error!
-      ui.info "Berks cookbook upload complete!"
-    end
-
-    def raw_upload
-      com = "knife cookbook upload#{Config[:knife_opts]} --all"
-      cmd = Mixlib::ShellOut.new(com)
-      cmd.run_command
-      cmd.error!
-      ui.info "Cookbook upload complete!"
-    end
+    private
 
     def write_berks_config
       path = File.join(vagabond_dir, 'berks.json')
@@ -166,6 +132,42 @@ module Vagabond
         @_gn = "server-#{s.hexdigest}"
       end
       @_gn
+    end
+
+    def do_create
+      cmd = Mixlib::ShellOut.new("#{Config[:sudo]}lxc-clone -n #{generated_name} -o #{@base_template}")
+      cmd.run_command
+      cmd.error!
+      @lxc = Lxc.new(generated_name)
+      @internal_config[:mappings][name] = generated_name
+      @internal_config.save
+      ui.info "Chef Server container created!"
+      lxc.start
+      ui.info "Bootstrapping erchef..."
+      tem_file = File.expand_path(File.join(File.dirname(__FILE__), 'bootstraps/server.erb'))
+      com = "#{Config[:sudo]}knife bootstrap #{lxc.container_ip(10, true)} --template-file #{tem_file} -i /opt/hw-lxc-config/id_rsa"
+      cmd = Mixlib::ShellOut.new(com, :live_stream => STDOUT, :timeout => 1200)
+      cmd.run_command
+      cmd.error!
+      ui.info 'Chef Server has been created!'
+      auto_upload if vagabondfile[:local_chef_server][:auto_upload]
+    end
+
+    def berks_upload
+      write_berks_config
+      com = "berks upload -c #{File.join(vagabond_dir, 'berks.json')}"
+      cmd = Mixlib::ShellOut.new(com)
+      cmd.run_command
+      cmd.error!
+      ui.info "Berks cookbook upload complete!"
+    end
+
+    def raw_upload
+      com = "knife cookbook upload#{Config[:knife_opts]} --all"
+      cmd = Mixlib::ShellOut.new(com)
+      cmd.run_command
+      cmd.error!
+      ui.info "Cookbook upload complete!"
     end
 
   end
