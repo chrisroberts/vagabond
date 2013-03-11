@@ -8,19 +8,14 @@ module Vagabond
 
     include Mixlib::CLI
     
-    VALID_COMMANDS = %w(
-      up destroy provision status freeze thaw ssh server
-    ).sort
-
     banner(
       (
-        VALID_COMMANDS.map{ |cmd|
+        %w(Nodes:) + Vagabond.public_instance_methods(false).sort.map{ |cmd|
+          "\tvagabond #{cmd} NODE [options]"
+        }.compact + %w(Server:) + Server.public_instance_methods(false).sort.map{ |cmd|
           next if cmd == 'server'
-          "vagabond #{cmd} NODE [options]"
-        }.compact + (VALID_COMMANDS + %w(shutdown)).sort.map{ |cmd|
-          next if cmd == 'server'
-          "vagabond server #{cmd} [options]"
-        }.compact
+          "\tvagabond server #{cmd} [options]"
+        }.compact + %w(Options:)
       ).join("\n")
     )
     
@@ -56,14 +51,11 @@ module Vagabond
     def run!(argv)
       parse_options
       name_args = parse_options(argv)
-      unless(VALID_COMMANDS.include?(name_args.first))
-        raise ArgumentError.new('Invalid command provided!')
-      end
       Config.merge!(config)
       if(name_args.first.to_s == 'server')
-        Server.new(name_args.shift, name_args).execute
+        Server.new(name_args.shift, name_args).send(:execute)
       else
-        Vagabond.new(name_args.shift, name_args).execute
+        Vagabond.new(name_args.shift, name_args).send(:execute)
       end
     end
   end
