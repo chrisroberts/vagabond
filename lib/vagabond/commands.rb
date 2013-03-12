@@ -1,4 +1,5 @@
 require 'mixlib/cli'
+require 'chef/log'
 require 'vagabond/config'
 require 'vagabond/vagabond'
 require 'vagabond/server'
@@ -7,12 +8,17 @@ module Vagabond
   class Commands
 
     include Mixlib::CLI
+
+    DEFAULT_ACTIONS = Actions.constants.map do |konst|
+      const = Actions.const_get(konst)
+      const.public_instance_methods(false) if const.is_a?(Module)
+    end.flatten.sort
     
     banner(
       (
-        %w(Nodes:) + Vagabond.public_instance_methods(false).sort.map{ |cmd|
+        %w(Nodes:) + DEFAULT_ACTIONS.map{ |cmd|
           "\tvagabond #{cmd} NODE [options]"
-        }.compact + %w(Server:) + Server.public_instance_methods(false).sort.map{ |cmd|
+        }.compact + %w(Server:) + (DEFAULT_ACTIONS + Server.public_instance_methods(false)).sort.map{ |cmd|
           next if cmd == 'server'
           "\tvagabond server #{cmd} [options]"
         }.compact + %w(Options:)
@@ -49,6 +55,9 @@ module Vagabond
     )
     
     def run!(argv)
+      # Turn off Chef logging since we will deal with
+      # our own output
+      Chef::Log.init('/dev/null')
       parse_options
       name_args = parse_options(argv)
       Config.merge!(config)
