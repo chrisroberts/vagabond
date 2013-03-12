@@ -1,3 +1,4 @@
+include_recipe 'lxc::install_dependencies'
 
 cookbook_file '/usr/share/lxc/templates/lxc-centos' do
   source 'lxc-centos'
@@ -14,7 +15,7 @@ node[:vagabond][:bases].each do |name, options|
       'rm -f /etc/sysctl.d/10-console-messages.conf',
       'rm -f /etc/sysctl.d/10-ptrace.conf',
       'rm -f /etc/sysctl.d/10-kernel-hardening.conf',
-      'apt-get install -q -y curl',
+      "#{options[:template] == 'centos' ? 'yum install -q -y curl' : 'apt-get install -q -y curl'}",
       'curl -L https://www.opscode.com/chef/install.sh | sudo bash'
     ]
   end
