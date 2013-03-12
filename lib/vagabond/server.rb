@@ -12,34 +12,9 @@ module Vagabond
       @action = actions.shift
       setup_ui
       load_configurations
+      Config[:disable_auto_provision] = true
     end
     
-    def create
-      if(lxc.exists?)
-        ui.warn 'Server container already exists'
-        if(lxc.frozen?)
-          ui.fatal 'Server container is currently frozen!'
-        elsif(lxc.stopped?)
-          lxc.start
-          ui.info 'Server container has been started'
-        else
-          ui.info 'Server container is currently running'
-        end
-      else
-        ui.info 'Creating Chef server container...'
-        do_create
-      end
-    end
-
-    def destroy
-      if(lxc.exists?)
-        ui.info 'Destroying Chef server container...'
-        do_destroy
-      else
-        ui.fatal 'No Chef server exists within this environment'
-      end
-    end
-
     def stop
       if(lxc.exists?)
         if(lxc.running?)
