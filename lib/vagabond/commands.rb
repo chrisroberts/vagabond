@@ -54,6 +54,12 @@ module Vagabond
       :boolean => true,
       :default => false
     )
+
+    option(:debug,
+      :long => '--debug',
+      :boolean => true,
+      :default => false
+    )
     
     def run!(argv)
       # Turn off Chef logging since we will deal with
