@@ -2,15 +2,18 @@ module Vagabond
   module Actions
     module Create
       def create
-        create
+        if(lxc.exists?)
+          ui.error "Node already exists: #{name}"
+        else
+          create
+        end
       end
 
       private
 
-      # Lets get this out proper!
       def do_create
         unless(check_existing!)
-          @ui.info "LXC: Creating #{name}..."
+          @ui.info "#{ui.color('Vagabond:', :bold)} Creating #{ui.color(name, :green)}"
           com = "#{sudo}lxc-start-ephemeral -d -o #{config[:template]}"
           c = Mixlib::ShellOut.new("#{com} && sleep 3")
           c.run_command
@@ -18,7 +21,7 @@ module Vagabond
           @internal_config[:mappings][name] = e_name
           @internal_config.save
           @lxc = Lxc.new(e_name)
-          @ui.info "LXC: #{name} has been created!"
+          @ui.info ui.color('  -> CREATED!', :green)
         else
           lxc.start unless lxc.running?
         end

@@ -130,7 +130,7 @@ module Vagabond
     end
     
     def run_solo
-      ui.info 'Ensuring expected system state...'
+      ui.info ui.color('Ensuring expected system state...', :yellow)
       com = "#{Config[:sudo]}chef-solo -j #{File.join(store_path, 'dna.json')} -c #{File.join(store_path, 'solo.rb')}"
       cmd = Mixlib::ShellOut.new(com, :timeout => 1200)
       cmd.run_command

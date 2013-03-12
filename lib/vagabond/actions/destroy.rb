@@ -2,9 +2,13 @@ module Vagabond
   module Actions
     module Destroy
       def destroy
-        ui.info "Destroying instance: #{name}..."
-        do_destroy
-        ui.info 'Complete!'
+        if(lxc.exists?)
+          ui.info "#{ui.color('Vagabond:', :bold)} Destroying node: #{ui.color(name, :red)}"
+          do_destroy
+          ui.info ui.color('  -> DESTROYED', :red)
+        else
+          ui.error "Node not created: #{name}"
+        end
       end
 
       private
@@ -16,7 +20,7 @@ module Vagabond
         cmd.run_command
         cmd.error!
         if(cmd.stderr.include?('skipping'))
-          ui.warn 'Failed to unmount some resource. Doing so manually'
+          ui.info ui.color('  -> Failed to unmount some resources. Forcing manually.', :yellow)
           %w(rootfs ephemeralbind).each do |mnt|
             cmd = Mixlib::ShellOut.new("#{Config[:sudo]}umount /var/lib/lxc/#{lxc.name}/#{mnt}")
             cmd.run_command
