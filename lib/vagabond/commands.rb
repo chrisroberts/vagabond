@@ -3,6 +3,7 @@ require 'chef/log'
 require 'vagabond/config'
 require 'vagabond/vagabond'
 require 'vagabond/server'
+require 'vagabond/knife'
 
 module Vagabond
   class Commands
@@ -61,8 +62,11 @@ module Vagabond
       parse_options
       name_args = parse_options(argv)
       Config.merge!(config)
-      if(name_args.first.to_s == 'server')
+      case name_args.first.to_s
+      when 'server'
         Server.new(name_args.shift, name_args).send(:execute)
+      when 'knife'
+        Knife.new(name_args.shift, name_args).send(:execute)
       else
         Vagabond.new(name_args.shift, name_args).send(:execute)
       end

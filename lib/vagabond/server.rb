@@ -39,49 +39,56 @@ module Vagabond
     end
 
     def upload_roles
-      ui.info "Uploading roles to local Chef server..."
-      com = "knife role from file #{File.join(base_dir, 'roles/*')} #{Config[:knife_opts]}"
-      cmd = Mixlib::ShellOut.new(com)
-      cmd.run_command
-      cmd.error!
-      ui.info "Roles uploaded to local Chef server!"
+      am_uploading('roles') do
+        com = "knife role from file #{File.join(base_dir, 'roles/*')} #{Config[:knife_opts]}"
+        cmd = Mixlib::ShellOut.new(com)
+        cmd.run_command
+        cmd.error!
+      end
     end
 
     def upload_databags
-      ui.info "Uploading data bags to local Chef server..."
-      Dir.glob(File.join(base_dir, "data_bags/*")).each do |b|
-        next if %w(. ..).include?(b)
-        coms = [
-          "knife data bag create #{File.basename(b)} #{Config[:knife_opts]}",
-          "knife data bag from file #{File.basename(b)} #{Config[:knife_opts]} --all"
-        ].each do |com|
-          cmd = Mixlib::ShellOut.new(com)
-          cmd.run_command
-          cmd.error!
+      am_uploading('data bags') do
+        Dir.glob(File.join(base_dir, "data_bags/*")).each do |b|
+          next if %w(. ..).include?(b)
+          coms = [
+            "knife data bag create #{File.basename(b)} #{Config[:knife_opts]}",
+            "knife data bag from file #{File.basename(b)} #{Config[:knife_opts]} --all"
+          ].each do |com|
+            cmd = Mixlib::ShellOut.new(com)
+            cmd.run_command
+            cmd.error!
+          end
         end
       end
-      ui.info "Data bags uploaded to local Chef server!"
     end
 
     def upload_environments
-      ui.info "Uploading environments to local Chef server..."
-      com = "knife environment from file #{File.join(base_dir, 'environments/*')} #{Config[:knife_opts]}"
-      cmd = Mixlib::ShellOut.new(com)
-      cmd.run_command
-      cmd.error!
-      ui.info "Environments uploaded to local Chef server!"
+      am_uploading('environments') do
+        com = "knife environment from file #{File.join(base_dir, 'environments/*')} #{Config[:knife_opts]}"
+        cmd = Mixlib::ShellOut.new(com)
+        cmd.run_command
+        cmd.error!
+      end
     end
 
     def upload_cookbooks
-      ui.info "Uploading cookbooks to local Chef server..."
-      if(vagabondfile[:local_chef_server][:berkshelf])
-        berks_upload
-      else
-        raw_upload
+      am_uploading('cookbooks') do
+        if(vagabondfile[:local_chef_server][:berkshelf])
+          berks_upload
+        else
+          raw_upload
+        end
       end
     end
 
     private
+
+    def am_uploading(thing)
+      ui.info "#{ui.color('Local chef server:', :bold)} Uploading #{ui.color(thing, :green)}"
+      yield
+      ui.info ui.color("  -> UPLOADED #{thing.upcase}", :green)
+    end
 
     def write_berks_config
       path = File.join(vagabond_dir, 'berks.json')
