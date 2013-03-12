@@ -155,7 +155,7 @@ echo "Downloading centos minimal ..."
 YUM="yum --installroot $INSTALL_ROOT -y --nogpgcheck"
 PKG_LIST="yum initscripts passwd rsyslog vim-minimal dhclient chkconfig"
 PKG_LIST="$PKG_LIST rootfiles policycoreutils centos-release openssh-server avahi"
-MIRRORLIST_URL="http://mirrorlist.centos.org/?release=$release&arch=$arch&repo=os"
+MIRRORLIST_URL="http://mirrorlist.centos.org/?release=$release.$releaseminor&arch=$arch&repo=os"
  
 DOWNLOAD_OK=no
 for trynumber in 1 2 3; do
