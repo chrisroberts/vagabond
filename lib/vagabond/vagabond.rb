@@ -8,11 +8,14 @@ end
 
 require 'vagabond/vagabondfile'
 require 'vagabond/internal_configuration'
+require 'vagabond/helpers'
 require 'chef/knife/core/ui'
 require File.join(File.dirname(__FILE__), 'cookbooks/lxc/libraries/lxc.rb')
 
 module Vagabond
   class Vagabond
+
+    include Helpers
 
     class << self
       attr_accessor :ui
@@ -98,15 +101,6 @@ module Vagabond
       end
     end
     
-    def sudo
-      case @vagabondfile[:sudo]
-      when TrueClass
-        'sudo '
-      when String
-        "#{@vagabondfile[:sudo]} "
-      end
-    end
-
     def base_dir
       File.dirname(vagabondfile.path)
     end
