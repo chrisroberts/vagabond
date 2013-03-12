@@ -55,7 +55,12 @@ module Vagabond
       unless(Config[:disable_local_server])
         if(@vagabondfile[:local_chef_server] && @vagabondfile[:local_chef_server][:enabled])
           srv = Lxc.new(@internal_config[:mappings][:server])
-          Config[:knife_opts] = " -s https://#{srv.container_ip(10, true)}" if srv.running?
+          if(srv.running?)
+            Config[:knife_opts] = " -s https://#{srv.container_ip(10, true)}"
+          else
+            ui.warn 'Local chef server is not currently running!' unless @action.to_sym == :status
+            Config[:knife_opts] = ' -s https://no-local-server'
+          end
         end
       end
     end
