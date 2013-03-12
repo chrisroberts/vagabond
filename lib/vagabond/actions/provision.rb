@@ -23,7 +23,7 @@ module Vagabond
           com << "-E #{config[:environment]}"
         end
         if(Config[:knife_opts])
-          com << Conifg[:knife_opts]
+          com << Config[:knife_opts]
         end
         # Send the live stream out since people will generally want to
         # know what's happening

@@ -6,7 +6,9 @@ module Vagabond
           if(lxc.running?)
             ui.error "Node already exists and is running: #{name}"
           else
-            ui.warn "Node already exists: #{name}."
+            ui.info "#{ui.color('Vagabond:', :bold)} Starting node: #{ui.color(name, :green)}"
+            lxc.start
+            ui.info ui.color('  -> STARTED', :green)
             do_provision unless Config[:disable_auto_provision]
           end
         else
