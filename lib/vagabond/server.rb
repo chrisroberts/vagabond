@@ -40,7 +40,7 @@ module Vagabond
       end
     end
 
-    def shutdown
+    def stop
       if(lxc.exists?)
         if(lxc.running?)
           ui.info 'Shutting down Chef server container...'
