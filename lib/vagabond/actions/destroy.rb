@@ -16,18 +16,25 @@ module Vagabond
       def do_destroy
         lxc.stop if lxc.running?
         com = "#{Config[:sudo]}lxc-destroy -n #{lxc.name}"
-        cmd = Mixlib::ShellOut.new(com)
+        debug(com)
+        cmd = Mixlib::ShellOut.new(com, :live_stream => Config[:debug])
         cmd.run_command
         cmd.error!
         if(cmd.stderr.include?('skipping'))
           ui.info ui.color('  -> Failed to unmount some resources. Forcing manually.', :yellow)
           %w(rootfs ephemeralbind).each do |mnt|
-            cmd = Mixlib::ShellOut.new("#{Config[:sudo]}umount /var/lib/lxc/#{lxc.name}/#{mnt}")
+            com = "#{Config[:sudo]}umount /var/lib/lxc/#{lxc.name}/#{mnt}"
+            debug(com)
+            cmd = Mixlib::ShellOut.new(com, :live_stream => Config[:debug])
             cmd.run_command
-            cmd = Mixlib::ShellOut.new("#{Config[:sudo]}lxc-destroy -n #{lxc.name}")
+            com = "#{Config[:sudo]}lxc-destroy -n #{lxc.name}"
+            debug(com)
+            cmd = Mixlib::ShellOut.new(com, :live_stream => Config[:debug])
             cmd.run_command
             cmd.error!
+            internal_config[:mappings].delete(name)
           end
+          internal_config.save
         end
       end
     end

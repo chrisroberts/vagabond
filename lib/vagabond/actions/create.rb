@@ -16,7 +16,8 @@ module Vagabond
 
       def do_create
         com = "#{sudo}lxc-start-ephemeral -d -o #{config[:template]}"
-        c = Mixlib::ShellOut.new("#{com} && sleep 3")
+        debug(com)
+        c = Mixlib::ShellOut.new("#{com} && sleep 3", :live_stream => Config[:debug])
         c.run_command
         e_name = c.stdout.split("\n").last.split(' ').last.strip
         @internal_config[:mappings][name] = e_name

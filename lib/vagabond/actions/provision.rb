@@ -25,6 +25,7 @@ module Vagabond
         if(Config[:knife_opts])
           com << Config[:knife_opts]
         end
+        debug(com)
         # Send the live stream out since people will generally want to
         # know what's happening
         cmd = Mixlib::ShellOut.new(com, :live_stream => STDOUT)

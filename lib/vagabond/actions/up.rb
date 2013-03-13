@@ -9,10 +9,9 @@ module Vagabond
             ui.info "#{ui.color('Vagabond:', :bold)} Starting node: #{ui.color(name, :green)}"
             lxc.start
             ui.info ui.color('  -> STARTED', :green)
-            do_provision unless Config[:disable_auto_provision]
           end
         else
-          do_create
+          create
         end
         do_provision unless Config[:disable_auto_provision]
       end

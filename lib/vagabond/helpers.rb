@@ -9,5 +9,10 @@ module Vagabond
         "#{@vagabondfile[:sudo]} "
       end
     end
+
+    def debug(s)
+      ui.info "#{ui.color('DEBUG:', :red, :bold)} #{s}" if Config[:debug]
+    end
+    
   end
 end

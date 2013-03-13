@@ -41,7 +41,8 @@ module Vagabond
     def upload_roles
       am_uploading('roles') do
         com = "knife role from file #{File.join(base_dir, 'roles/*')} #{Config[:knife_opts]}"
-        cmd = Mixlib::ShellOut.new(com)
+        debug(com)
+        cmd = Mixlib::ShellOut.new(com, :live_stream => Config[:debug])
         cmd.run_command
         cmd.error!
       end
@@ -55,7 +56,8 @@ module Vagabond
             "knife data bag create #{File.basename(b)} #{Config[:knife_opts]}",
             "knife data bag from file #{File.basename(b)} #{Config[:knife_opts]} --all"
           ].each do |com|
-            cmd = Mixlib::ShellOut.new(com)
+            debug(com)
+            cmd = Mixlib::ShellOut.new(com, :live_stream => Config[:debug])
             cmd.run_command
             cmd.error!
           end
@@ -66,7 +68,8 @@ module Vagabond
     def upload_environments
       am_uploading('environments') do
         com = "knife environment from file #{File.join(base_dir, 'environments/*')} #{Config[:knife_opts]}"
-        cmd = Mixlib::ShellOut.new(com)
+        debug(com)
+        cmd = Mixlib::ShellOut.new(com, :live_stream => Config[:debug])
         cmd.run_command
         cmd.error!
       end
@@ -117,7 +120,9 @@ module Vagabond
     end
 
     def do_create
-      cmd = Mixlib::ShellOut.new("#{Config[:sudo]}lxc-clone -n #{generated_name} -o #{@base_template}")
+      com = "#{Config[:sudo]}lxc-clone -n #{generated_name} -o #{@base_template}"
+      debug(com)
+      cmd = Mixlib::ShellOut.new(com, :live_stream => Config[:debug])
       cmd.run_command
       cmd.error!
       @lxc = Lxc.new(generated_name)
@@ -128,7 +133,8 @@ module Vagabond
       ui.info "Bootstrapping erchef..."
       tem_file = File.expand_path(File.join(File.dirname(__FILE__), 'bootstraps/server.erb'))
       com = "#{Config[:sudo]}knife bootstrap #{lxc.container_ip(10, true)} --template-file #{tem_file} -i /opt/hw-lxc-config/id_rsa"
-      cmd = Mixlib::ShellOut.new(com, :live_stream => STDOUT, :timeout => 1200)
+      debug(com)
+      cmd = Mixlib::ShellOut.new(com, :live_stream => Config[:debug], :timeout => 1200)
       cmd.run_command
       cmd.error!
       ui.info 'Chef Server has been created!'
@@ -138,7 +144,8 @@ module Vagabond
     def berks_upload
       write_berks_config
       com = "berks upload -c #{File.join(vagabond_dir, 'berks.json')}"
-      cmd = Mixlib::ShellOut.new(com)
+      debug(com)
+      cmd = Mixlib::ShellOut.new(com, :live_stream => Config[:debug])
       cmd.run_command
       cmd.error!
       ui.info "Berks cookbook upload complete!"
@@ -146,7 +153,8 @@ module Vagabond
 
     def raw_upload
       com = "knife cookbook upload#{Config[:knife_opts]} --all"
-      cmd = Mixlib::ShellOut.new(com)
+      debug(com)
+      cmd = Mixlib::ShellOut.new(com, :live_stream => Config[:debug])
       cmd.run_command
       cmd.error!
       ui.info "Cookbook upload complete!"

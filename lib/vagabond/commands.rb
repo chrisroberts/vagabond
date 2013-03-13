@@ -27,13 +27,13 @@ module Vagabond
     )
     
     option(:force_solo,
-      :long => '--force-solo',
+      :long => '--force-configure',
       :boolean => true,
       :default => false
     )
 
     option(:disable_solo,
-      :long => '--disable-solo',
+      :long => '--disable-configure',
       :boolean => true,
       :default => false
     )
@@ -68,6 +68,7 @@ module Vagabond
       parse_options
       name_args = parse_options(argv)
       Config.merge!(config)
+      Config[:debug] = STDOUT if Config[:debug]
       case name_args.first.to_s
       when 'server'
         Server.new(name_args.shift, name_args).send(:execute)
