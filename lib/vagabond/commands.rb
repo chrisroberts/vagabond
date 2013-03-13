@@ -22,7 +22,7 @@ module Vagabond
         }.compact + %w(Server:) + (DEFAULT_ACTIONS + Server.public_instance_methods(false)).sort.map{ |cmd|
           next if cmd == 'server'
           "\tvagabond server #{cmd} [options]"
-        }.compact + %w(Options:)
+        }.compact + ['Knife:', "\tvagabond knife COMMAND [knife_options]"] + %w(Options:)
       ).join("\n")
     )
     
