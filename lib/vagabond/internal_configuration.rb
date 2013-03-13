@@ -1,8 +1,11 @@
 require 'digest/sha2'
+require 'vagabond/helpers'
 
 module Vagabond
   class InternalConfiguration
 
+    include Helpers
+    
     attr_reader :config
     attr_reader :ui
     
@@ -58,21 +61,21 @@ module Vagabond
     end
 
     def write_dna_json
-      templates = @v_config.config[:boxes].map(&:last).map{|i| i[:template]}.compact.uniq
-      templates = Hash[*(
-          templates.map do |t|
-            if(@v_config.config[:templates] && @v_config[:templates][t])
-              [t, @v_config.config[:templates][t]]
-            else
-              [t, nil]
-            end
-          end
-      ).flatten]
+      conf = Mash.new
+      @v_config.config[:boxes].map(&:last).map{|i| i[:template]}.compact.uniq.each do |t|
+        conf[t] = Mash.new(:enabled => true)
+      end
+      if(@v_config.config[:templates])
+        @v_config.config[:templates].each do |t|
+          conf[t] ||= Mash.new
+          conf[t].merge!(@v_config[:templates][t])
+        end
+      end
       File.open(dna_path, 'w') do |file|
         file.write(
           JSON.dump(
             :vagabond => {
-              :bases => templates
+              :bases => conf
             },
             :run_list => %w(recipe[vagabond])
           )
@@ -130,9 +133,11 @@ module Vagabond
     end
     
     def run_solo
-      ui.info ui.color('Ensuring expected system state...', :yellow)
+      ui.info ui.color('Ensuring expected system state (creating required template containers)', :yellow)
+      ui.info ui.color('   - This can take a while...', :yellow)
       com = "#{Config[:sudo]}chef-solo -j #{File.join(store_path, 'dna.json')} -c #{File.join(store_path, 'solo.rb')}"
-      cmd = Mixlib::ShellOut.new(com, :timeout => 1200)
+      debug(com)
+      cmd = Mixlib::ShellOut.new(com, :timeout => 1200, :live_stream => Config[:debug])
       cmd.run_command
       cmd.error!
     end
