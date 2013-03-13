@@ -128,16 +128,16 @@ module Vagabond
       @lxc = Lxc.new(generated_name)
       @internal_config[:mappings][name] = generated_name
       @internal_config.save
-      ui.info "Chef Server container created!"
+      ui.info ui.color('  -> Chef Server container created!', :cyan)
       lxc.start
-      ui.info "Bootstrapping erchef..."
+      ui.info ui.color('  -> Bootstrapping erchef...', :cyan)
       tem_file = File.expand_path(File.join(File.dirname(__FILE__), 'bootstraps/server.erb'))
       com = "#{Config[:sudo]}knife bootstrap #{lxc.container_ip(10, true)} --template-file #{tem_file} -i /opt/hw-lxc-config/id_rsa"
       debug(com)
       cmd = Mixlib::ShellOut.new(com, :live_stream => Config[:debug], :timeout => 1200)
       cmd.run_command
       cmd.error!
-      ui.info 'Chef Server has been created!'
+      ui.info ui.color('  -> Chef Server CREATED!', :green)
       auto_upload if vagabondfile[:local_chef_server][:auto_upload]
     end
 
