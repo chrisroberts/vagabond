@@ -35,7 +35,7 @@ module Vagabond
       upload_databags
       upload_environments
       upload_cookbooks
-      ui.info 'All assets uploaded to local Chef server!'
+      ui.info ui.color('  -> All assets uploaded!', :green)
     end
 
     def upload_roles
