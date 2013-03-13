@@ -138,6 +138,7 @@ module Vagabond
       cmd.run_command
       cmd.error!
       ui.info ui.color('  -> Chef Server CREATED!', :green)
+      Config[:knife_opts] = " -s https://#{lxc.container_ip(20, true)}"
       auto_upload if vagabondfile[:local_chef_server][:auto_upload]
     end
 
