@@ -59,10 +59,10 @@ module Vagabond
         if(@vagabondfile[:local_chef_server] && @vagabondfile[:local_chef_server][:enabled])
           srv = Lxc.new(@internal_config[:mappings][:server])
           if(srv.running?)
-            Config[:knife_opts] = " -s https://#{srv.container_ip(10, true)}"
+            Config[:knife_opts] = " --server-url https://#{srv.container_ip(10, true)}"
           else
             ui.warn 'Local chef server is not currently running!' unless @action.to_sym == :status
-            Config[:knife_opts] = ' -s https://no-local-server'
+            Config[:knife_opts] = ' --server-url https://no-local-server'
           end
         end
       end
@@ -71,7 +71,7 @@ module Vagabond
     protected
 
     def setup_ui
-      Chef::Config[:color] = true
+      Chef::Config[:color] = Config[:color]
       @ui = Chef::Knife::UI.new(STDOUT, STDERR, STDIN, {})
       self.class.ui = @ui
     end
