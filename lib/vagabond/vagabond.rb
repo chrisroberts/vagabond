@@ -78,7 +78,9 @@ module Vagabond
 
     def validate!
       if(name.to_s == 'server')
-        raise 'Box name `server` is reserved and not allowed!'
+        ui.fatal "Invalid name supplied: #{ui.color(name, :red)}"
+        ui.info ui.color("  -> Try: vagabond server #{@action}", :cyan)
+        exit -1
       end
     end
     
