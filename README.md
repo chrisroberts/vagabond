@@ -1,8 +1,8 @@
 # Vagabond
 
-* Issue: VMs are slow. Especially when creating over and over.
-* Discovery: Linux provides LXC tools similar to BSD jails
-* Helpful: LXCs can provide different distributions
+* Issue: VMs are slow.
+* Discovery: Linux has LXC, which is pretty cool.
+* Helpful: LXCs can run different distributions.
 * Implementation: Vagabond
 
 Awesome
@@ -44,27 +44,45 @@ Pretty simple, right?
 
 ## Commands
 
+Lots of commands. What to see them all? Just ask:
+
 ```
-# create and provision
-$ vagabond up NODE
-
-# provision existing
-$ vagabond provision NODE
-
-# freeze (pause) node
-$ vagabond freeze NODE
-
-# thaw (unpause) node
-$ vagabond thaw NODE
-
-# destroy node
-$ vagabond destroy NODE
-
-# status of defined nodes
-$ vagabond status [NODE]
-
-# ssh to node
-$ vagabond ssh NODE
+$ vagabond --help
+Nodes:
+        vagabond create NODE [options]
+        vagabond destroy NODE [options]
+        vagabond freeze NODE [options]
+        vagabond provision NODE [options]
+        vagabond rebuild NODE [options]
+        vagabond ssh NODE [options]
+        vagabond start NODE [options]
+        vagabond status NODE [options]
+        vagabond thaw NODE [options]
+        vagabond up NODE [options]
+Server:
+        vagabond server auto_upload [options]
+        vagabond server create [options]
+        vagabond server destroy [options]
+        vagabond server freeze [options]
+        vagabond server provision [options]
+        vagabond server rebuild [options]
+        vagabond server ssh [options]
+        vagabond server start [options]
+        vagabond server status [options]
+        vagabond server stop [options]
+        vagabond server thaw [options]
+        vagabond server up [options]
+        vagabond server upload_cookbooks [options]
+        vagabond server upload_databags [options]
+        vagabond server upload_environments [options]
+        vagabond server upload_roles [options]
+Options:
+        --debug
+        --disable-auto-provision
+        --disable-local-server
+        --disable-configure
+        --force-configure
+    -f, --vagabond-file FILE
 ```
 
 ## Local chef server?
@@ -77,24 +95,50 @@ Server containers are isolated by project. This means you will have an
 erchef instance running in an isolated container for every project the
 local server option is enabled. It's just an important bit of information
 to remember so you can make a mental note to stop or freeze it when not
-in use.
+in use. Or just let them run. What ever floats your boat.
 
-Server provides a superset of the commands available for regular
-vagabond nodes. They are accessed using:
+### Vagabond knife
 
-`$ vagabond server COMMAND`
+Since you can have a local chef server running, it can also be helpful
+to be able to actually interact with that server. Vagabond has commands
+for doing bulk uploads of assets, but you can access it too with knife
+to do isolated uploads, or to just do knifey things:
+
+```
+vagabond knife SOME COOL KNIFE COMMAND
+```
+
+This will just push the command into the local chef server. 
 
 ## Important note
 
 Until namespaces hit Linux proper, vagabond `sudo`s its way around. You
 _can_ get around this using the setcap stuff, but it's pretty meh. If you
-do go that road, just turn off `sudo` in your Vagabond file by setting
-`:sudo => false`.
+do go that road, just turn off `sudo` in your Vagabond file by setting:
+
+```
+:sudo => false
+```
+
+Oh, and if you use `rvm` and would rather be using `rvmsudo` instead of
+boring old `sudo`, you can do that to:
+
+```
+:sudo => 'rvmsudo'
+```
 
 ## Extra note
 
 This is still very much in alpha testing phase. So if you find bugs, please
 report them!
+
+## Contributing
+
+No hard and fast rules for contributing just preferences. I'm always happy to 
+get help making things better!
+
+* Base updates and pull requests on the `develop` branch
+* Please don't update core files like `version.rb` or `vagabond.gemspec`
 
 ## Infos
 
