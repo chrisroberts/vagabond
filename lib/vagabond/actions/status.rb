@@ -12,6 +12,8 @@ module Vagabond
         end
       end
 
+      private
+
       def status_for(c_name)
         m_name = internal_config[:mappings][c_name]
         state = nil
