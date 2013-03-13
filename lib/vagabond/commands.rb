@@ -60,6 +60,11 @@ module Vagabond
       :boolean => true,
       :default => false
     )
+
+    option(:color,
+      :long => '--color',
+      :boolean => true
+    )
     
     def run!(argv)
       # Turn off Chef logging since we will deal with
