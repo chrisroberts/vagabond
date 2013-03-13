@@ -23,6 +23,7 @@ attribute :initialize_commands, :kind_of => Array, :default => []
 attribute :new_container, :kind_of => [TrueClass, FalseClass], :default => false
 attribute :template, :kind_of => String, :default => 'ubuntu'
 attribute :template_opts, :kind_of => Hash, :default => {}
+attribute :create_environment, :kind_of => Hash, :default => {}
 attribute :_lxc
 # TODO: We should ultimately have support for all these templates
 #attribute :template, :equal_to => %w(busybox debian fedora opensuse sshd ubuntu ubuntu-cloud), :default => 'ubuntu'
