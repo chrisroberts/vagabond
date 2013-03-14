@@ -6,5 +6,5 @@ module Vagabond
       super(v)
     end
   end
-  VERSION = Version.new('0.1.3', 'wanderlust')
+  VERSION = Version.new('0.1.4', 'vagari')
 end

@@ -1,3 +1,6 @@
+## v0.1.4
+* Fix color option to do the right thing
+
 ## v0.1.2
 * Added support for centos guests
 * Added new base templates for centos and debian

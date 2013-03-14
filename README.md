@@ -96,7 +96,10 @@ Server:
         vagabond server upload_databags [options]
         vagabond server upload_environments [options]
         vagabond server upload_roles [options]
+Knife:
+        vagabond knife COMMAND [knife_options]
 Options:
+        --color
         --debug
         --disable-auto-provision
         --disable-local-server
