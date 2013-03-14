@@ -14,6 +14,14 @@ easily and most importantly, quickly. It uses Linux containers
 instead of full blown VMs which means things are faster. Lots
 faster.
 
+## Installation
+
+As a rubygem:
+
+```
+$ gem install vagabond
+```
+
 ## How it is?
 
 Currently, this is built to run within a classic Chef repository.
