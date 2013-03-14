@@ -42,6 +42,18 @@ Hash you return. Heres a simple example:
 
 Pretty simple, right?
 
+### Templates available
+
+Currently builtin templates:
+
+* ubuntu_1204
+* ubuntu_1210
+* debian_6
+* debian_7
+* centos_58
+* centos_63
+* centos_64
+
 ## Commands
 
 Lots of commands. What to see them all? Just ask:
