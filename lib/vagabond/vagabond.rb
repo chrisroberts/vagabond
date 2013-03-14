@@ -71,7 +71,7 @@ module Vagabond
     protected
 
     def setup_ui
-      Chef::Config[:color] = Config[:color]
+      Chef::Config[:color] = Config[:color].nil? ? true : Config[:color]
       @ui = Chef::Knife::UI.new(STDOUT, STDERR, STDIN, {})
       self.class.ui = @ui
     end
