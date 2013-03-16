@@ -15,7 +15,14 @@ module Vagabond
       private
 
       def do_create
-        com = "#{sudo}lxc-start-ephemeral -d -o #{config[:template]}"
+        tmpl = config[:template]
+        if(internal_config[:template_mappings].keys.include?(tmpl))
+          tmpl = internal_config[:template_mappings][tmpl]
+        elsif(!BASE_TEMPLATES.include?(tmpl))
+          ui.fatal "Template requested for node does not exist: #{tmpl}"
+          exit EXIT_CODES[:invalid_template]
+        end
+        com = "#{sudo}lxc-start-ephemeral -d -o #{tmpl}"
         debug(com)
         c = Mixlib::ShellOut.new("#{com} && sleep 3", :live_stream => Config[:debug])
         c.run_command
