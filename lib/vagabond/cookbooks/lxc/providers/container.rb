@@ -308,7 +308,6 @@ action :clone do
   end
   
   lxc_config new_resource.name do
-    config new_resource.config
     action :create
     notifies :restart, resources(:lxc_service => "lxc config_restart[#{new_resource.name}]"), :immediately
   end
