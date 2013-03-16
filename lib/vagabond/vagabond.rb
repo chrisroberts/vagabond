@@ -33,6 +33,7 @@ module Vagabond
     attr_reader :config
     attr_reader :internal_config
     attr_reader :ui
+    attr_reader :mappings_key
 
     # action:: Action to perform
     # name:: Name of vagabond
@@ -40,6 +41,7 @@ module Vagabond
     #
     # Creates an instance
     def initialize(action, name_args)
+      @mappings_key = :mappings
       setup_ui
       @action = action
       @name = name_args.shift
@@ -47,6 +49,8 @@ module Vagabond
       validate!
     end
 
+    protected
+    
     def load_configurations
       @vagabondfile = Vagabondfile.new(Config[:vagabond_file])
       Config[:sudo] = sudo
@@ -68,8 +72,6 @@ module Vagabond
       end
     end
 
-    protected
-
     def setup_ui
       Chef::Config[:color] = Config[:color].nil? ? true : Config[:color]
       @ui = Chef::Knife::UI.new(STDOUT, STDERR, STDIN, {})
@@ -78,9 +80,14 @@ module Vagabond
 
     def validate!
       if(name.to_s == 'server')
-        ui.fatal "Invalid name supplied: #{ui.color(name, :red)}"
+        ui.fatal "RESERVED node name supplied: #{ui.color(name, :red)}"
         ui.info ui.color("  -> Try: vagabond server #{@action}", :cyan)
-        exit -1
+        exit EXIT_CODES[:reserved_name]
+      end
+      if(name && config.nil?)
+        ui.fatal "Invalid node name supplied: #{ui.color(name, :red)}"
+        ui.info ui.color("  -> Available: #{vagabondfile[:nodes].keys.sort.join(', ')}", :cyan)
+        exit EXIT_CODES[:invalid_name]
       end
     end
     
@@ -89,6 +96,7 @@ module Vagabond
         send(@action)
       else
         ui.error "Invalid action received: #{@action}"
+        exit EXIT_CODES[:invalid_action]
       end
     end
 
