@@ -1,8 +1,10 @@
 require 'mixlib/cli'
 require 'chef/log'
+require 'vagabond/constants'
 require 'vagabond/config'
 require 'vagabond/vagabond'
 require 'vagabond/server'
+require 'vagabond/kitchen'
 require 'vagabond/knife'
 
 module Vagabond
@@ -76,12 +78,14 @@ module Vagabond
       Config[:debug] = STDOUT if Config[:debug]
       case name_args.first.to_s
       when 'server'
-        Server.new(name_args.shift, name_args).send(:execute)
+        Server
       when 'knife'
-        Knife.new(name_args.shift, name_args).send(:execute)
+        Knife
+      when 'test'
+        Kitchen
       else
-        Vagabond.new(name_args.shift, name_args).send(:execute)
-      end
+        Vagabond
+      end.new(name_args.shift, name_args).send(:execute)
     end
   end
 end
