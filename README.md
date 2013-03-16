@@ -31,7 +31,7 @@ Hash you return. Heres a simple example:
 
 ```ruby
 {
-  :boxes => {
+  :nodes => {
     :precise => {
       :template => 'ubuntu_1204',
       :run_list => %w(role[base])
