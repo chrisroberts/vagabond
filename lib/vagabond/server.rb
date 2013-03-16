@@ -110,15 +110,6 @@ module Vagabond
       end
     end
     
-    def generated_name
-      unless(@_gn)
-        s = Digest::MD5.new
-        s << vagabondfile.path
-        @_gn = "server-#{s.hexdigest}"
-      end
-      @_gn
-    end
-
     def do_create
       com = "#{Config[:sudo]}lxc-clone -n #{generated_name} -o #{@base_template}"
       debug(com)
