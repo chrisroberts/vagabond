@@ -40,14 +40,22 @@ node[:vagabond][:bases].each do |name, options|
       'curl -L https://www.opscode.com/chef/install.sh | bash'
     ]
   end
+end
 
+node[:vagabond][:customs].each do |name, options|
+
+  lxc_container name do
+    action :clone
+    base_container options[:base]
+  end
+  
   if(options[:memory])
     lxc_config name do
       cgroup(
-        'memory.limit_in_bytes' => options[:memory][:maximum_ram],
+        'memory.limit_in_bytes' => options[:memory][:ram],
         'memory.memsw.limit_in_bytes' => (
-          Vagabond.get_bytes(options[:memory][:maximum_ram]) +
-          Vagabond.get_bytes(options[:memory][:maximum_swap])
+          Vagabond.get_bytes(options[:memory][:ram]) +
+          Vagabond.get_bytes(options[:memory][:swap])
         )
       )
     end
