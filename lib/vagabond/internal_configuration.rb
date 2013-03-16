@@ -1,5 +1,6 @@
 require 'digest/sha2'
 require 'vagabond/helpers'
+require 'vagabond/constants'
 
 module Vagabond
   class InternalConfiguration
@@ -9,13 +10,17 @@ module Vagabond
     attr_reader :config
     attr_reader :ui
     
-    def initialize(v_config, ui)
-      @v_config = v_config
-      @config = Mash.new(:mappings => Mash.new)
+    def initialize(vagabondfile, ui)
+      @vagabondfile = vagabondfile
       @checksums = Mash.new
       @ui = ui
       create_store
       load_existing
+      @config = Mash.new(
+        :mappings => Mash.new,
+        :template_mappings => Mash.new,
+        :test_mappings => Mash.new
+      ).merge(config)
       store_checksums
       write_dna_json
       write_solo_rb
@@ -47,7 +52,7 @@ module Vagabond
     def store_path
       FileUtils.mkdir_p(
         File.join(
-          File.dirname(@v_config.path), '.vagabond'
+          File.dirname(@vagabondfile.path), '.vagabond'
         )
       )
     end
@@ -61,26 +66,33 @@ module Vagabond
     end
 
     def write_dna_json
-      conf = Mash.new
-      @v_config.config[:boxes].map(&:last).map{|i| i[:template]}.compact.uniq.each do |t|
-        conf[t] = Mash.new(:enabled => true)
+      conf = Mash.new(:bases => Mash.new, :customs => Mash.new)
+      Array(@vagabondfile[:nodes]).map(&:last).map{|i| i[:template]}.compact.uniq.each do |t|
+        conf[:bases][t] = Mash.new(:enabled => true) if BASE_TEMPLATES.include?(t.to_s)
       end
-      if(@v_config.config[:templates])
-        @v_config.config[:templates].each do |t|
-          conf[t] ||= Mash.new
-          conf[t].merge!(@v_config[:templates][t])
+      Array(@vagabondfile[:templates]).each do |t_name, opts|
+        if(BASE_TEMPLATES.include?(opts[:base].to_s))
+          conf[:bases][opts[:base]] = Mash.new(:enabled => true)
+          if(opts.has_key?(:memory) && !opts[:memory].is_a?(Hash))
+            opts[:memory][:ram] = opts[:memory].to_s
+          end
+          conf[:customs][generated_name(t_name)] = opts
+          config[:template_mappings][t_name] = generated_name(t_name)
+        else
+          ui.fatal "Invalid base template encountered: #{t}"
+          ui.info ui.color("  -> Valid base templates: #{BASE_TEMPLATES.sort.join(', ')}", :red)
+          exit EXIT_CODES[:invalid_base_template]
         end
       end
       File.open(dna_path, 'w') do |file|
         file.write(
           JSON.dump(
-            :vagabond => {
-              :bases => conf
-            },
+            :vagabond => conf,
             :run_list => %w(recipe[vagabond])
           )
         )
       end
+      save
     end
 
     def write_solo_rb
@@ -133,13 +145,14 @@ module Vagabond
     end
     
     def run_solo
-      ui.info ui.color('Ensuring expected system state (creating required template containers)', :yellow)
+      ui.info ui.color('Ensuring expected system state (creating required base containers)', :yellow)
       ui.info ui.color('   - This can take a while...', :yellow)
       com = "#{Config[:sudo]}chef-solo -j #{File.join(store_path, 'dna.json')} -c #{File.join(store_path, 'solo.rb')}"
       debug(com)
       cmd = Mixlib::ShellOut.new(com, :timeout => 1200, :live_stream => Config[:debug])
       cmd.run_command
       cmd.error!
+      ui.info ui.color('  -> COMPLETE!', :yellow)
     end
     
     def save
