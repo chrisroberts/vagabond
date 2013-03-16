@@ -6,19 +6,44 @@ module Vagabond
     attr_reader :path
     attr_reader :config
 
-    def initialize(path=nil)
+    ALIASES = Mash.new(:boxes => :nodes, :nodes => :boxes)
+    
+    def initialize(path=nil, *args)
       path = discover_path(Dir.pwd) unless path
       @path = path
-      load_configuration!
+      load_configuration!(args.include?(:allow_missing))
     end
 
     def [](k)
-      @config[k]
+      aliased(k) || @config[k]
     end
 
-    def load_configuration!
-      raise 'No Vagabondfile file found!' unless @path && File.exists?(@path)
-      @config = Mash.new(self.instance_eval(IO.read(@path), @path, 1))
+    def aliased(k)
+      if(ALIASES.has_key?(k))
+        v = [@config[k], @config[ALIASES[k]]].compact
+        if(v.size > 1)
+          case v.first.class
+          when Array
+            m = :|
+          when Hash
+            m = :merge
+          else
+            m = :+
+          end
+          v.inject(&m)
+        else
+          v.first
+        end
+      end
+    end
+    
+    def load_configuration!(no_raise = false)
+      if(@path && File.exists?(@path))
+        @config = Mash.new(self.instance_eval(IO.read(@path), @path, 1))
+      else
+        raise 'No Vagabondfile file found!' unless no_raise
+        @config = Mash.new
+      end
     end
 
     def discover_path(path)
