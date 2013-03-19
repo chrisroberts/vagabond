@@ -17,10 +17,6 @@ module Vagabond
 
     include Helpers
 
-    class << self
-      attr_accessor :ui
-    end
-    
     # Load available actions
     Actions.constants.each do |const_sym|
       const = Actions.const_get(const_sym)
@@ -28,21 +24,23 @@ module Vagabond
     end
 
     attr_reader :name
-    attr_reader :lxc
     attr_reader :vagabondfile
-    attr_reader :config
     attr_reader :internal_config
     attr_reader :ui
-    attr_reader :mappings_key
 
+    attr_accessor :mappings_key
+    attr_accessor :lxc
+    attr_accessor :config
+    attr_accessor :action
+    
     # action:: Action to perform
     # name:: Name of vagabond
     # config:: Hash configuration
     #
     # Creates an instance
-    def initialize(action, name_args)
+    def initialize(action, name_args, args={})
       @mappings_key = :mappings
-      setup_ui
+      setup_ui(args[:ui])
       @action = action
       @name = name_args.shift
       load_configurations
@@ -50,6 +48,15 @@ module Vagabond
     end
 
     protected
+
+    def provision_solo(path)
+      ui.info "#{ui.color('Vagabond:', :bold)} Provisioning node: #{ui.color(name, :magenta)}"
+      lxc.container_ip(20) # force wait for container to appear and do so quietly
+      direct_container_command(
+        "chef-solo -c #{File.join(path, 'solo.rb')} -j #{File.join(path, 'dna.json')}",
+        :live_stream => STDOUT
+      )
+    end
     
     def load_configurations
       @vagabondfile = Vagabondfile.new(Config[:vagabond_file])
@@ -58,7 +65,7 @@ module Vagabond
       Lxc.use_sudo = @vagabondfile[:sudo].nil? ? true : @vagabondfile[:sudo]
       @internal_config = InternalConfiguration.new(@vagabondfile, ui)
       @config = @vagabondfile[:boxes][name]
-      @lxc = Lxc.new(@internal_config[:mappings][name] || '____nonreal____')
+      @lxc = Lxc.new(@internal_config[mappings_key][name] || '____nonreal____')
       unless(Config[:disable_local_server])
         if(@vagabondfile[:local_chef_server] && @vagabondfile[:local_chef_server][:enabled])
           srv = Lxc.new(@internal_config[:mappings][:server])
@@ -72,38 +79,19 @@ module Vagabond
       end
     end
 
-    def setup_ui
-      Chef::Config[:color] = Config[:color].nil? ? true : Config[:color]
-      @ui = Chef::Knife::UI.new(STDOUT, STDERR, STDIN, {})
-      self.class.ui = @ui
-    end
-
     def validate!
       if(name.to_s == 'server')
         ui.fatal "RESERVED node name supplied: #{ui.color(name, :red)}"
         ui.info ui.color("  -> Try: vagabond server #{@action}", :cyan)
         exit EXIT_CODES[:reserved_name]
       end
-      if(name && config.nil?)
+      if(name && config.nil? && !Config[:disable_name_validate])
         ui.fatal "Invalid node name supplied: #{ui.color(name, :red)}"
         ui.info ui.color("  -> Available: #{vagabondfile[:nodes].keys.sort.join(', ')}", :cyan)
         exit EXIT_CODES[:invalid_name]
       end
     end
     
-    def execute
-      if(public_methods.include?(@action.to_sym))
-        send(@action)
-      else
-        ui.error "Invalid action received: #{@action}"
-        exit EXIT_CODES[:invalid_action]
-      end
-    end
-
-    def generate_hash
-      Digest::MD5.hexdigest(@vagabondfile.path)
-    end
-
     def check_existing!
       if(@lxc.exists?)
         ui.error "LXC: #{name} already exists!"

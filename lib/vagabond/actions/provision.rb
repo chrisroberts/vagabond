@@ -33,8 +33,10 @@ module Vagabond
         # NOTE: cmd.status.success? won't be valid, so check for FATAL
         unless(cmd.stdout.split("\n").last.to_s.include?('FATAL'))
           ui.info ui.color('  -> PROVISIONED', :magenta)
+          true
         else
           ui.info ui.color('  -> PROVISION FAILED', :red)
+          false
         end
       end
 

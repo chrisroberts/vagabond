@@ -9,8 +9,9 @@ module Vagabond
     
     attr_reader :config
     attr_reader :ui
+    attr_accessor :force_bases
     
-    def initialize(vagabondfile, ui)
+    def initialize(vagabondfile, ui, args={})
       @vagabondfile = vagabondfile
       @checksums = Mash.new
       @ui = ui
@@ -21,6 +22,11 @@ module Vagabond
         :template_mappings => Mash.new,
         :test_mappings => Mash.new
       ).merge(config)
+      @force_bases = args[:force_bases] || []
+      ensure_state
+    end
+
+    def ensure_state
       store_checksums
       write_dna_json
       write_solo_rb
@@ -67,7 +73,7 @@ module Vagabond
 
     def write_dna_json
       conf = Mash.new(:bases => Mash.new, :customs => Mash.new)
-      Array(@vagabondfile[:nodes]).map(&:last).map{|i| i[:template]}.compact.uniq.each do |t|
+      (Array(@vagabondfile[:nodes]).map(&:last).map{|i| i[:template]}.compact + Array(force_bases)).uniq.each do |t|
         conf[:bases][t] = Mash.new(:enabled => true) if BASE_TEMPLATES.include?(t.to_s)
       end
       Array(@vagabondfile[:templates]).each do |t_name, opts|
@@ -149,7 +155,7 @@ module Vagabond
       ui.info ui.color('   - This can take a while...', :yellow)
       com = "#{Config[:sudo]}chef-solo -j #{File.join(store_path, 'dna.json')} -c #{File.join(store_path, 'solo.rb')}"
       debug(com)
-      cmd = Mixlib::ShellOut.new(com, :timeout => 1200, :live_stream => Config[:debug])
+      cmd = Mixlib::ShellOut.new(com, :timeout => 12000, :live_stream => Config[:debug])
       cmd.run_command
       cmd.error!
       ui.info ui.color('  -> COMPLETE!', :yellow)

@@ -32,7 +32,7 @@ module Vagabond
             cmd = Mixlib::ShellOut.new(com, :live_stream => Config[:debug])
             cmd.run_command
             cmd.error!
-            internal_config[:mappings].delete(name)
+            internal_config[mappings_key].delete(name)
           end
           internal_config.save
         end

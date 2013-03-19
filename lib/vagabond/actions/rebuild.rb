@@ -9,7 +9,7 @@ module Vagabond
         Config[:force_solo] = true
         ui.info ui.color('  -> DESTROYED!', :red)
         internal_config.run_solo
-        internal_config[:mappings].delete(name)
+        internal_config[mappings_key].delete(name)
         internal_config.save
         ui.info ui.color('  -> REBUILT!', :green)
       end

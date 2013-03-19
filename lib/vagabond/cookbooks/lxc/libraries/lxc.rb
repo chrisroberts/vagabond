@@ -224,7 +224,7 @@ class Lxc
 
   # Stop the container
   def stop
-    run_command("#{sudo}lxc-stop -n #{name}")
+    run_command("#{sudo}lxc-stop -n #{name}", :allow_failure_retry => 3)
     run_command("#{sudo}lxc-wait -n #{name} -s STOPPED", :allow_failure_retry => 2)
   end
   
@@ -276,13 +276,13 @@ class Lxc
       shlout.run_command
       shlout.error!
     rescue Mixlib::ShellOut::ShellCommandFailed, CommandFailed, Mixlib::ShellOut::CommandTimeout
-      if(args[:allow_failure])
-        true
-      elsif(retries > 0)
+      if(retries > 0)
         Chef::Log.warn "LXC run command failed: #{cmd}"
         Chef::Log.warn "Retrying command. #{args[:allow_failure_retry].to_i - retries} of #{args[:allow_failure_retry].to_i} retries remain"
         retries -= 1
         retry
+      elsif(args[:allow_failure])
+        true
       else
         raise
       end

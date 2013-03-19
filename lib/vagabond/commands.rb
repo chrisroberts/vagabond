@@ -59,13 +59,36 @@ module Vagabond
 
     option(:debug,
       :long => '--debug',
-      :boolean => true,
-      :default => false
+      :boolean => true
     )
 
     option(:color,
       :long => '--color',
+      :boolean => true,
+      :default => true
+    )
+
+    option(:platform,
+      :long => '--platform PLATFORM_NAME'
+    )
+
+    option(:suite,
+      :long => '--suite SUITE'
+    )
+
+    option(:integration,
+      :long => '--integration',
       :boolean => true
+    )
+
+    option(:integration_suite,
+      :long => '--integration-suite SUITE'
+    )
+
+    option(:teardown,
+      :long => '--teardown',
+      :boolean => true,
+      :default => true
     )
     
     def run!(argv)
@@ -81,7 +104,7 @@ module Vagabond
         Server
       when 'knife'
         Knife
-      when 'test'
+      when 'test', 'kitchen'
         Kitchen
       else
         Vagabond

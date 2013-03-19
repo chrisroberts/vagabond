@@ -6,7 +6,7 @@ module Vagabond
         if(name)
           status_for(name)
         else
-          (Array(vagabondfile[:boxes].keys) | Array(internal_config[:mappings].keys)).sort.each do |n|
+          (Array(vagabondfile[:boxes].keys) | Array(internal_config[mappings_key].keys)).sort.each do |n|
             status_for(n)
           end
         end
@@ -15,7 +15,7 @@ module Vagabond
       private
 
       def status_for(c_name)
-        m_name = internal_config[:mappings][c_name]
+        m_name = internal_config[mappings_key][c_name]
         state = nil
         status = []
         if(Lxc.exists?(m_name))
