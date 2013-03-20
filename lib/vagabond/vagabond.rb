@@ -1,53 +1,131 @@
+require 'thor'
+require 'chef/knife/core/ui'
+require File.join(File.dirname(__FILE__), 'cookbooks/lxc/libraries/lxc.rb')
+
+%w(vagabondfile internal_configuration helpers).each do |dep|
+  require "vagabond/#{dep}"
+end
+
 Dir.glob(
   File.join(
     File.dirname(__FILE__), 'actions', '*.rb'
   )
-).each do |action_module|
-  require action_module
+).each do |action|
+  require "vagabond/actions/#{File.basename(action).sub('.rb', '')}"
 end
 
-require 'vagabond/vagabondfile'
-require 'vagabond/internal_configuration'
-require 'vagabond/helpers'
-require 'chef/knife/core/ui'
-require File.join(File.dirname(__FILE__), 'cookbooks/lxc/libraries/lxc.rb')
-
 module Vagabond
-  class Vagabond
+  class Vagabond < Thor
 
+    include Thor::Actions
     include Helpers
 
-    # Load available actions
-    Actions.constants.each do |const_sym|
-      const = Actions.const_get(const_sym)
-      include const if const.is_a?(Module)
+    Actions.constants.each do |const|
+      klass = Actions.const_get(const)
+      include klass if klass.is_a?(Module)
     end
-
+    
     attr_reader :name
     attr_reader :vagabondfile
     attr_reader :internal_config
     attr_reader :ui
+    attr_reader :options
 
     attr_accessor :mappings_key
     attr_accessor :lxc
     attr_accessor :config
     attr_accessor :action
+
+    CLI_OPTIONS = lambda do
+    class_option(:debug,
+      :type => :boolean,
+      :default => false
+    )
+
+    class_option(:force_solo,
+      :aliases => '--force-configure',
+      :type => :boolean,
+      :default => false,
+      :desc => 'Force configuration of system'
+    )
+
+    class_option(:color,
+      :type => :boolean,
+      :default => true,
+      :desc => 'Enable/disable colorized output'
+    )
+
+    class_option(:vagabond_file,
+      :aliases => '-f',
+      :type => :string,
+      :desc => 'Provide path to Vagabondfile'
+    )
+    
+    class_option(:local_server,
+      :type => :boolean,
+      :default => true,
+      :desc => 'Enable/disable local Chef server usage if available'
+    )
+    end
+
+    CLI_OPTIONS.call
     
     # action:: Action to perform
     # name:: Name of vagabond
     # config:: Hash configuration
     #
-    # Creates an instance
-    def initialize(action, name_args, args={})
+    # Creates an instance    
+    def initialize(*args)
+      super
       @mappings_key = :mappings
-      setup_ui(args[:ui])
+    end
+
+    ## COMMANDS
+
+    COMMANDS = lambda do |show_node=true|
+      Actions.constants.find_all do |const|
+        Actions.const_get(const).is_a?(Module)
+      end.map(&:to_s).map(&:downcase).each do |meth|
+        if(self.respond_to?("_#{meth}_desc"))
+          args = self.send("_#{meth}_desc")
+        else
+          args = ["#{meth}#{' NODE' if show_node}", "#{meth.capitalize} instance#{' of NODE' if show_node}"]
+        end
+        desc(*args)
+        define_method meth do |*args|
+          setup(meth, *args)
+          execute
+        end
+      end
+    end
+
+    COMMANDS.call
+    
+    protected
+
+    def execute
+      self.send("_#{@action}")
+    end
+    
+    def setup(action, name=nil, *args)
       @action = action
-      @name = name_args.shift
+      @name = name
+      @options = options.dup
+      if(args.last.is_a?(Hash))
+        _ui = args.delete(:ui)
+        @options.merge!(args.last)
+      end
+      setup_ui(_ui)
       load_configurations
       validate!
     end
 
-    protected
+    def name_required!
+      unless(name)
+        ui.fatal "Node name is required!"
+        exit EXIT_CODES[:missing_node_name]
+      end
+    end
 
     def provision_solo(path)
       ui.info "#{ui.color('Vagabond:', :bold)} Provisioning node: #{ui.color(name, :magenta)}"
@@ -59,21 +137,21 @@ module Vagabond
     end
     
     def load_configurations
-      @vagabondfile = Vagabondfile.new(Config[:vagabond_file])
-      Config[:sudo] = sudo
-      Config[:disable_solo] = true if @action.to_sym == :status
+      @vagabondfile = Vagabondfile.new(options[:vagabond_file])
+      options[:sudo] = sudo
+      options[:disable_solo] = true if @action.to_s == 'status'
       Lxc.use_sudo = @vagabondfile[:sudo].nil? ? true : @vagabondfile[:sudo]
-      @internal_config = InternalConfiguration.new(@vagabondfile, ui)
+      @internal_config = InternalConfiguration.new(@vagabondfile, ui, options)
       @config = @vagabondfile[:boxes][name]
       @lxc = Lxc.new(@internal_config[mappings_key][name] || '____nonreal____')
-      unless(Config[:disable_local_server])
+      if(options[:local_server])
         if(@vagabondfile[:local_chef_server] && @vagabondfile[:local_chef_server][:enabled])
           srv = Lxc.new(@internal_config[:mappings][:server])
           if(srv.running?)
-            Config[:knife_opts] = " --server-url https://#{srv.container_ip(10, true)}"
+            options[:knife_opts] = " --server-url https://#{srv.container_ip(10, true)}"
           else
             ui.warn 'Local chef server is not currently running!' unless @action.to_sym == :status
-            Config[:knife_opts] = ' --server-url https://no-local-server'
+            options[:knife_opts] = ' --server-url https://no-local-server'
           end
         end
       end
@@ -85,7 +163,7 @@ module Vagabond
         ui.info ui.color("  -> Try: vagabond server #{@action}", :cyan)
         exit EXIT_CODES[:reserved_name]
       end
-      if(name && config.nil? && !Config[:disable_name_validate])
+      if(name && config.nil? && !options[:disable_name_validate])
         ui.fatal "Invalid node name supplied: #{ui.color(name, :red)}"
         ui.info ui.color("  -> Available: #{vagabondfile[:nodes].keys.sort.join(', ')}", :cyan)
         exit EXIT_CODES[:invalid_name]

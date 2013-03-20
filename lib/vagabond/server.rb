@@ -5,16 +5,23 @@ require 'digest/md5'
 module Vagabond
   
   class Server < Vagabond
-        
-    def initialize(me, actions)
-      @name = me
-      @base_template = 'ubuntu_1204' # TODO: Make this dynamic
-      @action = actions.shift
-      setup_ui
-      load_configurations
-      Config[:disable_auto_provision] = true
+
+    class << self
+      def basename
+        'vagabond server'
+      end
     end
+
+    self.class_exec(false, &Vagabond::COMMANDS)
     
+    def initialize(*args)
+      super
+      @name = 'server'
+      @base_template = 'ubuntu_1204' # TODO: Make this dynamic
+      setup(nil, name)
+    end
+
+    desc 'server stop', 'Stops the local Chef server'
     def stop
       if(lxc.exists?)
         if(lxc.running?)
@@ -29,6 +36,7 @@ module Vagabond
       end
     end
 
+    desc 'auto_upload', 'Uploads all assets'
     def auto_upload
       ui.info 'Auto uploading all assets to local Chef server...'
       upload_roles
@@ -38,26 +46,28 @@ module Vagabond
       ui.info ui.color('  -> All assets uploaded!', :green)
     end
 
+    desc 'upload_roles', 'Upload all roles'
     def upload_roles
       am_uploading('roles') do
-        com = "knife role from file #{File.join(base_dir, 'roles/*')} #{Config[:knife_opts]}"
+        com = "knife role from file #{File.join(base_dir, 'roles/*')} #{options[:knife_opts]}"
         debug(com)
-        cmd = Mixlib::ShellOut.new(com, :live_stream => Config[:debug])
+        cmd = Mixlib::ShellOut.new(com, :live_stream => options[:debug])
         cmd.run_command
         cmd.error!
       end
     end
 
+    desc 'upload_databags', 'Upload all data bags'
     def upload_databags
       am_uploading('data bags') do
         Dir.glob(File.join(base_dir, "data_bags/*")).each do |b|
           next if %w(. ..).include?(b)
           coms = [
-            "knife data bag create #{File.basename(b)} #{Config[:knife_opts]}",
-            "knife data bag from file #{File.basename(b)} #{Config[:knife_opts]} --all"
+            "knife data bag create #{File.basename(b)} #{options[:knife_opts]}",
+            "knife data bag from file #{File.basename(b)} #{options[:knife_opts]} --all"
           ].each do |com|
             debug(com)
-            cmd = Mixlib::ShellOut.new(com, :live_stream => Config[:debug])
+            cmd = Mixlib::ShellOut.new(com, :live_stream => options[:debug])
             cmd.run_command
             cmd.error!
           end
@@ -65,16 +75,18 @@ module Vagabond
       end
     end
 
+    desc 'upload_environments', 'Upload all environments'
     def upload_environments
       am_uploading('environments') do
-        com = "knife environment from file #{File.join(base_dir, 'environments/*')} #{Config[:knife_opts]}"
+        com = "knife environment from file #{File.join(base_dir, 'environments/*')} #{options[:knife_opts]}"
         debug(com)
-        cmd = Mixlib::ShellOut.new(com, :live_stream => Config[:debug])
+        cmd = Mixlib::ShellOut.new(com, :live_stream => options[:debug])
         cmd.run_command
         cmd.error!
       end
     end
 
+    desc 'upload_cookbooks', 'Upload all cookbooks'
     def upload_cookbooks
       am_uploading('cookbooks') do
         if(vagabondfile[:local_chef_server][:berkshelf])
@@ -87,6 +99,13 @@ module Vagabond
 
     private
 
+    def validate!
+    end
+
+    def setup(action, name=nil, *args)
+      super(action, 'server', *args)
+    end
+    
     def am_uploading(thing)
       ui.info "#{ui.color('Local chef server:', :bold)} Uploading #{ui.color(thing, :green)}"
       yield
@@ -111,9 +130,9 @@ module Vagabond
     end
     
     def do_create
-      com = "#{Config[:sudo]}lxc-clone -n #{generated_name} -o #{@base_template}"
+      com = "#{options[:sudo]}lxc-clone -n #{generated_name} -o #{@base_template}"
       debug(com)
-      cmd = Mixlib::ShellOut.new(com, :live_stream => Config[:debug])
+      cmd = Mixlib::ShellOut.new(com, :live_stream => options[:debug])
       cmd.run_command
       cmd.error!
       @lxc = Lxc.new(generated_name)
@@ -123,13 +142,13 @@ module Vagabond
       lxc.start
       ui.info ui.color('  -> Bootstrapping erchef...', :cyan)
       tem_file = File.expand_path(File.join(File.dirname(__FILE__), 'bootstraps/server.erb'))
-      com = "#{Config[:sudo]}knife bootstrap #{lxc.container_ip(10, true)} --template-file #{tem_file} -i /opt/hw-lxc-config/id_rsa"
+      com = "#{options[:sudo]}knife bootstrap #{lxc.container_ip(10, true)} --template-file #{tem_file} -i /opt/hw-lxc-config/id_rsa"
       debug(com)
-      cmd = Mixlib::ShellOut.new(com, :live_stream => Config[:debug], :timeout => 1200)
+      cmd = Mixlib::ShellOut.new(com, :live_stream => options[:debug], :timeout => 1200)
       cmd.run_command
       cmd.error!
       ui.info ui.color('  -> Chef Server CREATED!', :green)
-      Config[:knife_opts] = " --server-url https://#{lxc.container_ip(20, true)}"
+      options[:knife_opts] = " --server-url https://#{lxc.container_ip(20, true)}"
       auto_upload if vagabondfile[:local_chef_server][:auto_upload]
     end
 
@@ -137,16 +156,16 @@ module Vagabond
       write_berks_config
       com = "berks upload -c #{File.join(vagabond_dir, 'berks.json')}"
       debug(com)
-      cmd = Mixlib::ShellOut.new(com, :live_stream => Config[:debug])
+      cmd = Mixlib::ShellOut.new(com, :live_stream => options[:debug])
       cmd.run_command
       cmd.error!
       ui.info "Berks cookbook upload complete!"
     end
 
     def raw_upload
-      com = "knife cookbook upload#{Config[:knife_opts]} --all"
+      com = "knife cookbook upload#{options[:knife_opts]} --all"
       debug(com)
-      cmd = Mixlib::ShellOut.new(com, :live_stream => Config[:debug])
+      cmd = Mixlib::ShellOut.new(com, :live_stream => options[:debug])
       cmd.run_command
       cmd.error!
       ui.info "Cookbook upload complete!"

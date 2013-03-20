@@ -279,6 +279,7 @@ class Lxc
       if(retries > 0)
         Chef::Log.warn "LXC run command failed: #{cmd}"
         Chef::Log.warn "Retrying command. #{args[:allow_failure_retry].to_i - retries} of #{args[:allow_failure_retry].to_i} retries remain"
+        sleep(0.3)
         retries -= 1
         retry
       elsif(args[:allow_failure])

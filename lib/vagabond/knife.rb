@@ -1,34 +1,39 @@
-require 'vagabond/helpers'
+require 'thor'
+require File.join(File.dirname(__FILE__), 'cookbooks/lxc/libraries/lxc.rb')
+
+%w(helpers vagabondfile internal_configuration).each do |dep|
+  require "vagabond/#{dep}"
+end
 
 module Vagabond
-  class Knife
+  class Knife < Thor
 
+    include Thor::Actions
     include Helpers
 
-    attr_reader :name_args
+    def initialize(*args)
+      super
+    end
     
-    def initialize(name, name_args)
-      @name_args = name_args
-      @vagabondfile = Vagabondfile.new(Config[:vagabond_file])
-      Config[:disable_solo] = true
-      Config[:sudo] = sudo
+    desc 'knife COMMAND', 'Run knife commands against local Chef server'
+    def knife(command, *args)
+      @options = options.dup
+      @vagabondfile = Vagabondfile.new(options[:vagabond_file])
+      options[:disable_solo] = true
+      options[:sudo] = sudo
       Lxc.use_sudo = @vagabondfile[:sudo].nil? ? true : @vagabondfile[:sudo]
-      @internal_config = InternalConfiguration.new(@vagabondfile, nil)
-      unless(Config[:disable_local_server])
+      @internal_config = InternalConfiguration.new(@vagabondfile, nil, options)
+      unless(options[:local_server])
         if(@vagabondfile[:local_chef_server] && @vagabondfile[:local_chef_server][:enabled])
           srv = Lxc.new(@internal_config[:mappings][:server])
           if(srv.running?)
-            Config[:knife_opts] = " -s https://#{srv.container_ip(10, true)}"
+            options[:knife_opts] = " -s https://#{srv.container_ip(10, true)}"
           else
-            Config[:knife_opts] = ' -s https://no-local-server'
+            options[:knife_opts] = ' -s https://no-local-server'
           end
         end
       end
-
-    end
-
-    def execute
-      exec("knife #{name_args.join(' ')} #{Config[:knife_opts]}")
+      exec("knife #{[command, args].flatten.compact.join(' ')} #{options[:knife_opts]}")
     end
 
     

@@ -1,45 +1,48 @@
-require 'vagabond/helpers'
-require 'vagabond/vagabondfile'
+require 'thor'
 require 'chef'
 require 'kitchen/busser'
-require 'vagabond/helpers/cheffile_loader'
+
+%w(helpers vagabondfile vagabond server helpers/cheffile_loader).each do |dep|
+  require "vagabond/#{dep}"
+end
 
 module Vagabond
-  class Kitchen
-
+  class Kitchen < Thor
+    
+    include Thor::Actions
     include Helpers
 
+    class << self
+      def basename
+        'vagabond kitchen'
+      end
+    end
+
+    self.class_exec(&Vagabond::CLI_OPTIONS)
+    
     attr_reader :kitchen
     attr_reader :platform_map
     attr_reader :vagabondfile
     attr_reader :ui
     attr_reader :name
     attr_reader :action
-    
-    def initialize(action, name_args)
-      @vagabondfile = Vagabondfile.new(Config[:vagabond_file])
-      setup_ui
-      if(name_args.empty?)
-        ui.fatal 'Must provide a cookbook name for testing!'
-        exit EXIT_CODES[:kitchen_no_cookbook_arg]
-      elsif(name_args.size > 2)
-        ui.fatal 'Too many arguments provided!'
-        exit EXIT_CODES[:kitchen_too_many_args]
-      end
-      if(name_args.size == 1)
-        @action = :cookbook
-        @name = name_args.first
-      else
-        @action, @name = name_args
-      end
-      load_kitchen_yml
-      Config[:teardown] = true if Config[:teardown].nil?
+
+    def initialize(*args)
+      super
     end
 
-    # TODO: We need platform + suite for teardown proper
-    def teardown(platform=nil)
+    desc 'teardown COOKBOOK', 'Destroy containers related to COOKBOOK test'
+    method_option(:platform,
+      :type => :string,
+      :desc => 'Specify platform to destroy'
+    )
+    method_option(:suite,
+      :type => :string,
+      :desc => 'Specify suite to destroy'
+    )
+    def teardown(cookbook)
       ui.info "#{ui.color('Vagabond:', :bold)} - Kitchen teardown for cookbook #{ui.color(name, :red)}"
-      plats = [platform || Config[:platform] || platform_map.keys].flatten
+      plats = [platform || options[:platform] || platform_map.keys].flatten
       plats.each do |plat|
         validate_platform!(plat)
         ui.info ui.color("  -> Tearing down platform: #{plat}", :red)
@@ -48,20 +51,121 @@ module Vagabond
       end
     end
 
-    def cookbook
+    desc 'test COOKBOOK', 'Run test kitchen on COOKBOOK'
+    method_option(:platform,
+      :type => :string,
+      :desc => 'Specify platform to test'
+    )
+    method_option(:cluster,
+      :type => :string,
+      :desc => 'Specify cluster to test'
+    )
+    method_option(:teardown,
+      :type => :boolean,
+      :default => true,
+      :desc => 'Teardown nodes automatically after testing'
+    )
+    method_option(:parallel,
+      :type => :boolean,
+      :default => false,
+      :desc => 'Build test nodes in parallel'
+    )
+    def test(cookbook)
+      setup(cookbook, :test)
       ui.info "#{ui.color('Vagabond:', :bold)} - Kitchen testing for cookbook #{ui.color(name, :cyan)}"
-      plats = [Config[:platform] || platform_map.keys].flatten
-      plats.each do |plat|
-        validate_platform!(plat)
-        if(Config[:integration])
-          integration_tests(plat)
-        else
-          suite_tests(plat)
+      results = Mash.new
+      platforms = [options[:platform] || platform_map.keys].flatten
+      if(options[:cluster])
+        ui.info ui.color("  -> Cluster Testing #{options[:cluster]}!", :yellow)
+        if(kitchen[:clusters].nil? || kitchen[:clusters][options[:cluster]].nil?)
+          ui.fatal "Requested cluster is not defined: #{options[:cluster]}"
+          exit EXIT_CODES[:cluster_invalid]
+        end
+        serv = Server.new
+        serv.options = options
+        serv.auto_upload # upload everything : make optional?
+        suites = kitchen[:clusters][options[:cluster]]
+        platforms.each do |platform|
+          %w(local_server_provision test destroy).each do |action|
+            suites.each do |suite_name|
+              res = self.send("#{action}_node", platform, suite_name)
+              if(action == 'test')
+                results[platform] ||=[]
+                results[platform] << {
+                  :suite_name => suite_name,
+                  :result => res
+                }
+              end
+            end
+          end
+        end
+      else
+        suites = options[:suites] ? options[:suites].split(',') : ['default']
+        platforms.each do |platform|
+          suites.each do |suite_name|
+            provision_node(platform, suite_name)
+            results[platform] ||= []
+            results[platform] << {
+              :suite_name => suite_name,
+              :result => test_node(platform, suite_name)
+            }
+            destroy_node(platform, suite_name)
+          end
+        end
+      end
+      ui.info ui.color('Kitchen Test Results:', :bold)
+      results.each do |platform, infos|
+        ui.info "  Platform: #{ui.color(platform, :blue, :bold)}"
+        infos.each do |res|
+          ui.info "    Suite: #{res[:suite_name]} -> #{res[:result] ? ui.color('SUCCESS!', :green) : ui.color('FAILED!', :red)}"
         end
       end
     end
     
     protected
+
+    def local_server_provision_node(platform, suite_name)
+      run_list = generate_runlist(platform, suite_name)
+      v_inst = vagabond_instance(:up, platform, :suite_name => suite_name, :run_list => run_list)
+      raise "ERROR! No local chef!" unless v_inst.options[:knife_opts]
+      v_inst.send(:execute)
+    end
+    
+    # TODO: Handle failed provision!
+    def provision_node(platform, suite_name)
+      run_list = generate_runlist(platform, suite_name)
+      ui.info ui.color("  -> Provisioning suite #{suite_name} on platform: #{platform}", :cyan)
+      v_inst = vagabond_instance(:create, platform, :suite_name => suite_name)
+      v_inst.send(:execute)
+      solo_path = configure_for(v_inst.name, platform, suite_name, run_list, :dna, :cookbooks)
+      v_inst.send(:provision_solo, solo_path)
+    end
+
+    def test_node(platform, suite_name)
+      v_inst = vagabond_instance(:create, platform, :suite_name => suite_name)
+      busser = bus_node(v_inst, suite_name)
+      ui.info "#{ui.color('Kitchen:', :bold)} Running tests..."
+      cmd = busser.run_cmd
+      res = cmd.to_s.empty? ? true : v_inst.send(:direct_container_command, cmd, :live_stream => STDOUT)
+      ui.info "\n  -> #{ui.color('Testing', :bold, :cyan)} #{name} suite #{suite_name} on platform #{platform}: #{res ? ui.color('SUCCESS!', :green, :bold) : ui.color('FAILED', :red)}"
+      res
+    end
+
+    def destroy_node(platform, suite_name)
+      if(options[:teardown])
+        v_inst = vagabond_instance(:destroy, platform, :suite_name => suite_name)
+        v_inst.send(:execute)
+      end
+    end
+    
+    def setup(name, action)
+      @options = options.dup
+      @vagabondfile = Vagabondfile.new(options[:vagabond_file])
+      setup_ui
+      @name = name
+      @action = action
+      load_kitchen_yml
+    end
 
     def configure_for(l_name, platform, suite_name, runlist, *args)
       dir = File.join(File.dirname(vagabondfile.path), ".vagabond/node_configs/#{l_name}")
@@ -109,30 +213,9 @@ module Vagabond
       end
       com = "librarian-chef update"
       debug(com)
-      c = Mixlib::ShellOut.new(com, :live_stream => Config[:debug], :cwd => dir)
+      c = Mixlib::ShellOut.new(com, :live_stream => options[:debug], :cwd => dir)
       c.run_command
       c.error!
-    end
- 
-    def suite_tests(plat)
-      generate_runlists(plat, Config[:suite]).each do |s_name, s_runlist|
-        ui.info ui.color("  -> Running #{s_name} on platform: #{plat}", :cyan)
-        v_inst = vagabond_instance(:create, plat, :suite_name => s_name)
-        v_inst.send(:execute)
-        solo_path = configure_for(v_inst.name, plat, s_name, s_runlist, :dna, :cookbooks)
-        res = v_inst.send(:provision_solo, solo_path)
-        if(res)
-          ui.info ui.color('  -> PROVISION COMPLETE', :green)
-          busser = bus_node(v_inst, s_name)
-          ui.info "#{ui.color('Kitchen:', :bold)} Running tests..."
-          res = v_inst.send(:direct_container_command, busser.run_cmd, :live_stream => STDOUT)
-        end
-        if(false && Config[:teardown])
-          v_inst.action = :destroy
-          v_inst.send(:execute)
-        end
-        ui.info "\n  -> #{ui.color('Testing', :bold, :cyan)} #{name} suite #{s_name} on platform #{plat}: #{res ? ui.color('SUCCESS!', :green, :bold) : ui.color('FAILED', :red)}"
-      end
     end
 
     def bus_node(v_inst, suite_name)
@@ -149,24 +232,16 @@ module Vagabond
       end
       busser
     end
-
-    def cluster_tests
-      generate_runlists(plat, Config[:suite], :integration).each do |s_name, s_runlist|
-        ui.info ui.color("  -> Running #{s_name} on platform: #{plat}", :cyan)
-        if(vagabond_instance(:up, plat, :suite_name => s_name, :run_list => s_runlist).send(:execute))
-          ui.info ui.color("  -> Running #{s_name} on platform: #{plat} - COMPLETE!", :cyan)
-        else
-          ui.info ui.color("  -> Running #{s_name} on platform: #{plat} - FAILED!", :red)
-        end
-        teardown(plat)
-      end
-    end
     
     def vagabond_instance(action, platform, args={})
-      Config[:disable_name_validate] = true
-      v = Vagabond.new(action, [[name, platform, args[:suite_name]].compact.join('-')],
+      options[:disable_name_validate] = true
+      v = Vagabond.new
+      v.options = options
+      v.send(:setup, action, [name, platform, args[:suite_name]].compact.join('-'),
         :ui => ui,
-        :template => platform_map[platform][:template]
+        :template => platform_map[platform][:template],
+        :disable_name_validate => true,
+        :ui => ui
       )
       v.internal_config.force_bases = platform_map[platform][:template]
       v.internal_config.ensure_state
@@ -210,20 +285,15 @@ module Vagabond
       )])
     end
 
-    def generate_runlists(platform, suite, *args)
+    def generate_runlist(platform, suite)
       r = platform_map[platform][:run_list]
-      lists = Mash.new
-      if(kitchen[:suites])
-        s = suite ? kitchen[:suites].detect{|su| su[:name] == suite} : kitchen[:suites]
-        [s].flatten.each do |_suite|
-          gen_suite = r | _suite[:run_list]
-          gen_suite.uniq
-          lists[_suite[:name]] = gen_suite
-        end
-      else
-        lists[:default] = r
+      kitchen_suite = kitchen[:suites].detect do |k_s|
+        k_s[:name] == suite
       end
-      lists
+      if(kitchen_suite && kitchen_suite[:run_list])
+        r |= kitchen_suite[:run_list]
+      end
+      r.uniq
     end
 
     def validate_platform!(plat)

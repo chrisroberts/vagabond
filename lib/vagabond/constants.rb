@@ -29,6 +29,8 @@ module Vagabond
     :kitchen_missing_yml => 6,
     :kitchen_no_cookbook_arg => 7,
     :kitchen_too_many_args => 8,
-    :kitchen_invalid_platform => 9
+    :kitchen_invalid_platform => 9,
+    :missing_node_name => 10,
+    :cluster_invalid => 11
   )
 end

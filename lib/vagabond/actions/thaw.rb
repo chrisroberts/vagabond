@@ -1,7 +1,8 @@
 module Vagabond
   module Actions
     module Thaw
-      def thaw
+      def _thaw
+        name_required!
         if(lxc.exists?)
           if(lxc.frozen?)
             ui.info "#{ui.color('Vagabond:', :bold)} Thawing node: #{ui.color(name, :yellow)}"

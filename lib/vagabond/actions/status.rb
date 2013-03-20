@@ -1,7 +1,19 @@
 module Vagabond
   module Actions
     module Status
-      def status
+      class << self
+        def included(klass)
+          klass.class_eval do
+            class << self
+              def _status_desc
+                ['status [NODE]', 'Status of NODE or all nodes']
+              end
+            end
+          end
+        end
+      end
+      
+      def _status
         ui.info ui.color("Vagabond node status:\n", :bold)
         if(name)
           status_for(name)

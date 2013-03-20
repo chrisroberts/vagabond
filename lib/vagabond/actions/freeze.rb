@@ -1,7 +1,8 @@
 module Vagabond
   module Actions
     module Freeze
-      def freeze
+      def _freeze
+        name_required!
         if(lxc.exists?)
           ui.info "#{ui.color('Vagabond:', :bold)} Freezing node: #{ui.color(name, :blue)}"
           if(lxc.running?)

@@ -1,7 +1,8 @@
 module Vagabond
   module Actions
     module Provision
-      def provision
+      def _provision
+        name_required!
         if(lxc.exists?)
           if(lxc.running?)
             do_provision
@@ -22,8 +23,8 @@ module Vagabond
         if(config[:environment])
           com << "-E #{config[:environment]}"
         end
-        if(Config[:knife_opts])
-          com << Config[:knife_opts]
+        if(options[:knife_opts])
+          com << options[:knife_opts]
         end
         debug(com)
         # Send the live stream out since people will generally want to

@@ -1,6 +1,22 @@
 #!/usr/bin/env ruby
 
-require 'rubygems'
-require 'vagabond/commands'
+Signal.trap('INT'){ exit 255 }
 
-Vagabond::Commands.new.run!(ARGV)
+require 'rubygems'
+
+case arg = ARGV.shift
+when 'server'
+  require 'vagabond/server'
+  Vagabond::Server
+when 'knife'
+  require 'vagabond/knife'
+  ARGV.unshift(arg) unless ARGV.empty?
+  Vagabond::Knife
+when 'test', 'kitchen'
+  require 'vagabond/kitchen'
+  Vagabond::Kitchen
+else
+  require 'vagabond/vagabond'
+  ARGV.unshift(arg)
+  Vagabond::Vagabond
+end.start

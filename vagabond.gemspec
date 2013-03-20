@@ -17,4 +17,5 @@ Gem::Specification.new do |s|
   s.add_dependency 'chef'
   s.add_dependency 'librarian'
   s.add_dependency 'test-kitchen', '1.0.0.alpha.0'
+  s.add_dependency 'thor'
 end

@@ -13,7 +13,7 @@ module Vagabond
     end
 
     def debug(s)
-      ui.info "#{ui.color('DEBUG:', :red, :bold)} #{s}" if Config[:debug]
+      ui.info "#{ui.color('DEBUG:', :red, :bold)} #{s}" if options[:debug]
     end
     
     def generated_name(n=nil)
@@ -29,11 +29,12 @@ module Vagabond
 
     def setup_ui(ui=nil)
       unless(ui)
-        Chef::Config[:color] = Config[:color].nil? ? true : Config[:color]
+        Chef::Config[:color] = options[:color].nil? ? true : options[:color]
         @ui = Chef::Knife::UI.new(STDOUT, STDERR, STDIN, {})
       else
         @ui = ui
       end
+      options[:debug] = STDOUT if options[:debug]
       self.class.ui = @ui
     end
 
@@ -56,7 +57,7 @@ module Vagabond
       debug(com)
       begin
         cmd = Mixlib::ShellOut.new(com,
-          :live_stream => args[:live_stream] || Config[:debug],
+          :live_stream => args[:live_stream] || options[:debug],
           :timeout => args[:timeout] || 1200
         )
         cmd.run_command

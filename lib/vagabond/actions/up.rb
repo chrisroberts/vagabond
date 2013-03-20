@@ -1,7 +1,8 @@
 module Vagabond
   module Actions
     module Up
-      def up
+      def _up
+        name_required!
         if(lxc.exists?)
           if(lxc.running?)
             ui.error "Node already exists and is running: #{name}"
@@ -11,9 +12,9 @@ module Vagabond
             ui.info ui.color('  -> STARTED', :green)
           end
         else
-          create
+          _create
         end
-        do_provision unless Config[:disable_auto_provision]
+        do_provision if true #options[:auto_provision]
       end
 
     end

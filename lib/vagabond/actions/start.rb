@@ -2,7 +2,8 @@ module Vagabond
   module Actions
     module Start
 
-      def start
+      def _start
+        name_required!
         ui.info "#{ui.color('Vagabond:', :bold)} Starting node: #{ui.color(name, :green)}"
         do_start
         ui.info ui.color('  -> STARTED', :green)

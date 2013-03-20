@@ -1,10 +1,11 @@
 module Vagabond
   module Actions
     module Create
-      def create
+      def _create
+        name_required!
         if(lxc.exists?)
           ui.warn "Node already exists: #{name}" unless name == 'server'
-          start
+          _start
         else
           ui.info "#{ui.color('Vagabond:', :bold)} Creating #{ui.color(name, :green)}"
           do_create
@@ -25,7 +26,7 @@ module Vagabond
         bind_path = File.expand_path(File.dirname(vagabondfile.path))
         com = "#{sudo}lxc-start-ephemeral -d -b #{bind_path} -o #{tmpl}"
         debug(com)
-        c = Mixlib::ShellOut.new("#{com} && sleep 3", :live_stream => Config[:debug])
+        c = Mixlib::ShellOut.new("#{com} && sleep 3", :live_stream => options[:debug])
         c.run_command
         e_name = c.stdout.split("\n").last.split(' ').last.strip
         @internal_config[mappings_key][name] = e_name
