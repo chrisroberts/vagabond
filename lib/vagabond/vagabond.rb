@@ -103,6 +103,13 @@ module Vagabond
     
     protected
 
+    def version
+      setup_ui
+      ui.info "#{ui.color('Vagabond:', :yellow, :bold)} - Advocating idleness and work-shyness"
+      ui.info "  #{ui.color('Version:', :blue)} - #{VERSION.version} (#{VERSION.codename})"
+      exit EXIT_CODES[:success]
+    end
+    
     def execute
       self.send("_#{@action}")
     end
