@@ -3,20 +3,26 @@
 Signal.trap('INT'){ exit 255 }
 
 require 'rubygems'
+require 'vagabond'
 
-case arg = ARGV.shift
-when 'server'
-  require 'vagabond/server'
-  Vagabond::Server
-when 'knife'
-  require 'vagabond/knife'
-  ARGV.unshift(arg) unless ARGV.empty?
-  Vagabond::Knife
-when 'test', 'kitchen'
-  require 'vagabond/kitchen'
-  Vagabond::Kitchen
-else
+if(ARGV.include?('--version') || ARGV.include?('-v'))
   require 'vagabond/vagabond'
-  ARGV.unshift(arg)
-  Vagabond::Vagabond
-end.start
+  Vagabond::Vagabond.new.send(:version)
+else
+  case arg = ARGV.shift
+  when 'server'
+    require 'vagabond/server'
+    Vagabond::Server
+  when 'knife'
+    require 'vagabond/knife'
+    ARGV.unshift(arg) unless ARGV.empty?
+    Vagabond::Knife
+  when 'test', 'kitchen'
+    require 'vagabond/kitchen'
+    Vagabond::Kitchen
+  else
+    require 'vagabond/vagabond'
+    ARGV.unshift(arg)
+    Vagabond::Vagabond
+  end.start
+end
