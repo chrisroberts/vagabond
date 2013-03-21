@@ -16,7 +16,7 @@ end
 
 module Vagabond
   class Vagabond < Thor
-
+    
     include Thor::Actions
     include Helpers
 
@@ -69,6 +69,7 @@ module Vagabond
     end
 
     CLI_OPTIONS.call
+
     
     # action:: Action to perform
     # name:: Name of vagabond
@@ -100,7 +101,7 @@ module Vagabond
     end
 
     COMMANDS.call
-    
+
     protected
 
     def version
