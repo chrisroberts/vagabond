@@ -6,7 +6,11 @@ module Vagabond
           klass.class_eval do
             class << self
               def _status_desc
-                ['status [NODE]', 'Status of NODE or all nodes']
+                if(defined?(Server) && self == Server)
+                  ['status', 'Status of server']
+                else
+                  ['status [NODE]', 'Status of NODE or all nodes']
+                end
               end
             end
           end
