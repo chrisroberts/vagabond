@@ -93,6 +93,11 @@ module Vagabond
           args = ["#{meth}#{' NODE' if show_node}", "#{meth.capitalize} instance#{' of NODE' if show_node}"]
         end
         desc(*args)
+        if(self.respond_to?("_#{meth}_options"))
+          self.send("_#{meth}_options").each do |opts|
+            method_option(*opts)
+          end
+        end
         define_method meth do |*args|
           setup(meth, *args)
           execute
