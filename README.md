@@ -14,6 +14,10 @@ easily and most importantly, quickly. It uses Linux containers
 instead of full blown VMs which means things are faster. Lots
 faster.
 
+Vagabond is built for Chef. The tooling within Vagabond is targeted
+at Chef. As the initial development push on Vagabond slows, this
+tooling will become optionally swappable (applicable bits at least).
+
 ## Installation
 
 As a rubygem:
@@ -22,10 +26,10 @@ As a rubygem:
 $ gem install vagabond
 ```
 
-## How it is?
+## How does it work
 
 Currently, this is built to run within a classic Chef repository.
-It requires a Vagabond file, that simply outputs a Hash. The file
+It requires a `Vagabond` file, that simply outputs a Hash. The file
 is Ruby though, so you can do lots of crazy stuff to build the
 Hash you return. Heres a simple example:
 
@@ -48,6 +52,12 @@ Hash you return. Heres a simple example:
 }
 ```
 
+Now, to create a node, simply run:
+
+```
+$ vagabond up db
+```
+
 Pretty simple, right?
 
 ### Templates available
@@ -64,49 +74,8 @@ Currently builtin templates:
 
 ## Commands
 
-Lots of commands. What to see them all? Just ask:
-
-```
-$ vagabond --help
-Nodes:
-        vagabond create NODE [options]
-        vagabond destroy NODE [options]
-        vagabond freeze NODE [options]
-        vagabond provision NODE [options]
-        vagabond rebuild NODE [options]
-        vagabond ssh NODE [options]
-        vagabond start NODE [options]
-        vagabond status NODE [options]
-        vagabond thaw NODE [options]
-        vagabond up NODE [options]
-Server:
-        vagabond server auto_upload [options]
-        vagabond server create [options]
-        vagabond server destroy [options]
-        vagabond server freeze [options]
-        vagabond server provision [options]
-        vagabond server rebuild [options]
-        vagabond server ssh [options]
-        vagabond server start [options]
-        vagabond server status [options]
-        vagabond server stop [options]
-        vagabond server thaw [options]
-        vagabond server up [options]
-        vagabond server upload_cookbooks [options]
-        vagabond server upload_databags [options]
-        vagabond server upload_environments [options]
-        vagabond server upload_roles [options]
-Knife:
-        vagabond knife COMMAND [knife_options]
-Options:
-        --color
-        --debug
-        --disable-auto-provision
-        --disable-local-server
-        --disable-configure
-        --force-configure
-    -f, --vagabond-file FILE
-```
+See the `USAGE` file for an overview of available commands and their
+usage.
 
 ## Local chef server?
 
@@ -133,6 +102,35 @@ vagabond knife SOME COOL KNIFE COMMAND
 
 This will just push the command into the local chef server. 
 
+## Test Kitchen
+
+Vagabond provides test kitchen 1.0 support. It will map boxes defined
+within platforms to platform templates available (to the best of its
+ability). No need to spin up vagrant VMs, or use another tool. Point
+vagabond at the cookbook, and let it handle the details.
+
+In the TODO pipeline is allowing platform mapping in the Vagabondfile
+so custom templates (with memory limits for example) can be used
+instead of the base templates.
+
+### Cluster testing
+
+Vagabond adds an extra feature to test kitchen: cluster testing. This
+type of testing uses the local chef server, and provides an extreme
+amount of power to tests. Instead of provisioning a node and simply
+testing it in isolation, cluster testing provides the support to
+provision multiple nodes against the local chef server. Once all
+nodes have been successfully provisioned, vagabond will go back through
+each node and run tests.
+
+Seems simple, right? It is, but it's also extremely powerful. Instead
+of testing things individually and isolated, this allows for real
+integration testing. Tests can be applied to discovery, slaving,
+and all the other fun things nodes may be doing that require a
+chef server. Looking for example? See the `USAGE` file!
+
+Double awesome
+
 ## Important note
 
 Until namespaces hit Linux proper, vagabond `sudo`s its way around. You
@@ -152,8 +150,10 @@ boring old `sudo`, you can do that to:
 
 ## Extra note
 
-This is still very much in alpha testing phase. So if you find bugs, please
-report them!
+This thing is still very new and shiny with lots of sharp edges. They
+are getting sanded down as quickly as possible. If you find bugs, are
+confused about some of the available functionality, or just want to point 
+out some stupidity that I have implemented, please file an issue on github!
 
 ## Contributing
 
