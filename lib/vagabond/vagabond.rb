@@ -152,15 +152,16 @@ module Vagabond
     def load_configurations
       @vagabondfile = Vagabondfile.new(options[:vagabond_file])
       options[:sudo] = sudo
-      options[:disable_solo] = true if @action.to_s == 'status'
+      options[:disable_solo] = true if @action.to_s == 'status' && lxc_installed?
       Lxc.use_sudo = @vagabondfile[:sudo].nil? ? true : @vagabondfile[:sudo]
       @internal_config = InternalConfiguration.new(@vagabondfile, ui, options)
       @config = @vagabondfile[:boxes][name]
       @lxc = Lxc.new(@internal_config[mappings_key][name] || '____nonreal____')
-      if(options[:local_server])
+      if(options[:local_server] && lxc_installed?)
         if(@vagabondfile[:local_chef_server] && @vagabondfile[:local_chef_server][:enabled])
-          srv = Lxc.new(@internal_config[:mappings][:server])
-          if(srv.running?)
+          srv_name = @internal_config[:mappings][:server]
+          srv = Lxc.new(srv_name) if srv_name
+          if(srv_name && srv.running?)
             options[:knife_opts] = " --server-url https://#{srv.container_ip(10, true)}"
           else
             ui.warn 'Local chef server is not currently running!' unless @action.to_sym == :status
@@ -196,6 +197,10 @@ module Vagabond
 
     def vagabond_dir
       File.join(base_dir, '.vagabond')
+    end
+
+    def lxc_installed?
+      system('which lxc-info > /dev/null')
     end
   end
 end
