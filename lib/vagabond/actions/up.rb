@@ -1,6 +1,18 @@
 module Vagabond
   module Actions
     module Up
+      class << self
+        def included(klass)
+          klass.class_eval do
+            class << self
+              def _up_options
+                [[:auto_provision, :type => :boolean, :default => true]]
+              end
+            end
+          end
+        end
+      end
+
       def _up
         name_required!
         if(lxc.exists?)
@@ -14,7 +26,7 @@ module Vagabond
         else
           _create
         end
-        do_provision if true #options[:auto_provision]
+        do_provision if options[:auto_provision]
       end
 
     end
