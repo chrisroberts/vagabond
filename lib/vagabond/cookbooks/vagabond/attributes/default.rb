@@ -1,5 +1,8 @@
+default[:vagabond][:bases][:ubuntu_1004][:template] = 'ubuntu'
 default[:vagabond][:bases][:ubuntu_1004][:template_options] = {'--release' => 'lucid'}
+default[:vagabond][:bases][:ubuntu_1204][:template] = 'ubuntu'
 default[:vagabond][:bases][:ubuntu_1204][:template_options] = {'--release' => 'precise'}
+default[:vagabond][:bases][:ubuntu_1210][:template] = 'ubuntu'
 default[:vagabond][:bases][:ubuntu_1210][:template_options] = {'--release' => 'quantal'}
 default[:vagabond][:bases][:centos_58][:template] = 'centos'
 default[:vagabond][:bases][:centos_58][:template_options] = {'--release' => '5', '--releaseminor' => '8'}

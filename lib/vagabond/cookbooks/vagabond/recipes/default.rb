@@ -1,8 +1,23 @@
-include_recipe 'lxc::install_dependencies'
+include_recipe 'lxc'
 
-cookbook_file '/usr/share/lxc/templates/lxc-centos' do
-  source 'lxc-centos'
-  mode 0755
+ruby_block 'LXC template: lxc-centos' do
+  block do
+    dir = %w(/usr/share /usr/lib).map do |prefix|
+      if(File.directory?(d = File.join(prefix, 'lxc/templates')))
+        d
+      end
+    end.compact.first
+    raise 'Failed to locate LXC template directory' unless dir
+    cfl = Chef::Resource::CookbookFile.new(
+      ::File.join(dir, 'lxc-centos'),
+      run_context
+    )
+    cfl.source 'lxc-centos'
+    cfl.mode 0755
+    cfl.cookbook cookbook_name.to_s
+    cfl.action :nothing
+    cfl.run_action(:create)
+  end
 end
 
 node[:vagabond][:bases].each do |name, options|
@@ -14,9 +29,9 @@ node[:vagabond][:bases].each do |name, options|
     'upgrade -y -q',
     'install curl -y -q'
   ]
-  if(%w(debian ubuntu).include?(options[:template]))
+  if(!options[:template].scan(%r{debian|ubuntu}).empty?)
     pkg_man = 'apt-get'
-  elsif(%w(fedora centos).include?(options[:template]))
+  elsif(!options[:template].scan(%r{fedora|centos}).empty?)
     pkg_man = 'yum'
   end
   if(pkg_man)
