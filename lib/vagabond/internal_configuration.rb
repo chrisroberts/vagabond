@@ -55,6 +55,8 @@ module Vagabond
             File.read(path)
           )
         )
+      else
+        @config = Mash.new
       end
     end
 
