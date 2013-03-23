@@ -70,6 +70,10 @@ module Vagabond
       :default => false,
       :desc => 'Build test nodes in parallel'
     )
+    method_option(:suites,
+      :type => :string,
+      :desc => 'Specify suites to test [suite1,suite2,...]'
+    )
     def test(cookbook)
       setup(cookbook, :test)
       ui.info "#{ui.color('Vagabond:', :bold)} - Kitchen testing for cookbook #{ui.color(name, :cyan)}"
