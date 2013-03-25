@@ -28,6 +28,7 @@ module Vagabond
         debug(com)
         c = Mixlib::ShellOut.new("#{com} && sleep 3", :live_stream => options[:debug])
         c.run_command
+        c.error!
         e_name = c.stdout.split("\n").last.split(' ').last.strip
         @internal_config[mappings_key][name] = e_name
         @internal_config.save
