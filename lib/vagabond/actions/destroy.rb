@@ -22,7 +22,16 @@ module Vagabond
         cmd = Mixlib::ShellOut.new(com, :live_stream => options[:debug])
         cmd.run_command
         cmd.error!
-        if(cmd.stderr.include?('skipping'))
+        force_umount_if_required!
+        internal_config[mappings_key].delete(name)
+        internal_config.save
+      end
+
+      def force_umount_if_required!
+        mount = %x{mount}.split("\n").find_all do |line|
+          line.include?(lxc.name)
+        end
+        unless(mount.empty?)
           ui.info ui.color('  -> Failed to unmount some resources. Forcing manually.', :yellow)
           %w(rootfs ephemeralbind).each do |mnt|
             com = "#{options[:sudo]}umount /var/lib/lxc/#{lxc.name}/#{mnt}"
@@ -34,9 +43,15 @@ module Vagabond
             cmd = Mixlib::ShellOut.new(com, :live_stream => options[:debug])
             cmd.run_command
             cmd.error!
-            internal_config[mappings_key].delete(name)
           end
-          internal_config.save
+          # check for tmpfs and umount too
+          tmp = mount.detect{|x|x.include?('rootfs')}.scan(%r{upperdir=[^,]+}).first.to_s.split('=').last
+          if(tmp)
+            com = "#{options[:sudo]}umount #{tmp}"
+            debug(com)
+            cmd = Mixlib::ShellOut.new(com, :live_stream => options[:debug])
+            cmd.run_command
+          end
         end
       end
     end
