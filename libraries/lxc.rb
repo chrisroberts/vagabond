@@ -1,3 +1,5 @@
+require 'pathname'
+
 class Lxc
   class CommandFailed < StandardError
   end
@@ -5,6 +7,18 @@ class Lxc
   attr_reader :name
 
   class << self
+
+    attr_accessor :use_sudo
+
+    def sudo
+      case use_sudo
+      when TrueClass
+        'sudo '
+      when String
+        "#{use_sudo} "
+      end
+    end
+        
     # List running containers
     def running
       full_list[:running]
@@ -28,14 +42,14 @@ class Lxc
 
     # List of containers
     def list
-      %x{lxc-ls}.split("\n").uniq
+      %x{#{sudo}lxc-ls}.split("\n").uniq
     end
 
     # name:: Name of container
     # Returns information about given container
     def info(name)
       res = {:state => nil, :pid => nil}
-      info = %x{lxc-info -n #{name}}.split("\n")
+      info = %x{#{sudo}lxc-info -n #{name}}.split("\n")
       parts = info.first.split(' ')
       res[:state] = parts.last.downcase.to_sym
       parts = info.last.split(' ')
@@ -94,26 +108,28 @@ class Lxc
 
   # retries:: Number of discovery attempt (3 second sleep intervals)
   # Returns container IP
-  def container_ip(retries=0)
-    retries.to_i.times do
-      ip = leased_address || lxc_stored_address
+  def container_ip(retries=0, raise_on_fail=false)
+    (retries.to_i + 1).times do
+      ip = proc_detected_address || hw_detected_address || leased_address || lxc_stored_address
       return ip if ip && self.class.connection_alive?(ip)
       Chef::Log.warn "LXC IP discovery: Failed to detect live IP"
-      sleep(3)
+      sleep(3) if retries > 0
     end
-    nil
+    raise "Failed to detect live IP address for container: #{name}" if raise_on_fail
   end
 
   # Container address via lxc config file
   def lxc_stored_address
-    ip = File.readlines(container_config).detect{|line|
-      line.include?('ipv4')
-    }.to_s.split('=').last.to_s.strip
-    if(ip.to_s.empty?)
-      nil
-    else
-      Chef::Log.info "LXC Discovery: Found container address via storage: #{ip}"
-      ip
+    if(File.exists?(container_config))
+      ip = File.readlines(container_config).detect{|line|
+        line.include?('ipv4')
+      }.to_s.split('=').last.to_s.strip
+      if(ip.to_s.empty?)
+        nil
+      else
+        Chef::Log.info "LXC Discovery: Found container address via storage: #{ip}"
+        ip
+      end
     end
   end
 
@@ -136,51 +152,106 @@ class Lxc
     end
   end
 
+  def hw_detected_address
+    if(container_config.readable?)
+      hw = File.readlines(container_config).detect{|line|
+        line.include?('hwaddr')
+      }.to_s.split('=').last.to_s.downcase
+      if(File.exists?(container_config) && !hw.empty?)
+        running? # need to do a list!
+        ip = File.readlines('/proc/net/arp').detect{|line|
+          line.downcase.include?(hw)
+        }.to_s.split(' ').first.to_s.strip
+        if(ip.to_s.empty?)
+          nil
+        else
+          Chef::Log.info "LXC Discovery: Found container address via HW addr: #{ip}"
+          ip
+        end
+      end
+    end
+  end
+
+  def proc_detected_address(base='/run/netns')
+    if(pid != -1)
+      Dir.mktmpdir do |t_dir|
+        name = File.basename(t_dir)
+        path = File.join(base, name)
+        system("#{sudo}mkdir -p #{base}")
+        system("#{sudo}ln -s /proc/#{pid}/ns/net #{path}")
+        res = %x{#{sudo}ip netns exec #{name} ip -4 addr show scope global | grep inet}
+        system("#{sudo}rm -f #{path}")
+        ip = res.strip.split(' ')[1].to_s.sub(%r{/.*$}, '').strip
+        ip.empty? ? nil : ip
+      end
+    end
+  end
+
+  def sudo
+    self.class.sudo
+  end
+    
   # Full path to container
   def container_path
-    File.join(@base_path, name)
+    Pathname.new(@base_path).join(name)
   end
   alias_method :path, :container_path
 
   # Full path to container configuration file
   def container_config
-    File.join(container_path, 'config')
+    container_path.join('config')
   end
   alias_method :config, :container_config
 
   def container_rootfs
-    File.join(container_path, 'rootfs')
+    container_path.join('rootfs')
   end
   alias_method :rootfs, :container_rootfs
 
+  def expand_path(path)
+    container_rootfs.join(path)
+  end
+
+  def state
+    self.class.info(name)[:state]
+  end
+
+  def pid
+    self.class.info(name)[:pid]
+  end
+
   # Start the container
   def start
-    run_command("lxc-start -n #{name} -d")
-    run_command("lxc-wait -n #{name} -s RUNNING", :allow_failure_retry => 2)
+    run_command("#{sudo}lxc-start -n #{name} -d")
+    run_command("#{sudo}lxc-wait -n #{name} -s RUNNING", :allow_failure_retry => 2)
   end
 
   # Stop the container
   def stop
-    run_command("lxc-stop -n #{name}")
-    run_command("lxc-wait -n #{name} -s STOPPED", :allow_failure_retry => 2)
+    run_command("#{sudo}lxc-stop -n #{name}", :allow_failure_retry => 3)
+    run_command("#{sudo}lxc-wait -n #{name} -s STOPPED", :allow_failure_retry => 2)
   end
   
   # Freeze the container
   def freeze
-    run_command("lxc-freeze -n #{name}")
-    run_command("lxc-wait -n #{name} -s FROZEN", :allow_failure_retry => 2)
+    run_command("#{sudo}lxc-freeze -n #{name}")
+    run_command("#{sudo}lxc-wait -n #{name} -s FROZEN", :allow_failure_retry => 2)
   end
 
   # Unfreeze the container
   def unfreeze
-    run_command("lxc-unfreeze -n #{name}")
-    run_command("lxc-wait -n #{name} -s RUNNING", :allow_failure_retry => 2)
+    run_command("#{sudo}lxc-unfreeze -n #{name}")
+    run_command("#{sudo}lxc-wait -n #{name} -s RUNNING", :allow_failure_retry => 2)
   end
 
   # Shutdown the container
   def shutdown
-    run_command("lxc-shutdown -n #{name}")
-    run_command("lxc-wait -n #{name} -s STOPPED", :allow_failure_retry => 2)
+    run_command("#{sudo}lxc-shutdown -n #{name}")
+    run_command("#{sudo}lxc-wait -n #{name} -s STOPPED", :allow_failure => true, :timeout => 10)
+    if(running?)
+      container_command('shutdown -h now')
+      run_command("#{sudo}lxc-wait -n #{name} -s STOPPED")
+    end
   end
 
   def knife_container(cmd, ip)
@@ -203,18 +274,20 @@ class Lxc
     begin
       shlout = Mixlib::ShellOut.new(cmd, 
         :logger => Chef::Log.logger, 
-        :live_stream => STDOUT
+        :live_stream => STDOUT,
+        :timeout => args[:timeout] || 1200
       )
       shlout.run_command
       shlout.error!
-    rescue Mixlib::ShellOut::ShellCommandFailed, CommandFailed
-      if(args[:allow_failure])
-        true
-      elsif(retries > 0)
+    rescue Mixlib::ShellOut::ShellCommandFailed, CommandFailed, Mixlib::ShellOut::CommandTimeout
+      if(retries > 0)
         Chef::Log.warn "LXC run command failed: #{cmd}"
         Chef::Log.warn "Retrying command. #{args[:allow_failure_retry].to_i - retries} of #{args[:allow_failure_retry].to_i} retries remain"
+        sleep(0.3)
         retries -= 1
         retry
+      elsif(args[:allow_failure])
+        true
       else
         raise
       end

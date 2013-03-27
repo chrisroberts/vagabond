@@ -6,7 +6,6 @@ end
 include_recipe 'lxc::install_dependencies'
 
 #if the server uses the apt::cacher-client recipe, re-use it
-mirror="http://archive.ubuntu.com/ubuntu"
 unless Chef::Config[:solo]
   if File.exists?('/etc/apt/apt.conf.d/01proxy')
     query = 'recipes:apt\:\:cacher-ng'
@@ -15,7 +14,7 @@ unless Chef::Config[:solo]
     servers = search(:node, query)
     if servers.length > 0
       Chef::Log.info("apt-cacher-ng server found on #{servers[0]}.")
-      mirror="http://#{servers[0]['ipaddress']}:3142/archive.ubuntu.com/ubuntu"
+      node.default[:lxc][:mirror] = "http://#{servers[0]['ipaddress']}:3142/archive.ubuntu.com/ubuntu"
     end
   end
 end
@@ -34,7 +33,7 @@ template '/etc/default/lxc' do
       :lxc_dhcp_range => node[:lxc][:dhcp_range],
       :lxc_dhcp_max => node[:lxc][:dhcp_max],
       :lxc_shutdown_timeout => node[:lxc][:shutdown_timeout],
-      :mirror => mirror
+      :mirror => node[:lxc][:mirror]
     }
   )
 end

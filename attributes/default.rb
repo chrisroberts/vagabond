@@ -22,5 +22,5 @@ default[:lxc][:user_pass][:ubuntu] = {:username => 'ubuntu', :password => 'ubunt
 default[:lxc][:user_pass][:fedora] = {:username => 'root', :password => 'root'}
 
 default[:lxc][:packages] = %w(lxc)
-
+default[:lxc][:mirror] = 'http://archive.ubuntu.com/ubuntu'
 default[:lxc][:containers] = {}

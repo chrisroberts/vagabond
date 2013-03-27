@@ -1,5 +1,5 @@
 # Chef generated fstab!
-<% node[:lxc][:fstabs][@container].each do |line| -%>
+<% node.run_state[:lxc][:fstabs][@container].each do |line| -%>
 <%= line %>
 <% end -%>
 
