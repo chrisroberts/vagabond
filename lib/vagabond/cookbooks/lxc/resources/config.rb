@@ -13,7 +13,6 @@ attribute :cgroup, :kind_of => Hash, :default => Mash.new
 attribute :cap_drop, :kind_of => [String, Array], :default => %w(sys_module mac_admin)
 attribute :mount, :kind_of => String
 attribute :mount_entry, :kind_of => String
-attribute :rootfs, :kind_of => String
+attribute :rootfs, :kind_of => [String,Pathname]
 attribute :rootfs_mount, :kind_of => String
 attribute :pivotdir, :kind_of => String
-attribute :_lxc

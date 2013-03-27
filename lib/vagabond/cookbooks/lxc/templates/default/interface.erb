@@ -4,7 +4,7 @@
 auto lo
 iface lo inet loopback
 
-<% node[:lxc][:interfaces][@container].each do |net_set| -%>
+<% node.run_state[:lxc][:interfaces][@container].each do |net_set| -%>
 <% if net_set[:auto] -%>
 auto <%= net_set[:device] %>
 <% end -%>

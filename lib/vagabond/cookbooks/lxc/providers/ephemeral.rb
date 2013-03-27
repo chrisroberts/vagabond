@@ -1,7 +1,7 @@
 use_inline_resources if self.respond_to?(:use_inline_resources)
 
 def load_current_resource
-  @lxc = Lxc.new(
+  @lxc = ::Lxc.new(
     new_resource.base_container,
     :base_dir => node[:lxc][:container_directory],
     :dnsmasq_lease_file => node[:lxc][:dnsmasq_lease_file]

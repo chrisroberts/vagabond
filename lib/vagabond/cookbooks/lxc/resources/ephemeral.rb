@@ -1,4 +1,4 @@
-action :run
+actions :run
 default_action :run
 
 attribute :command, :kind_of => String, :required => true

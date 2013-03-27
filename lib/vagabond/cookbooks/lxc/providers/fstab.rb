@@ -1,10 +1,4 @@
 def load_current_resource
-  new_resource._lxc Lxc.new(
-    new_resource.container,
-    :base_dir => node[:lxc][:container_directory],
-    :dnsmasq_lease_file => node[:lxc][:dnsmasq_lease_file]
-  )
-  @loaded ||= {}
   node.run_state[:lxc] ||= Mash.new
   node.run_state[:lxc][:fstabs] ||= Mash.new
   node.run_state[:lxc][:fstabs][new_resource.container] ||= []

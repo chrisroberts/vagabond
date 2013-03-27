@@ -153,19 +153,21 @@ class Lxc
   end
 
   def hw_detected_address
-    hw = File.readlines(container_config).detect{|line|
-      line.include?('hwaddr')
-    }.to_s.split('=').last.to_s.downcase
-    if(File.exists?(container_config) && !hw.empty?)
-      running? # need to do a list!
-      ip = File.readlines('/proc/net/arp').detect{|line|
-        line.downcase.include?(hw)
-      }.to_s.split(' ').first.to_s.strip
-      if(ip.to_s.empty?)
-        nil
-      else
-        Chef::Log.info "LXC Discovery: Found container address via HW addr: #{ip}"
-        ip
+    if(container_config.readable?)
+      hw = File.readlines(container_config).detect{|line|
+        line.include?('hwaddr')
+      }.to_s.split('=').last.to_s.downcase
+      if(File.exists?(container_config) && !hw.empty?)
+        running? # need to do a list!
+        ip = File.readlines('/proc/net/arp').detect{|line|
+          line.downcase.include?(hw)
+        }.to_s.split(' ').first.to_s.strip
+        if(ip.to_s.empty?)
+          nil
+        else
+          Chef::Log.info "LXC Discovery: Found container address via HW addr: #{ip}"
+          ip
+        end
       end
     end
   end

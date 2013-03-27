@@ -57,3 +57,4 @@ def device(iname='device', &block)
   @subresources << iface
 end
 
+attr_reader :subresources

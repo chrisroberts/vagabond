@@ -1,5 +1,5 @@
 def load_current_resource
-  @lxc = Lxc.new(
+  @lxc = ::Lxc.new(
     new_resource.name,
     :base_dir => node[:lxc][:container_directory],
     :dnsmasq_lease_file => node[:lxc][:dnsmasq_lease_file]
@@ -9,9 +9,10 @@ def load_current_resource
     raise "Static gateway must be defined when static IP is provided (Container: #{new_resource.name})"
   end
   new_resource.default_bridge node[:lxc][:bridge] unless new_resource.default_bridge
+  node.run_state[:lxc] ||= Mash.new
   node.run_state[:lxc][:meta] ||= Mash.new
   node.run_state[:lxc][:meta][new_resource.name] = Mash.new(
-    :new_container => @lxc.exists?,
+    :new_container => !@lxc.exists?,
     :lxc => @lxc
   )
 end
@@ -87,23 +88,29 @@ action :create do
       new_resource.subresources.empty?
     end
   end
-  
-  template @lxc.path.join('fstab') do
+
+  template @lxc.path.join('fstab').to_path do
     source 'fstab.erb'
+    cookbook 'lxc'
     variables :container => new_resource.name
     mode 0644
   end
 
-  template @lxc.rootfs.join('etc/network/interfaces') do
-    source 'interfaces.erb'
+  template @lxc.rootfs.join('etc/network/interfaces').to_path do
+    source 'interface.erb'
+    cookbook 'lxc'
     variables :container => new_resource.name
     mode 0644
+    only_if do
+      node.run_state[:lxc][:interfaces] &&
+        node.run_state[:lxc][:interfaces][new_resource.name]
+    end
   end
 
   #### Ensure host has ssh access into container
-  directory @lxc.rootfs.join('root/.ssh')
+  directory @lxc.rootfs.join('root/.ssh').to_path
 
-  file @lxc.rootfs.join('root/.ssh/authorized_keys') do
+  file @lxc.rootfs.join('root/.ssh/authorized_keys').to_path do
     content "# Chef generated key file\n#{::File.read('/opt/hw-lxc-config/id_rsa.pub')}\n"
   end
 
@@ -135,7 +142,7 @@ action :create do
       # TODO: Add resources for RPM install
 
       #### Setup chef related bits within container
-      directory @lxc.rootfs.join('etc/chef') do
+      directory @lxc.rootfs.join('etc/chef').to_path do
         action :create
         mode 0755
       end
@@ -143,7 +150,7 @@ action :create do
       template "lxc chef-config[#{new_resource.name}]" do
         source 'client.rb.erb'
         cookbook 'lxc'
-        path _lxc.rootfs.join('etc/chef/client.rb')
+        path _lxc.rootfs.join('etc/chef/client.rb').to_path
         variables(
           :validation_client => new_resource.validation_client,
           :node_name => new_resource.node_name || "#{node.name}-#{new_resource.name}",
@@ -154,13 +161,13 @@ action :create do
       end
 
       file "lxc chef-validator[#{new_resource.name}]" do
-        path _lxc.rootfs.join('etc/chef/validator.pem')
+        path _lxc.rootfs.join('etc/chef/validator.pem').to_path
         content new_resource.validator_pem || node[:lxc][:validator_pem]
         mode 0600
       end
 
       file "lxc chef-runlist[#{new_resource.name}]" do
-        path _lxc.rootfs.join('etc/chef/first_run.json')
+        path _lxc.rootfs.join('etc/chef/first_run.json').to_path
         content({:run_list => new_resource.run_list}.to_json)
         not_if do
           _lxc.rootfs.join('etc/chef/client.pem').exist?
@@ -172,7 +179,7 @@ action :create do
       if(new_resource.copy_data_bag_secret_file)
         if ::File.readable?(new_resource.data_bag_secret_file)
           file "lxc chef-data-bag-secret[#{new_resource.name}]" do
-            path _lxc.rootfs.join('etc/chef/encrypted_data_bag_secret')
+            path _lxc.rootfs.join('etc/chef/encrypted_data_bag_secret').to_path
             content ::File.open(new_resource.data_bag_secret_file, "rb").read
             mode 0600
           end
@@ -187,7 +194,7 @@ action :create do
         _lxc.start
       end
       only_if do
-        _lxc.rootfs.join('etc/chef/first_run.json') ||
+        _lxc.rootfs.join('etc/chef/first_run.json').exist? ||
           (node.run_state[:lxc][:meta][new_resource.name][:new_container] && new_resource.initialize_commands)
       end
     end
@@ -198,7 +205,7 @@ action :create do
         # Use remote file to remove curl dep
         remote_file "lxc chef_install_script[#{new_resource.name}]" do
           source "http://opscode.com/chef/install.sh"
-          path _lxc.rootfs.join('opt/chef-install.sh')
+          path _lxc.rootfs.join('opt/chef-install.sh').to_path
           action :create_if_missing
         end
 
@@ -230,6 +237,7 @@ action :create do
     ruby_block "lxc initialize_commands[#{new_resource.name}]" do
       block do
         new_resource.initialize_commands.each do |cmd|
+          Chef::Log.info "Running command on #{new_resource.name}: #{cmd}"
           _lxc.container_command(cmd, 2)
         end
       end
@@ -243,7 +251,7 @@ action :create do
     ruby_block "lxc container_commands[#{new_resource.name}]" do
       block do
         new_resource.container_commands.each do |cmd|
-          new_resource._lxc.container_command(cmd, 2)
+          _lxc.container_command(cmd, 2)
         end
       end
       not_if do
@@ -254,7 +262,7 @@ action :create do
     #### NOTE: Creation always leaves the container in a stopped state
     ruby_block "lxc shutdown[#{new_resource.name}]" do
       block do
-        new_resource._lxc.shutdown
+        _lxc.shutdown
       end
       only_if do
         node.run_state[:lxc][:meta][new_resource.name][:new_container]
@@ -262,11 +270,11 @@ action :create do
     end
 
     #### Clean up after chef if it's enabled
-    file @lxc.rootfs.join('etc/chef/first_run.json') do
+    file @lxc.rootfs.join('etc/chef/first_run.json').to_path do
       action :delete
     end
 
-    file @lxc.rootfs.join('etc/chef/validator.pem') do
+    file @lxc.rootfs.join('etc/chef/validator.pem').to_path do
       action :delete
     end
     
