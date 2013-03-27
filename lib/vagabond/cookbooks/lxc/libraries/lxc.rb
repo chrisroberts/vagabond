@@ -1,3 +1,5 @@
+require 'pathname'
+
 class Lxc
   class CommandFailed < StandardError
   end
@@ -189,23 +191,23 @@ class Lxc
     
   # Full path to container
   def container_path
-    File.join(@base_path, name)
+    Pathname.new(@base_path).join(name)
   end
   alias_method :path, :container_path
 
   # Full path to container configuration file
   def container_config
-    File.join(container_path, 'config')
+    container_path.join('config')
   end
   alias_method :config, :container_config
 
   def container_rootfs
-    File.join(container_path, 'rootfs')
+    container_path.join('rootfs')
   end
   alias_method :rootfs, :container_rootfs
 
   def expand_path(path)
-    File.join(container_rootfs, path)
+    container_rootfs.join(path)
   end
 
   def state
