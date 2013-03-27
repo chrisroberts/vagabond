@@ -62,13 +62,6 @@ def load_current_resource
 end
 
 action :create do
-  ruby_block "lxc config_updater[#{new_resource.utsname}]" do
-    block do
-      new_resource.updated_by_last_action(true)
-    end
-    action :nothing
-  end
-
   directory new_resource._lxc.container_path do
     action :create
   end
@@ -77,6 +70,5 @@ action :create do
     path new_resource._lxc.container_config
     content LxcFileConfig.generate_config(new_resource)
     mode 0644
-    notifies :create, resources(:ruby_block => "lxc config_updater[#{new_resource.utsname}]"), :immediately
   end
 end

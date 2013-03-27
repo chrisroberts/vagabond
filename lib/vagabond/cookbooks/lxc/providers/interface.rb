@@ -11,89 +11,32 @@ def load_current_resource
       raise "#{key} is required for static interfaces" if new_resource.send(key).nil?
     end
   end
-  # address checks
-  unless(new_resource.dynamic)
-    %w(address).each do |key|
-      new_resource.send(key).split('.').each do |oct|
-        raise "#{key} is not a valid address" if oct.to_i > 254
-      end
-    end
-    new_resource.netmask.split('.').each do |oct|
-      raise 'netmask is not valid' if oct.to_i > 255
-    end
-  end
-  interfaces = node[:lxc][:interfaces] || Mash.new
-  interfaces[new_resource.container] ||= []
-  node[:lxc][:interfaces] = interfaces
+  node.run_state[:lxc] ||= Mash.new
+  node.run_state[:lxc][:interfaces] ||= Mash.new
+  node.run_state[:lxc][:interfaces][new_resource.container] ||= []
 end
 
 action :create do
+  raise 'Device is required for creating an LXC interface!' unless new_resource.device
+  
   unless(@loaded[new_resource.container])
     @loaded[new_resource.container] = true
-    ruby_block "lxc_interface_notifier[#{new_resource.container}]" do
-      action :create
-      block{ true }
-      only_if do
-        new_resource.updated_by_last_action?
-      end
-    end
-    template ::File.join(@lxc.rootfs, 'etc', 'network', 'interfaces') do
-      source 'interface.erb'
-      cookbook 'lxc'
-      variables :container => new_resource.container
-      subscribes :create, resources(:ruby_block => "lxc_interface_notifier[#{new_resource.container}]"), :delayed
-      mode 0644
-    end
   end
 
   net_set = Mash.new(:device => new_resource.device)
   if(new_resource.dynamic)
     net_set[:dynamic] = true
   else
+    net_set[:auto] = new_resource.auto
     net_set[:address] = new_resource.address
     net_set[:gateway] = new_resource.gateway
     net_set[:netmask] = new_resource.netmask
   end
 
-  unless(node[:lxc][:interfaces][new_resource.container].include?(net_set))
-    current_interfaces = node[:lxc][:interfaces][new_resource.container].dup
-    current_interfaces << net_set
-    node[:lxc][:interfaces][new_resource.contaienr] = current_interfaces
-    new_resource.updated_by_last_action(true)
-  end
+  node.run_state[:lxc][:interfaces][new_resource.container] << net_set
 end
 
 action :delete do
-  unless(@loaded[new_resource.container])
-    @loaded[new_resource.container] = true
-    ruby_block "lxc_interface_notifier[#{new_resource.container}]" do
-      action :create
-      block{ true }
-      only_if do
-        new_resource.updated_by_last_action?
-      end
-    end
-    template ::File.join(@lxc.rootfs, 'etc', 'interfaces') do
-      cookbook 'lxc'
-      source 'interface.erb'
-      variables :container => new_resource.container
-      subscribes :create, resources(:ruby_block => "lxc_interface_notifier[#{new_resource.container}]"), :delayed
-    end
-  end
-
-  net_set = Mash.new(:device => new_resource.device)
-  if(new_resource.dynamic)
-    net_set[:dynamic] = true
-  else
-    net_set[:address] = new_resource.address
-    net_set[:gateway] = new_resource.gateway
-    net_set[:netmask] = new_resource.netmask
-  end
-
-  if(node[:lxc][:interfaces][new_resource.container].include?(net_set))
-    current_interfaces = node[:lxc][:interfaces][new_resource.container].dup
-    current_interfaces.delete(net_set)
-    node[:lxc][:interfaces][new_resource.contaienr] = current_interfaces
-    new_resource.updated_by_last_action(true)
-  end
+  # do nothing, simply not provided to run_state, and thus implicitly
+  # deleted
 end

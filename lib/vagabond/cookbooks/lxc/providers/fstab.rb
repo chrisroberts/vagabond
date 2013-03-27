@@ -11,23 +11,6 @@ def load_current_resource
 end
 
 action :create do
-  unless(@loaded[new_resource.container])
-    @loaded[new_resource.container] = true
-    ruby_block "lxc_fstab_notifier[#{new_resource.container}]" do
-      action :create
-      block{ true }
-      only_if do
-        new_resource.updated_by_last_action?
-      end
-    end
-    template ::File.join(new_resource._lxc.container_path, 'fstab') do
-      cookbook 'lxc'
-      source 'fstab.erb'
-      mode 0644
-      variables :container => new_resource.container
-      subscribes :create, resources(:ruby_block => "lxc_fstab_notifier[#{new_resource.container}]"), :delayed
-    end
-  end
 
   line = "#{new_resource.file_system}\t#{new_resource.mount_point}\t" <<
     "#{new_resource.type}\t#{Array(new_resource.options).join(',')}\t" <<
@@ -35,37 +18,6 @@ action :create do
 
   unless(node.run_state[:lxc][:fstabs][new_resource.container].include?(line))
     node.run_state[:lxc][:fstabs][new_resource.container] << line
-    new_resource.updated_by_last_action(true)
   end
 
-end
-
-action :delete do
-  unless(@loaded[new_resource.container])
-    @loaded[new_resource.container] = true
-    
-    ruby_block "lxc_fstab_notifier[#{new_resource.container}]" do
-      action :create
-      block{ true }
-      only_if do
-        new_resource.updated_by_last_action?
-      end
-    end
-
-    template ::File.join(new_resource._lxc.container_path, 'fstab') do
-      cookbook 'lxc'
-      source 'fstab.erb'
-      mode 0644
-      variables :container => new_resource.container
-      subscribes :create, resources(:ruby_block => "lxc_fstab_notifier[#{new_resource.container}]"), :delayed
-    end
-  end
-
-  line = "#{new_resource.file_system}\t#{new_resource.mount_point}\t" <<
-    "#{new_resource.type}\t#{Array(new_resource.options).join(' ')}\t" <<
-    "#{new_resource.dump}\t#{new_resource.pass}"
-  if(node.run_state[:lxc][:fstabs][new_resource.container].include?(line))
-    node.run_state[:lxc][:fstabs][new_resource.container].delete(line)
-    new_resource.updated_by_last_action(true)
-  end
 end

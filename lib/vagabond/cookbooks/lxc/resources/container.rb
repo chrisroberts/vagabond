@@ -1,4 +1,9 @@
-actions :create, :delete, :clone
+def initialize(*args)
+  @subresources = []
+  super
+end
+
+actions :create, :delete
 default_action :create
 
 attribute :base_container, :kind_of => String
@@ -20,10 +25,35 @@ attribute :default_config, :kind_of => [TrueClass, FalseClass], :default => true
 attribute :default_fstab, :kind_of => [TrueClass, FalseClass], :default => true
 attribute :container_commands, :kind_of => Array, :default => []
 attribute :initialize_commands, :kind_of => Array, :default => []
-attribute :new_container, :kind_of => [TrueClass, FalseClass], :default => false
+attribute :clone, :kind_of => String
 attribute :template, :kind_of => String, :default => 'ubuntu'
 attribute :template_opts, :kind_of => Hash, :default => {}
 attribute :create_environment, :kind_of => Hash, :default => {}
-attribute :_lxc
-# TODO: We should ultimately have support for all these templates
-#attribute :template, :equal_to => %w(busybox debian fedora opensuse sshd ubuntu ubuntu-cloud), :default => 'ubuntu'
+
+def fstab(fname=nil, &block)
+  instance_eval &block
+end
+
+def mount(mname='mount', &block)
+  r = self
+  stab = lxc_fstab(mname) do
+    container r.name
+    instance_eval &block
+  end
+  stab.action :nothing
+  @subresources << stab
+end
+
+def interface(name=nil, &block)
+  instance_eval &block
+end
+
+def device(iname='device', &block)
+  iface = lxc_interface(iname) do
+    container r.name
+    instance_eval &block
+  end
+  iface.action :nothing
+  @subresources << iface
+end
+
