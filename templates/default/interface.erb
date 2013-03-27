@@ -9,9 +9,9 @@ iface lo inet loopback
 auto <%= net_set[:device] %>
 <% end -%>
 <% if net_set[:dynamic] -%>
-iface <%= net_set[:device] %> inet dhcp
+iface <%= net_set[:device] %> inet<%= '6' if net_set[:ipv6] %> dhcp
 <% else -%>
-iface <%= net_set[:device] %> inet static
+iface <%= net_set[:device] %> inet<%= '6' if net_set[:ipv6] %> static
   address <%= net_set[:address] %>
 <% if net_set[:gateway] -%>
   gateway <%= net_set[:gateway] %>

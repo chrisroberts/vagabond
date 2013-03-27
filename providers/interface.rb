@@ -31,6 +31,7 @@ action :create do
     net_set[:address] = new_resource.address
     net_set[:gateway] = new_resource.gateway
     net_set[:netmask] = new_resource.netmask
+    net_set[:ipv6] = new_resource.ipv6
   end
 
   node.run_state[:lxc][:interfaces][new_resource.container] << net_set
