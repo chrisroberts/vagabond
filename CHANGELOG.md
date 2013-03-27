@@ -1,3 +1,6 @@
+## v0.2.2
+* Output relevant information on bad command (thanks [Xabier de Zuazo](https://github.com/zuazo))
+
 ## v0.2.0
 * Migrate to thor
 * Clean up option usage
