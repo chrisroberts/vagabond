@@ -16,7 +16,7 @@ module Vagabond
       private
 
       def do_destroy
-        lxc.stop if lxc.running?
+        lxc.shutdown if lxc.running?
         com = "#{options[:sudo]}lxc-destroy -n #{lxc.name}"
         debug(com)
         cmd = Mixlib::ShellOut.new(com, :live_stream => options[:debug])
