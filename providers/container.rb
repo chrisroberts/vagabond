@@ -4,6 +4,9 @@ def load_current_resource
     :base_dir => node[:lxc][:container_directory],
     :dnsmasq_lease_file => node[:lxc][:dnsmasq_lease_file]
   )
+  new_resource.subresources.each do |s_r|
+    s_r.run_context = run_context
+  end
   # TODO: Use some actual logic here, sheesh
   if(new_resource.static_ip && new_resource.static_gateway.nil?)
     raise "Static gateway must be defined when static IP is provided (Container: #{new_resource.name})"
@@ -112,6 +115,7 @@ action :create do
 
   template @lxc.rootfs.join('root/.ssh/authorized_keys').to_path do
     source 'file_content.erb'
+    cookbook 'lxc'
     mode 0600
     variables(:path => '/opt/hw-lxc-config/id_rsa.pub')
   end
