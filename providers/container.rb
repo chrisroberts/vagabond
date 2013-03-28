@@ -110,8 +110,10 @@ action :create do
   #### Ensure host has ssh access into container
   directory @lxc.rootfs.join('root/.ssh').to_path
 
-  file @lxc.rootfs.join('root/.ssh/authorized_keys').to_path do
-    content "# Chef generated key file\n#{::File.read('/opt/hw-lxc-config/id_rsa.pub')}\n"
+  template @lxc.rootfs.join('root/.ssh/authorized_keys').to_path do
+    source 'file_content.erb'
+    mode 0600
+    variables(:path => '/opt/hw-lxc-config/id_rsa.pub')
   end
 
   if(new_resource.chef_enabled || !new_resource.container_commands.empty? || !new_resource.initialize_commands.empty?)
