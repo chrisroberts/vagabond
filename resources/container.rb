@@ -34,17 +34,15 @@ def fstab_mount(fname, &block)
   fstab = Chef::Resource::LxcFstab.new("lxc_fstab[#{self.name} - #{fname}]", nil)
   fstab.action :nothing
   fstab.container self.name
-  fstab.instance_eval(&block)
-  fstab.mount_point ::Lxc.new(self.name).rootfs.join(fstab.mount_point).to_path
-  @subresources << fstab
+
+  @subresources << [fstab, block]
 end
 
 def interface(iname, &block)
   iface = Chef::Resource::LxcInterface.new("lxc_interface[#{self.name} - #{iname}]", nil)
   iface.container self.name
-  iface.instance_eval(&block)
   iface.action :nothing
-  @subresources << iface
+  @subresources << [iface, block]
 end
 
 attr_reader :subresources

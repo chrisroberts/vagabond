@@ -12,7 +12,7 @@ def load_current_resource
 end
 
 action :run do
-  com = ['lxc-ephemeral-start']
+  com = ['lxc-start-ephemeral']
   com << "-o #{new_resource.base_container}"
   com << "-b #{new_resource.bind_directory}" if new_resource.bind_directory
   com << "-U #{new_resource.union_type}"
@@ -22,7 +22,7 @@ action :run do
     Chef::Log.warn("Ephemeral container will be backgrounded: #{new_resource.name}")
     com << '-d'
   end
-  com << new_resource.command
+  com << "\"#{new_resource.command}\"" # TODO: fix this to be proper
   execute "LXC ephemeral: #{new_resource.name}" do
     command com.join(' ')
   end

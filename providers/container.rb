@@ -4,9 +4,12 @@ def load_current_resource
     :base_dir => node[:lxc][:container_directory],
     :dnsmasq_lease_file => node[:lxc][:dnsmasq_lease_file]
   )
-  new_resource.subresources.each do |s_r|
-    s_r.run_context = run_context
+  new_resource.subresources.map! do |s_r|
+    s_r.first.run_context = run_context
+    s_r.first.instance_eval(&s_r.last)
+    s_r.first
   end
+  
   # TODO: Use some actual logic here, sheesh
   if(new_resource.static_ip && new_resource.static_gateway.nil?)
     raise "Static gateway must be defined when static IP is provided (Container: #{new_resource.name})"
