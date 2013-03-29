@@ -142,7 +142,7 @@ action :create do
           execute "lxc install_chef_full[#{new_resource.name}]" do
             action :nothing
             command "chroot #{_lxc.rootfs} dpkg -i #{::File.join('/opt', file_name)}"
-            subscribes :run, "execute[lxc copy_chef_full[#{new_resource.name}]", :immediately
+            subscribes :run, "execute[lxc copy_chef_full[#{new_resource.name}]]", :immediately
           end
           @chef_installed = true
         end
