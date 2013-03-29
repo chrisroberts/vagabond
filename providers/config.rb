@@ -21,6 +21,7 @@ def load_current_resource
       }
     else
       default_net = config.network.first
+      default_net.delete(:ipv4) if default_net.has_key?(:ipv4)
       default_net.merge!(:link => new_resource.default_bridge)
     end
     new_resource.network(default_net)
