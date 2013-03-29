@@ -3,6 +3,15 @@ require 'pathname'
 class Lxc
   class CommandFailed < StandardError
   end
+
+  # Pathname#join does not act like File#join when joining paths that
+  # begin with '/', and that's dumb. So we'll make our own Pathname,
+  # with a #join that uses File
+  class Pathname < ::Pathname
+    def join(*args)
+      self.class.new(::File.join(self.to_path, *args))
+    end
+  end
   
   attr_reader :name
 
