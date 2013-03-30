@@ -25,5 +25,6 @@ action :run do
   com << "\"#{new_resource.command}\"" # TODO: fix this to be proper
   execute "LXC ephemeral: #{new_resource.name}" do
     command com.join(' ')
+    stream_output new_resource.stream_output
   end
 end
