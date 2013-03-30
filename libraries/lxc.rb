@@ -272,7 +272,7 @@ class Lxc
     require 'chef/knife/ssh'
     Chef::Knife::Ssh.load_deps
     k = Chef::Knife::Ssh.new([
-      ip, '-m', '-i', '/opt/hw-lxc-config/id_rsa', '--no-host-key-verify', cmd
+      ip, '-m', '-x', 'root', '-i', '/opt/hw-lxc-config/id_rsa', '--no-host-key-verify', cmd
     ])
     e = nil
     begin
