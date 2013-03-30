@@ -284,7 +284,8 @@ class Lxc
       shlout = Mixlib::ShellOut.new(cmd, 
         :logger => Chef::Log.logger, 
         :live_stream => STDOUT,
-        :timeout => args[:timeout] || 1200
+        :timeout => args[:timeout] || 1200,
+        :environment => {'HOME' => ENV['HOME'] || File.directory?('/root') ? '/root' : '/tmp'}
       )
       shlout.run_command
       shlout.error!
