@@ -311,11 +311,15 @@ class Lxc
 
   # Detect HOME environment variable. If not an acceptable
   # value, set to /root or /tmp
-  def detect_home
+  def detect_home(set_if_missing=false)
     if(ENV['HOME'] && Pathname.new(ENV['HOME']).absolute?)
       ENV['HOME']
     else
-      File.directory?('/root') && File.writable?('/root') ? '/root' : '/tmp'
+      home = File.directory?('/root') && File.writable?('/root') ? '/root' : '/tmp'
+      if(set_if_missing)
+        ENV['HOME'] = home
+      end
+      home
     end
   end
   
@@ -324,6 +328,7 @@ class Lxc
   # Runs command in container via ssh
   def container_command(cmd, retries=1)
     begin
+      detect_home(true)
       knife_container(cmd, container_ip(5))
     rescue => e
       if(retries.to_i > 0)
