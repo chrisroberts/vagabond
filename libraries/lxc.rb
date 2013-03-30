@@ -256,10 +256,15 @@ class Lxc
   # Shutdown the container
   def shutdown
     run_command("#{sudo}lxc-shutdown -n #{name}")
-    run_command("#{sudo}lxc-wait -n #{name} -s STOPPED", :allow_failure => true, :timeout => 10)
+    run_command("#{sudo}lxc-wait -n #{name} -s STOPPED", :allow_failure => true, :timeout => 120)
+    # This block is for fedora/centos/anyone else that does not like lxc-shutdown
     if(running?)
       container_command('shutdown -h now')
-      run_command("#{sudo}lxc-wait -n #{name} -s STOPPED")
+      run_command("#{sudo}lxc-wait -n #{name} -s STOPPED", :allow_failure => true)
+      # If still running here, something is wrong
+      if(running?)
+        raise "Failed to shutdown container: #{name}"
+      end
     end
   end
 
