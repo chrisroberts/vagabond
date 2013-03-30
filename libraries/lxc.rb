@@ -290,7 +290,7 @@ class Lxc
         :logger => Chef::Log.logger, 
         :live_stream => STDOUT,
         :timeout => args[:timeout] || 1200,
-        :environment => {'HOME' => ENV['HOME'] || File.directory?('/root') ? '/root' : '/tmp'}
+        :environment => {'HOME' => detect_home}
       )
       shlout.run_command
       shlout.error!
@@ -309,6 +309,16 @@ class Lxc
     end
   end
 
+  # Detect HOME environment variable. If not an acceptable
+  # value, set to /root or /tmp
+  def detect_home
+    if(ENV['HOME'] && Pathname.new(ENV['HOME']).absolute?)
+      ENV['HOME']
+    else
+      File.directory?('/root') && File.writable?('/root') ? '/root' : '/tmp'
+    end
+  end
+  
   # cmd:: Shell command string
   # retries:: Number of retry attempts (1 second sleep interval)
   # Runs command in container via ssh
