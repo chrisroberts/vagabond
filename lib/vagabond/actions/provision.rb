@@ -29,7 +29,7 @@ module Vagabond
         debug(com)
         # Send the live stream out since people will generally want to
         # know what's happening
-        cmd = Mixlib::ShellOut.new(com, :live_stream => STDOUT)
+        cmd = Mixlib::ShellOut.new(com, :live_stream => STDOUT, :timeout => 2000)
         cmd.run_command
         # NOTE: cmd.status.success? won't be valid, so check for FATAL
         unless(cmd.stdout.split("\n").last.to_s.include?('FATAL'))
