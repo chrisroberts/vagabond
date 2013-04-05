@@ -100,6 +100,10 @@ action :create do
     source 'fstab.erb'
     cookbook 'lxc'
     variables :container => new_resource.name
+    only_if do
+      node.run_state[:lxc][:fstabs] &&
+        node.run_state[:lxc][:fstabs][new_resource.name]
+    end
     mode 0644
   end
 
