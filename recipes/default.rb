@@ -5,6 +5,11 @@ end
 
 include_recipe 'lxc::install_dependencies'
 
+cookbook_file '/usr/local/bin/lxc-awesome-ephemeral' do
+  source 'lxc-awesome-ephemeral'
+  mode 0755
+end
+
 #if the server uses the apt::cacher-client recipe, re-use it
 unless Chef::Config[:solo]
   if File.exists?('/etc/apt/apt.conf.d/01proxy')
