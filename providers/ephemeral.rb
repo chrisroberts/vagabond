@@ -9,15 +9,25 @@ def load_current_resource
   unless(@lxc.exists?)
     raise "Requested base contianer: #{new_resource.base_container} does not exist"
   end
+  @start_script = node[:lxc][:awesome_ephemerals] ? 'lxc-awesome-ephemeral' : 'lxc-ephemeral-start'
+  unless(node[:lxc][:awesome_ephemerals])
+    %w(host_rootfs virtual_device).each do |key|
+      if(resource.send(key))
+        raise "#{key} lxc ephemeral attribute only valid when awesome_ephemerals is true!"
+      end
+    end
+  end
 end
 
 action :run do
-  com = ['lxc-start-ephemeral']
+  com = [@start_script]
   com << "-o #{new_resource.base_container}"
   com << "-b #{new_resource.bind_directory}" if new_resource.bind_directory
   com << "-U #{new_resource.union_type}"
   com << "-u #{new_resource.user}"
   com << "-S #{new_resource.key}"
+  com << "-z #{new_resource.host_rootfs}" if new_resource.host_rootfs
+  com << "-D #{new_resource.virtual_device}" if new_resource.virtual_device 
   if(new_resource.background)
     Chef::Log.warn("Ephemeral container will be backgrounded: #{new_resource.name}")
     com << '-d'
