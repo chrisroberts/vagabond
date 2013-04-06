@@ -48,7 +48,7 @@ cleanup_dirs()
     # echo "umounting lxc_dir $LXC_DIR" >&2
     sudo umount $LXC_DIR/rootfs
     # echo "umounting overlay" >&2
-    if [ ! $OVERLAY_DIRECTORY ]; then
+    if [ ! $HOST_OVERLAY_DIRECTORY ]; then
         sudo umount $OVERLAY_DIR
     fi
     # remove all contents of the content dir
@@ -59,7 +59,9 @@ cleanup_dirs()
     # echo "rming lxc_dir $LXC_DIR" >&2
     sudo rmdir $LXC_DIR
     # echo "rming overlay dir $OVERLAY_DIR" >&2
-    if [ ! $OVERLAY_DIRECTORY ]; then
+    if [ $HOST_OVERLAY_DIRECTORY ]; then
+        sudo rmdir -rf $HOST_OVERLAY_DIRECTORY
+    else
         sudo rmdir $OVERLAY_DIR
     fi
 }
@@ -76,9 +78,11 @@ cleanup() {
 
 do_mount() {
     lower=$1
-    if [ -d $OVERLAY_DIRECTORY ]; then
-        upper=$OVERLAY_DIRECTORY
-        echo "Using local directory for overlay: ${OVERLAY_DIRECTORY}"
+    if [ $HOST_OVERLAY_DIRECTORY ]; then
+        mkdir -p $HOST_OVERLAY_DIRECTORY
+        HOST_OVERLAY_DIRECTORY=`mktemp -d --tmpdir=$HOST_OVERLAY_DIRECTORY $LXC_BASE-temp-XXXXXXX`
+        upper=$HOST_OVERLAY_DIRECTORY
+        echo "Using local directory for overlay: ${HOST_OVERLAY_DIRECTORY}"
     else
         upper=$2
     fi
@@ -118,7 +122,7 @@ while true; do
         ;;
         -z|--directory)
             shift
-            OVERLAY_DIRECTORY=$1
+            HOST_OVERLAY_DIRECTORY=$1
             shift
         ;;
         -b|--bdir)
