@@ -9,7 +9,7 @@ LXC_BIND=""
 UNION="overlayfs"
 
 usage() {
-    echo "usage: lxc-start-ephemeral [-D device] [-U uniontype] [-d|--daemon] [-h] [-b bdir] [-u user] [-S key] -o orig -- [COMMAND [ARGS...]]"
+    echo "usage: lxc-start-ephemeral [-D size] [-z rdir] [-U uniontype] [-d|--daemon] [-h] [-b bdir] [-u user] [-S key] -o orig -- [COMMAND [ARGS...]]"
 }
 
 help() {
@@ -22,12 +22,13 @@ help() {
     echo "bdir        : directory to bind mount into container"
     echo "user        : the user to connect to the container as"
     echo "key         : the path to the SSH key to use to connect"
+    echo "size        : size of virtual device in M"
+    echo "rdir        : host directory to store rootfs overlay"
     echo "-d          : run in the background"
     echo "-U          : type of union (aufs or overlayfs)"
     echo "              Default is overlayfs"
     echo "-D          : block device for rootfs overlay"
     echo "-z          : directory to use for rootfs overlay"
-    echo "-y          : create virtual device of [SIZE in M]"
     echo
     echo "if a COMMAND is given, then the container will run only as long"
     echo "as the command runs.  If no COMMAND is given, this command will"
@@ -60,10 +61,34 @@ cleanup_dirs()
     sudo rmdir $LXC_DIR
     # echo "rming overlay dir $OVERLAY_DIR" >&2
     if [ $HOST_OVERLAY_DIRECTORY ]; then
-        sudo rmdir -rf $HOST_OVERLAY_DIRECTORY
+        if [ $VIRT_DIR ]; then
+            sudo umount $VIRT_MNT
+            sudo rmdir $VIRT_MNT
+            sudo rm $VIRT_DEV
+        fi
+        sudo rm -rf $HOST_OVERLAY_DIRECTORY
     else
         sudo rmdir $OVERLAY_DIR
     fi
+}
+
+create_virt_device() {
+    echo "Creating ephemeral virtual device for rootfs (${OVERLAY_DEVICE}M)"
+    VIRT_DIR="/tmp/lxc-virt-devs"
+    VIRT_IMG_DIR="${VIRT_DIR}/imgs"
+    VIRT_MNT_DIR="${VIRT_DIR}/mnt"
+    sudo mkdir -p $VIRT_DIR
+    sudo mkdir -p $VIRT_IMG_DIR
+    sudo mkdir -p $VIRT_MNT_DIR
+    VIRT_DEV=`mktemp --tmpdir=$VIRT_IMG_DIR virtdev-XXXXXXX`
+    VIRT_MNT=`mktemp -d --tmpdir=$VIRT_MNT_DIR virtmnt-XXXXXXX`
+    # Create empty disk
+    dd if=/dev/zero of=$VIRT_DEV bs=1k seek=${OVERLAY_DEVICE}k count=1
+    # format device
+    echo "y" | mkfs -t ext4 $VIRT_DEV
+    # mount loopback
+    mount -o loop $VIRT_DEV $VIRT_MNT
+    HOST_OVERLAY_DIRECTORY=$VIRT_MNT
 }
 
 cleanup() {
@@ -78,7 +103,10 @@ cleanup() {
 
 do_mount() {
     lower=$1
-    if [ $HOST_OVERLAY_DIRECTORY ]; then
+    if [ $OVERLAY_DEVICE ]; then
+        create_virt_device
+        upper=$HOST_OVERLAY_DIRECTORY
+    elif [ $HOST_OVERLAY_DIRECTORY ]; then
         mkdir -p $HOST_OVERLAY_DIRECTORY
         HOST_OVERLAY_DIRECTORY=`mktemp -d --tmpdir=$HOST_OVERLAY_DIRECTORY $LXC_BASE-temp-XXXXXXX`
         upper=$HOST_OVERLAY_DIRECTORY
