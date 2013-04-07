@@ -32,7 +32,9 @@ module Vagabond
         cmd = Mixlib::ShellOut.new(com, :live_stream => STDOUT, :timeout => 2000)
         cmd.run_command
         # NOTE: cmd.status.success? won't be valid, so check for FATAL
-        unless(cmd.stdout.split("\n").last.to_s.include?('FATAL'))
+        # TODO: This isn't really the best check, but should be good
+        # enough for now
+        unless(cmd.stdout.include?('FATAL: Stacktrace'))
           ui.info ui.color('  -> PROVISIONED', :magenta)
           true
         else
