@@ -153,6 +153,7 @@ module Vagabond
       @vagabondfile = Vagabondfile.new(options[:vagabond_file])
       options[:sudo] = sudo
       options[:disable_solo] = true if @action.to_s == 'status' && lxc_installed?
+      Chef::Log.init('/dev/null') unless options[:debug]
       Lxc.use_sudo = @vagabondfile[:sudo].nil? ? true : @vagabondfile[:sudo]
       @internal_config = InternalConfiguration.new(@vagabondfile, ui, options)
       @config = @vagabondfile[:boxes][name]
@@ -164,8 +165,9 @@ module Vagabond
           if(srv_name && srv.running?)
             options[:knife_opts] = " --server-url https://#{srv.container_ip(10, true)}"
           else
-            ui.warn 'Local chef server is not currently running!' unless @action.to_sym == :status
-            options[:knife_opts] = ' --server-url https://no-local-server'
+            unless(@action.to_sym == :status || name.to_s =='server')
+              ui.warn 'Local chef server is not currently running!' unless @action.to_sym == :status
+            end
           end
         end
       end
