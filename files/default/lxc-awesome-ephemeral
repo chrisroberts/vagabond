@@ -9,7 +9,7 @@ LXC_BIND=""
 UNION="overlayfs"
 
 usage() {
-    echo "usage: lxc-start-ephemeral [-D size] [-z rdir] [-U uniontype] [-d|--daemon] [-h] [-b bdir] [-u user] [-S key] -o orig -- [COMMAND [ARGS...]]"
+    echo "usage: lxc-awesome-ephemeral [-D size] [-z rdir] [-U uniontype] [-d|--daemon] [-h] [-b bdir] [-u user] [-S key] -o orig -- [COMMAND [ARGS...]]"
 }
 
 help() {
@@ -35,8 +35,8 @@ help() {
     echo "wait until the container is shut down"
 }
 
-shortoptions='hb:o:u:D:z:S:dU'
-longoptions='help,orig:,bdir:,user:,device:,directory:,ssh-key:,daemon,union'
+shortoptions='hb:o:u:D:z:S:dU:'
+longoptions='help,orig:,bdir:,user:,device:,directory:,ssh-key:,daemon,union:'
 
 LXC_RUNNING=0
 LXC_MOUNTED=0
