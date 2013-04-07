@@ -24,3 +24,5 @@ default[:lxc][:user_pass][:fedora] = {:username => 'root', :password => 'root'}
 default[:lxc][:packages] = %w(lxc)
 default[:lxc][:mirror] = 'http://archive.ubuntu.com/ubuntu'
 default[:lxc][:containers] = {}
+
+default[:lxc][:awesome_ephemerals] = true

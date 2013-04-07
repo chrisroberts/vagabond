@@ -19,11 +19,10 @@ def load_current_resource
         :flags => :up,
         :hwaddr => "00:16:3e#{SecureRandom.hex(3).gsub(/(..)/, ':\1')}"
       }
-      default_net.merge!(:ipv4 => new_resource.static_ip) if new_resource.static_ip
     else
       default_net = config.network.first
+      default_net.delete(:ipv4) if default_net.has_key?(:ipv4)
       default_net.merge!(:link => new_resource.default_bridge)
-      default_net.merge!(:ipv4 => new_resource.static_ip) if new_resource.static_ip
     end
     new_resource.network(default_net)
   else

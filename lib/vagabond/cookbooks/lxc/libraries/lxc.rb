@@ -3,6 +3,15 @@ require 'pathname'
 class Lxc
   class CommandFailed < StandardError
   end
+
+  # Pathname#join does not act like File#join when joining paths that
+  # begin with '/', and that's dumb. So we'll make our own Pathname,
+  # with a #join that uses File
+  class Pathname < ::Pathname
+    def join(*args)
+      self.class.new(::File.join(self.to_path, *args))
+    end
+  end
   
   attr_reader :name
 
@@ -247,10 +256,15 @@ class Lxc
   # Shutdown the container
   def shutdown
     run_command("#{sudo}lxc-shutdown -n #{name}")
-    run_command("#{sudo}lxc-wait -n #{name} -s STOPPED", :allow_failure => true, :timeout => 10)
+    run_command("#{sudo}lxc-wait -n #{name} -s STOPPED", :allow_failure => true, :timeout => 120)
+    # This block is for fedora/centos/anyone else that does not like lxc-shutdown
     if(running?)
       container_command('shutdown -h now')
-      run_command("#{sudo}lxc-wait -n #{name} -s STOPPED")
+      run_command("#{sudo}lxc-wait -n #{name} -s STOPPED", :allow_failure => true)
+      # If still running here, something is wrong
+      if(running?)
+        raise "Failed to shutdown container: #{name}"
+      end
     end
   end
 
@@ -258,7 +272,7 @@ class Lxc
     require 'chef/knife/ssh'
     Chef::Knife::Ssh.load_deps
     k = Chef::Knife::Ssh.new([
-      ip, '-m', '-i', '/opt/hw-lxc-config/id_rsa', '--no-host-key-verify', cmd
+      ip, '-m', '-x', 'root', '-i', '/opt/hw-lxc-config/id_rsa', '--no-host-key-verify', cmd
     ])
     e = nil
     begin
@@ -275,7 +289,8 @@ class Lxc
       shlout = Mixlib::ShellOut.new(cmd, 
         :logger => Chef::Log.logger, 
         :live_stream => STDOUT,
-        :timeout => args[:timeout] || 1200
+        :timeout => args[:timeout] || 1200,
+        :environment => {'HOME' => detect_home}
       )
       shlout.run_command
       shlout.error!
@@ -294,11 +309,26 @@ class Lxc
     end
   end
 
+  # Detect HOME environment variable. If not an acceptable
+  # value, set to /root or /tmp
+  def detect_home(set_if_missing=false)
+    if(ENV['HOME'] && Pathname.new(ENV['HOME']).absolute?)
+      ENV['HOME']
+    else
+      home = File.directory?('/root') && File.writable?('/root') ? '/root' : '/tmp'
+      if(set_if_missing)
+        ENV['HOME'] = home
+      end
+      home
+    end
+  end
+  
   # cmd:: Shell command string
   # retries:: Number of retry attempts (1 second sleep interval)
   # Runs command in container via ssh
   def container_command(cmd, retries=1)
     begin
+      detect_home(true)
       knife_container(cmd, container_ip(5))
     rescue => e
       if(retries.to_i > 0)
