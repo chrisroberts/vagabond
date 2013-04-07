@@ -156,14 +156,21 @@ module Vagabond
     end
     
     def run_solo
-      ui.info ui.color('Ensuring expected system state (creating required base containers)', :yellow)
-      ui.info ui.color('   - This can take a while...', :yellow)
-      com = "#{options[:sudo]}chef-solo -j #{File.join(store_path, 'dna.json')} -c #{File.join(store_path, 'solo.rb')}"
-      debug(com)
-      cmd = Mixlib::ShellOut.new(com, :timeout => 12000, :live_stream => options[:debug])
-      cmd.run_command
-      cmd.error!
-      ui.info ui.color('  -> COMPLETE!', :yellow)
+      begin
+        ui.info ui.color('Ensuring expected system state (creating required base containers)', :yellow)
+        ui.info ui.color('   - This can take a while...', :yellow)
+        com = "#{options[:sudo]}chef-solo -j #{File.join(store_path, 'dna.json')} -c #{File.join(store_path, 'solo.rb')}"
+        debug(com)
+        cmd = Mixlib::ShellOut.new(com, :timeout => 12000, :live_stream => options[:debug])
+        cmd.run_command
+        cmd.error!
+        ui.info ui.color('  -> COMPLETE!', :yellow)
+      rescue => e
+        ui.info e.to_s
+        FileUtils.rm(solo_path)
+        ui.info ui.color('  -> FAILED!', :red, :bold)
+        exit # TODO: Make better
+      end
     end
     
     def save
