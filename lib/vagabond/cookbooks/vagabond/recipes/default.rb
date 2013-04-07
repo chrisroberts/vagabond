@@ -60,7 +60,7 @@ end
 node[:vagabond][:customs].each do |name, options|
 
   lxc_container name do
-    action :clone
+    action :create
     base_container options[:base]
   end
   
