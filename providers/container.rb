@@ -148,54 +148,19 @@ action :create do
       command "chroot #{_lxc.rootfs} dpkg -i #{::File.join('/opt', file_name)}"
       subscribes :run, "execute[lxc copy_chef_full[#{new_resource.name}]]", :immediately
     end
-  end
-
-  #### Setup chef related bits within container
-  directory @lxc.rootfs.join('etc/chef').to_path do
-    action :create
-    mode 0755
-    only_if{ new_resource.chef_enabled }
-  end
-
-  template "lxc chef-config[#{new_resource.name}]" do
-    source 'client.rb.erb'
-    cookbook 'lxc'
-    path _lxc.rootfs.join('etc/chef/client.rb').to_path
-    variables(
-      :validation_client => new_resource.validation_client || Chef::Config[:validation_client_name],
-      :node_name => new_resource.node_name || "#{node.name}-#{new_resource.name}",
-      :server_uri => new_resource.server_uri || Chef::Config[:chef_server_url],
-      :chef_environment => new_resource.chef_environment || '_default'
-    )
-    mode 0644
-    only_if{ new_resource.chef_enabled }
-  end
-
-  file "lxc chef-validator[#{new_resource.name}]" do
-    path _lxc.rootfs.join('etc/chef/validator.pem').to_path
-    content new_resource.validator_pem || node[:lxc][:validator_pem]
-    mode 0600
-    only_if{ new_resource.chef_enabled && !_lxc.rootfs.join('etc/chef/client.pem').exist? }
-  end
-
-  file "lxc chef-runlist[#{new_resource.name}]" do
-    path _lxc.rootfs.join('etc/chef/first_run.json').to_path
-    content({:run_list => new_resource.run_list}.to_json)
-    not_if do
-      !new_resource.chef_enabled || _lxc.rootfs.join('etc/chef/client.pem').exist?
+  elsif(new_resource.chef_enabled)
+    pkg_coms = ['update -y -q', 'upgrade -y -q','install curl -y -q']
+    if(!new_resource.template.to_s.scan(%r{debian|ubuntu}).empty?)
+      pkg_man = 'apt-get'
+    elsif(!new_resource.template.to_s.scan(%r{fedora|centos}).empty?)
+      pkg_man = 'yum'
     end
-    mode 0644
-  end
-
-  file "lxc chef-data-bag-secret[#{new_resource.name}]" do
-    path _lxc.rootfs.join('etc/chef/encrypted_data_bag_secret').to_path
-    content(
-      ::File.exists?(new_resource.data_bag_secret_file) ? ::File.open(new_resource.data_bag_secret_file, "rb").read : ''
-    )
-    mode 0600
-    only_if do
-      new_resource.copy_data_bag_secret_file &&
-        ::File.exists?(new_resource.copy_data_bag_secret_file)
+    if(pkg_man)
+      new_resource.initialize_commands(
+        pkg_coms.map do |c|
+          "#{pkg_man} #{c}"
+        end + new_resource.initialize_commands
+      )
     end
   end
 
@@ -229,8 +194,8 @@ action :create do
     source "http://opscode.com/chef/install.sh"
     path _lxc.rootfs.join('opt/chef-install.sh').to_path
     action :create_if_missing
-    not_if do
-      !new_resource.chef_enabled || _lxc.rootfs.join('usr/bin/chef-client').exist? || _lxc.rootfs.join('opt/chef-install.sh').exist?
+    only_if do
+      new_resource.chef_enabled && !_lxc.rootfs.join('usr/bin/chef-client').exist?
     end
   end
 
@@ -238,25 +203,77 @@ action :create do
     block do
       _lxc.container_command('bash /opt/chef-install.sh')
     end
-    action :nothing
-    subscribes :create, "remote_file[lxc chef_install_script[#{new_resource.name}]]", :immediately
+    action :create
+    only_if do
+      new_resource.chef_enabled &&
+        !_lxc.rootfs.join('usr/bin/chef-client').exist? &&
+        _lxc.rootfs.join('opt/chef-install.sh').exist?
+    end
   end
 
+  #### Setup chef related bits within container
+  directory @lxc.rootfs.join('etc/chef').to_path do
+    action :create
+    mode 0755
+    only_if{ new_resource.chef_enabled }
+  end
+
+  template "lxc chef-config[#{new_resource.name}]" do
+    source 'client.rb.erb'
+    cookbook 'lxc'
+    path _lxc.rootfs.join('etc/chef/client.rb').to_path
+    variables(
+      :validation_client => new_resource.validation_client || Chef::Config[:validation_client_name],
+      :node_name => new_resource.node_name || "#{node.name}-#{new_resource.name}",
+      :server_uri => new_resource.server_uri || Chef::Config[:chef_server_url],
+      :chef_environment => new_resource.chef_environment || '_default'
+    )
+    mode 0644
+    only_if{ new_resource.chef_enabled }
+  end
+
+  file "lxc chef-validator[#{new_resource.name}]" do
+    path _lxc.rootfs.join('etc/chef/validator.pem').to_path
+    content new_resource.validator_pem || node[:lxc][:validator_pem]
+    mode 0600
+    only_if{ new_resource.chef_enabled && !_lxc.rootfs.join('etc/chef/client.pem').exist? }
+  end
+
+  file "lxc chef-runlist[#{new_resource.name}]" do
+    path _lxc.rootfs.join('etc/chef/first_run.json').to_path
+    content({:run_list => new_resource.run_list}.to_json)
+    only_if do
+      new_resource.chef_enabled && !_lxc.rootfs.join('etc/chef/client.pem').exist?
+    end
+    mode 0644
+  end
+
+  file "lxc chef-data-bag-secret[#{new_resource.name}]" do
+    path _lxc.rootfs.join('etc/chef/encrypted_data_bag_secret').to_path
+    content(
+      ::File.exists?(new_resource.data_bag_secret_file) ? ::File.open(new_resource.data_bag_secret_file, "rb").read : ''
+    )
+    mode 0600
+    only_if do
+      new_resource.chef_enabled &&
+      new_resource.copy_data_bag_secret_file &&
+        ::File.exists?(new_resource.copy_data_bag_secret_file)
+    end
+  end
+  
   #### Let chef configure the container
-  # NOTE: We run chef-client on the container only if the client.pem
-  # doesn't exist OR if it does exist AND the validator.pem exists.
-  # Since we delete the validator at the end of the container setup,
-  # if it still exists we can assume that the previous run failed
+  # NOTE: We run chef-client if the validator.pem exists and the
+  # client.pem file does not exist.
   ruby_block "lxc run_chef[#{new_resource.name}]" do
     block do
-      _lxc.container_command(
-        'chef-client -K /etc/chef/validator.pem -c /etc/chef/client.rb -j /etc/chef/first_run.json',
-        new_resource.chef_retries
-      )
+      cmd = 'chef-client -K /etc/chef/validator.pem -c /etc/chef/client.rb -j /etc/chef/first_run.json'
+      Chef::Log.info "Running command on #{new_resource.name}: #{cmd}"      
+      _lxc.container_command(cmd, new_resource.chef_retries)
     end
-    not_if do
-      !new_resource.chef_enabled ||
-        (_lxc.rootfs.join('etc/chef/client.pem').exist? && !_lxc.rootfs.join('etc/chef/validator.pem').exist?)
+    only_if do
+      new_resource.chef_enabled &&
+        _lxc.rootfs.join('etc/chef/validator.pem').exist? &&
+        !_lxc.rootfs.join('etc/chef/client.pem').exist?
     end
   end
 
