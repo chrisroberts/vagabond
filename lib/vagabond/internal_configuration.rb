@@ -30,11 +30,25 @@ module Vagabond
     end
 
     def ensure_state
+      check_bases_and_customs!
       if(solo_needed?)
         store_checksums
         write_dna_json
         write_solo_rb
         run_solo if solo_needed?
+      end
+    end
+
+    def check_bases_and_customs!
+      if(File.exists?(dna_path))
+        dna = Mash.new(JSON.load(File.read(dna_path)))
+        %w(bases customs).each do |key|
+          if(dna[:vagabond][key])
+            dna[:vagabond][key].each do |n, opts|
+              options[:force_solo] = true unless Lxc.new(n).exists?
+            end
+          end
+        end
       end
     end
 
