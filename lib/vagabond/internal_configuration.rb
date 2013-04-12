@@ -30,10 +30,12 @@ module Vagabond
     end
 
     def ensure_state
-      store_checksums
-      write_dna_json
-      write_solo_rb
-      run_solo if solo_needed?
+      if(solo_needed?)
+        store_checksums
+        write_dna_json
+        write_solo_rb
+        run_solo if solo_needed?
+      end
     end
 
     def [](k)
