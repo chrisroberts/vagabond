@@ -5,10 +5,12 @@ module Vagabond
     private
     def sudo
       case @vagabondfile[:sudo]
-      when TrueClass
-        'sudo '
+      when FalseClass
+        ''
       when String
         "#{@vagabondfile[:sudo]} "
+      else
+        'sudo '
       end
     end
 
