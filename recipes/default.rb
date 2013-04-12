@@ -46,7 +46,7 @@ end
 # this just reloads the dnsmasq rules when the template is adjusted
 service 'lxc-net' do
   action [:enable]
-  subscribes :restart, resources("template[/etc/default/lxc]")
+  subscribes :restart, resources("template[/etc/default/lxc]"), :immediately
 end
 
 service 'lxc' do
