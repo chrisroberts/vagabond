@@ -1,4 +1,5 @@
 require 'pathname'
+require 'tmpdir'
 
 class Lxc
   class CommandFailed < StandardError
@@ -268,19 +269,22 @@ class Lxc
     end
   end
 
-  def knife_container(cmd, ip)
-    require 'chef/knife/ssh'
-    Chef::Knife::Ssh.load_deps
-    k = Chef::Knife::Ssh.new([
-      ip, '-m', '-x', 'root', '-i', '/opt/hw-lxc-config/id_rsa', '--no-host-key-verify', cmd
-    ])
-    e = nil
+  def direct_container_command(command, args={})
+    com = "#{sudo}ssh root@#{args[:ip] || container_ip} -i /opt/hw-lxc-config/id_rsa -oStrictHostKeyChecking=no '#{command}'"
     begin
-      e = k.run
-    rescue SystemExit => e
+      cmd = Mixlib::ShellOut.new(com,
+        :live_stream => args[:live_stream],
+        :timeout => args[:timeout] || 1200
+      )
+      cmd.run_command
+      cmd.error!
+      true
+    rescue
+      raise if args[:raise_on_failure]
+      false
     end
-    raise CommandFailed.new(cmd) if e.nil? || e != 0
   end
+  alias_method :knife_container, :direct_container_command
 
   # Simple helper to shell out
   def run_command(cmd, args={})
@@ -329,7 +333,11 @@ class Lxc
   def container_command(cmd, retries=1)
     begin
       detect_home(true)
-      knife_container(cmd, container_ip(5))
+      direct_container_command(cmd,
+        :ip => container_ip(5),
+        :live_stream => STDOUT,
+        :raise_on_failure => true
+      )
     rescue => e
       if(retries.to_i > 0)
         Chef::Log.info "Encountered error running container command (#{cmd}): #{e}"
