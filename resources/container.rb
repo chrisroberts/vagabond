@@ -6,7 +6,6 @@ end
 actions :create, :delete
 default_action :create
 
-attribute :base_container, :kind_of => String
 attribute :validation_client, :kind_of => String
 attribute :validator_pem, :kind_of => String, :default => nil
 attribute :server_uri, :kind_of => String
