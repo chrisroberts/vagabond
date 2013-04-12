@@ -12,6 +12,7 @@
 * Patches execute resource to provide streaming output
 * Updates Lxc library to be more reusable
 * Add proc based network detection for more robust address discovery
+* Shell out directly to ssh for container commands instead of using knife ssh
 
 ## v0.1.0
 * Abstracted out packages for cross-platform support later.
