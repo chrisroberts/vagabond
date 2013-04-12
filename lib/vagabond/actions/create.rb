@@ -23,7 +23,8 @@ module Vagabond
           ui.fatal "Template requested for node does not exist: #{tmpl}"
           exit EXIT_CODES[:invalid_template]
         end
-        device_size = config[:disk_size].to_i || 2000
+        device_size = config[:disk_size].to_i
+        device_size = 2000 unless device_size > 0
         bind_path = File.expand_path(File.dirname(vagabondfile.path))
         com = "#{sudo}lxc-awesome-ephemeral -D #{device_size} -d -b #{bind_path} -o #{tmpl}"
         debug(com)
