@@ -151,6 +151,10 @@ module Vagabond
       auto_upload if vagabondfile[:local_chef_server][:auto_upload]
     end
 
+    def do_provision
+      ui.info "#{ui.color('Vagabond:', :bold)} Nothing to provision for node: #{ui.color(name, :magenta)}"
+    end
+    
     def berks_upload
       write_berks_config
       com = "berks upload -c #{File.join(vagabond_dir, 'berks.json')}"
