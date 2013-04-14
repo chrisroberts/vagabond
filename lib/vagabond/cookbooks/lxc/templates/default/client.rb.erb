@@ -1,0 +1,13 @@
+log_level        :info
+log_location     "/var/log/chef-client.log"
+
+chef_server_url  '<%= @server_uri %>'
+validation_client_name '<%= @validation_client %>' 
+node_name '<%= @node_name %>'
+environment '<%= @chef_environment %>'
+
+file_backup_path   "/var/lib/chef"
+file_cache_path    "/var/cache/chef"
+
+pid_file           "/var/run/chef/client.pid"
+
