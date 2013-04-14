@@ -61,7 +61,7 @@ node[:vagabond][:customs].each do |name, options|
 
   lxc_container name do
     action :create
-    base_container options[:base]
+    clone options[:base]
   end
   
   if(options[:memory])
