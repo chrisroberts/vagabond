@@ -68,7 +68,7 @@ module Vagabond
     method_option(:parallel,
       :type => :boolean,
       :default => false,
-      :desc => 'Build test nodes in parallel'
+      :desc => 'Build test nodes in parallel [not enabled yet]'
     )
     method_option(:suites,
       :type => :string,
