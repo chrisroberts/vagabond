@@ -130,7 +130,7 @@ action :create do
 
   #### Use cached chef package from host if available
   if(%w(debian ubuntu).include?(new_resource.template) && system('ls /opt/chef*.deb 2>1 > /dev/null'))
-    if(::File.directory('/opt'))
+    if(::File.directory?('/opt'))
       file_name = Dir.new('/opt').detect do |item| 
         item.start_with?('chef') && item.end_with?('.deb')
       end
