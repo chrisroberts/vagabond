@@ -9,7 +9,7 @@ def load_current_resource
   unless(@lxc.exists?)
     raise "Requested base contianer: #{new_resource.base_container} does not exist"
   end
-  @start_script = node[:lxc][:awesome_ephemerals] ? 'lxc-awesome-ephemeral' : 'lxc-ephemeral-start'
+  @start_script = node[:lxc][:awesome_ephemerals] ? '/usr/local/bin/lxc-awesome-ephemeral' : 'lxc-ephemeral-start'
   unless(node[:lxc][:awesome_ephemerals])
     %w(host_rootfs virtual_device).each do |key|
       if(resource.send(key))

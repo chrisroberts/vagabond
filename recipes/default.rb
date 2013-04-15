@@ -5,6 +5,10 @@ end
 
 include_recipe 'lxc::install_dependencies'
 
+directory '/usr/local/bin' do
+  recursive true
+end
+
 cookbook_file '/usr/local/bin/lxc-awesome-ephemeral' do
   source 'lxc-awesome-ephemeral'
   mode 0755
