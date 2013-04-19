@@ -9,7 +9,7 @@ LXC_BIND=""
 UNION="overlayfs"
 
 usage() {
-    echo "usage: lxc-awesome-ephemeral [-D size] [-z rdir] [-U uniontype] [-d|--daemon] [-h] [-b bdir] [-u user] [-S key] -o orig -- [COMMAND [ARGS...]]"
+    echo "usage: lxc-awesome-ephemeral [-I ip_address] [-G gateway] [-N netmask] [-D size] [-z rdir] [-U uniontype] [-d|--daemon] [-h] [-b bdir] [-u user] [-S key] -o orig -- [COMMAND [ARGS...]]"
 }
 
 help() {
@@ -24,19 +24,23 @@ help() {
     echo "key         : the path to the SSH key to use to connect"
     echo "size        : size of virtual device in M"
     echo "rdir        : host directory to store rootfs overlay"
+    echo "ip_address  : static ipv4 to use instead of dhcp"
     echo "-d          : run in the background"
     echo "-U          : type of union (aufs or overlayfs)"
     echo "              Default is overlayfs"
     echo "-D          : block device for rootfs overlay"
     echo "-z          : directory to use for rootfs overlay"
+    echo "-I          : ip address to use"
+    echo "-G          : gateway to use"
+    echo "-N          : netmask to use"
     echo
     echo "if a COMMAND is given, then the container will run only as long"
     echo "as the command runs.  If no COMMAND is given, this command will"
     echo "wait until the container is shut down"
 }
 
-shortoptions='hb:o:u:D:z:S:dU:'
-longoptions='help,orig:,bdir:,user:,device:,directory:,ssh-key:,daemon,union:'
+shortoptions='hb:o:u:D:z:I:G:N:S:dU:'
+longoptions='help,orig:,bdir:,user:,device:,directory:,ipaddress:,gateway:,netmask:,ssh-key:,daemon,union:'
 
 LXC_RUNNING=0
 LXC_MOUNTED=0
@@ -173,6 +177,21 @@ while true; do
             DAEMON=1
             shift
         ;;
+        -I|--ipaddress)
+            shift
+            CUSTOM_IPADDRESS=$1
+            shift
+        ;;
+        -G|--gateway)
+            shift
+            CUSTOM_GATEWAY=$1
+            shift
+        ;;
+        -N|--netmask)
+            shift
+            CUSTOM_NETMASK=$1
+            shift
+        ;;
         -U|--union)
             shift
             UNION=$1
@@ -303,6 +322,16 @@ setup_container()
     done
     ) < ${c}.old | sudo tee ${c} >/dev/null
     sudo rm -f ${c}.old
+
+    if [ $CUSTOM_IPADDRESS ]; then
+        if [ -z $CUSTOM_GATEWAY ]; then
+            CUSTOM_GATEWAY=`echo $CUSTOM_IPADDRESS | sed 's/[0-9]\+$/1/'`
+        fi
+        if [ -z $CUSTOM_NETMASK ]; then
+            CUSTOM_NETMASK='255.255.255.0'
+        fi
+        write_custom_networking
+    fi
 }
 
 get_ip()
@@ -383,6 +412,19 @@ start_container()
         echo "    sudo lxc-console -n $LXC_NAME"
         sudo lxc-wait -n $LXC_NAME -s STOPPED
     fi
+}
+
+write_custom_networking()
+{
+    cat <<EOF > $LXC_DIR/rootfs/etc/network/interfaces
+auto lo
+iface lo inet loopback
+auto eth0
+iface eth0 inet static
+address $CUSTOM_IPADDRESS
+netmask $CUSTOM_NETMASK
+gateway $CUSTOM_GATEWAY
+EOF
 }
 
 stop_container()
