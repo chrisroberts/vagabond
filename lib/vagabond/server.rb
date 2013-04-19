@@ -49,27 +49,31 @@ module Vagabond
     desc 'upload_roles', 'Upload all roles'
     def upload_roles
       am_uploading('roles') do
-        com = "knife role from file #{File.join(base_dir, 'roles/*')} #{options[:knife_opts]}"
-        debug(com)
-        cmd = Mixlib::ShellOut.new(com, :live_stream => options[:debug])
-        cmd.run_command
-        cmd.error!
+        if(File.directory?(File.join(base_dir, 'roles')))
+          com = "knife role from file #{File.join(base_dir, 'roles/*')} #{options[:knife_opts]}"
+          debug(com)
+          cmd = Mixlib::ShellOut.new(com, :live_stream => options[:debug])
+          cmd.run_command
+          cmd.error!
+        end
       end
     end
 
     desc 'upload_databags', 'Upload all data bags'
     def upload_databags
       am_uploading('data bags') do
-        Dir.glob(File.join(base_dir, "data_bags/*")).each do |b|
-          next if %w(. ..).include?(b)
-          coms = [
-            "knife data bag create #{File.basename(b)} #{options[:knife_opts]}",
-            "knife data bag from file #{File.basename(b)} #{options[:knife_opts]} --all"
-          ].each do |com|
-            debug(com)
-            cmd = Mixlib::ShellOut.new(com, :live_stream => options[:debug])
-            cmd.run_command
-            cmd.error!
+        if(File.directory?(File.join(base_dir, 'data_bags')))
+          Dir.glob(File.join(base_dir, "data_bags/*")).each do |b|
+            next if %w(. ..).include?(b)
+            coms = [
+              "knife data bag create #{File.basename(b)} #{options[:knife_opts]}",
+              "knife data bag from file #{File.basename(b)} #{options[:knife_opts]} --all"
+            ].each do |com|
+              debug(com)
+              cmd = Mixlib::ShellOut.new(com, :live_stream => options[:debug])
+              cmd.run_command
+              cmd.error!
+            end
           end
         end
       end
@@ -78,11 +82,13 @@ module Vagabond
     desc 'upload_environments', 'Upload all environments'
     def upload_environments
       am_uploading('environments') do
-        com = "knife environment from file #{File.join(base_dir, 'environments/*')} #{options[:knife_opts]}"
-        debug(com)
-        cmd = Mixlib::ShellOut.new(com, :live_stream => options[:debug])
-        cmd.run_command
-        cmd.error!
+        if(File.directory?(File.join(base_dir, 'environments')))
+          com = "knife environment from file #{File.join(base_dir, 'environments/*')} #{options[:knife_opts]}"
+          debug(com)
+          cmd = Mixlib::ShellOut.new(com, :live_stream => options[:debug])
+          cmd.run_command
+          cmd.error!
+        end
       end
     end
 
@@ -158,21 +164,22 @@ module Vagabond
     
     def berks_upload
       write_berks_config
+      ui.warn 'Cookbooks being uploaded via berks'
       com = "berks upload -c #{File.join(vagabond_dir, 'berks.json')}"
       debug(com)
       cmd = Mixlib::ShellOut.new(com, :live_stream => options[:debug])
       cmd.run_command
       cmd.error!
-      ui.info "Berks cookbook upload complete!"
     end
 
     def raw_upload
-      com = "knife cookbook upload#{options[:knife_opts]} --all"
-      debug(com)
-      cmd = Mixlib::ShellOut.new(com, :live_stream => options[:debug])
-      cmd.run_command
-      cmd.error!
-      ui.info "Cookbook upload complete!"
+      if(File.directory?(base_dir, 'cookbooks'))
+        com = "knife cookbook upload#{options[:knife_opts]} --all"
+        debug(com)
+        cmd = Mixlib::ShellOut.new(com, :live_stream => options[:debug])
+        cmd.run_command
+        cmd.error!
+      end
     end
 
   end
