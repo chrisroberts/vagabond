@@ -18,6 +18,7 @@ module Vagabond
       super
       @name = 'server'
       @base_template = 'ubuntu_1204' # TODO: Make this dynamic
+      setup('status')
     end
 
     desc 'server stop', 'Stops the local Chef server'
