@@ -2,6 +2,7 @@ actions :create, :delete
 default_action :create
 
 attribute :utsname, :kind_of => String, :default => nil # defaults to resource name
+attribute :aa_profile, :kind_of => String, :default => nil # platform specific?
 attribute :network, :kind_of => [Array, Hash]
 attribute :default_bridge, :kind_of => String
 attribute :static_ip, :kind_of => String

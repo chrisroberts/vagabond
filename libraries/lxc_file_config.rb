@@ -7,6 +7,9 @@ class LxcFileConfig
     def generate_config(resource)
       config = []
       config << "lxc.utsname = #{resource.utsname}"
+      if(resource.aa_profile)
+        config << "lxc.aa_profile = #{resource.aa_profile}"
+      end
       [resource.network].flatten.each do |net_hash|
         nhsh = Mash.new(net_hash)
         flags = nhsh.delete(:flags)
