@@ -74,8 +74,9 @@ module Vagabond
       :type => :string,
       :desc => 'Specify suites to test [suite1,suite2,...]'
     )
-    def test(cookbook)
+    def test(cookbook=nil)
       setup(cookbook, :test)
+      
       ui.info "#{ui.color('Vagabond:', :bold)} - Kitchen testing for cookbook #{ui.color(name, :cyan)}"
       results = Mash.new
       platforms = [options[:platform] || platform_map.keys].flatten
@@ -164,15 +165,31 @@ module Vagabond
     
     def setup(name, action)
       @options = options.dup
-      @vagabondfile = Vagabondfile.new(options[:vagabond_file])
+      @vagabondfile = Vagabondfile.new(options[:vagabond_file], :allow_missing)
       setup_ui
-      @name = name
+      load_kitchen_yml(name)
+      @solo = !name
+      @name = name ? name : discover_name
       @action = action
-      load_kitchen_yml
+    end
+
+    # TODO: Make this traverse up if in cookbook subdir
+    def discover_name
+      name = nil
+      if(File.exists?('metadata.rb'))
+        m = Chef::Cookbook::Metadata.new
+        m.from_file('metadata.rb')
+        name = m.name
+        unless(name)
+          name = File.basename(File.dirname(File.expand_path(Dir.pwd)))
+        end
+      end
+      raise "Failed to detect name of cookbook. Are we in the top directory?" unless name
+      name
     end
 
     def configure_for(l_name, platform, suite_name, runlist, *args)
-      dir = File.join(File.dirname(vagabondfile.path), ".vagabond/node_configs/#{l_name}")
+      dir = File.join(File.dirname(vagabondfile.store_path), ".vagabond/node_configs/#{l_name}")
       FileUtils.mkdir_p(dir)
       _args = [args.include?(:integration) ? :integration : nil].compact
       write_dna(l_name, suite_name, dir, platform, runlist, *_args) if args.include?(:dna)
@@ -202,9 +219,13 @@ module Vagabond
     end
 
     def cookbook_path
-      Chef::CookbookLoader.new(
-        File.join(File.dirname(vagabondfile.path), 'cookbooks')
-      ).load_cookbooks[name].root_dir
+      if(@solo)
+        File.dirname(vagabondfile.path)
+      else
+        Chef::CookbookLoader.new(
+          File.join(File.dirname(vagabondfile.path), 'cookbooks')
+        ).load_cookbooks[name].root_dir
+      end
     end
     
     def load_cookbooks(l_name, suite_name, dir, platform, runlist, *_args)
@@ -260,10 +281,12 @@ module Vagabond
       v
     end
 
-    def load_kitchen_yml
-      y_path = File.join(
-        File.dirname(vagabondfile.path), 'cookbooks', name, '.kitchen.yml'
-      )
+    def load_kitchen_yml(name)
+      if(name)
+        y_path = File.join(File.dirname(vagabondfile.path), 'cookbooks', name, '.kitchen.yml')
+      else
+        y_path = File.join(File.dirname(vagabondfile.path), '.kitchen.yml')
+      end
       if(File.exists?(y_path))
         @kitchen = Mash.new(YAML.load(File.read(y_path)))
       else

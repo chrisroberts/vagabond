@@ -150,7 +150,7 @@ module Vagabond
     end
     
     def load_configurations
-      @vagabondfile = Vagabondfile.new(options[:vagabond_file])
+      @vagabondfile = Vagabondfile.new(options[:vagabond_file], :allow_missing)
       options[:sudo] = sudo
       options[:disable_solo] = true if @action.to_s == 'status' && lxc_installed?
       Chef::Log.init('/dev/null') unless options[:debug]

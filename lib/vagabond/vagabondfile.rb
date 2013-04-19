@@ -42,10 +42,17 @@ module Vagabond
         @config = Mash.new(self.instance_eval(IO.read(@path), @path, 1))
       else
         raise 'No Vagabondfile file found!' unless no_raise
-        @config = Mash.new
+        @path = File.expand_path(File.join(Dir.pwd, 'Vagabondfile'))
+        @store_path = File.join('/tmp/vagabond-solos', Dir.pwd.gsub(%r{[^0-9a-zA-Z]}, '-'), 'Vagabondfile')
+        FileUtils.mkdir_p(File.dirname(@store_path))
+        @config = Mash.new(:boxes => {})
       end
     end
 
+    def store_path
+      @store_path || @path
+    end
+    
     def discover_path(path)
       d_path = Dir.glob(File.join(path, 'Vagabondfile')).first
       unless(d_path)

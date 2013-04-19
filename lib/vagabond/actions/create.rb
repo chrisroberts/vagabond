@@ -25,7 +25,7 @@ module Vagabond
         end
         device_size = config[:disk_size].to_i
         device_size = 2000 unless device_size > 0
-        bind_path = File.expand_path(File.dirname(vagabondfile.path))
+        bind_path = File.expand_path(File.dirname(vagabondfile.store_path))
         com = "#{sudo}lxc-awesome-ephemeral -D #{device_size} -d -b #{bind_path} -o #{tmpl}"
         debug(com)
         c = Mixlib::ShellOut.new("#{com} && sleep 3", :live_stream => options[:debug])

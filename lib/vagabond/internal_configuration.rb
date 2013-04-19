@@ -79,7 +79,7 @@ module Vagabond
     def store_path
       FileUtils.mkdir_p(
         File.join(
-          File.dirname(@vagabondfile.path), '.vagabond'
+          File.dirname(@vagabondfile.store_path), '.vagabond'
         )
       )
     end
@@ -174,7 +174,7 @@ module Vagabond
     def run_solo
       begin
         ui.info ui.color('Ensuring expected system state (creating required base containers)', :yellow)
-        ui.info ui.color('   - This can take a while...', :yellow)
+        ui.info ui.color('   - This can take a while on first run or new templates...', :yellow)
         com = "#{options[:sudo]}chef-solo -j #{File.join(store_path, 'dna.json')} -c #{File.join(store_path, 'solo.rb')}"
         debug(com)
         cmd = Mixlib::ShellOut.new(com, :timeout => 12000, :live_stream => options[:debug])
