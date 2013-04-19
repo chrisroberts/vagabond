@@ -44,4 +44,11 @@ def interface(iname, &block)
   @subresources << [iface, block]
 end
 
+def config(cname, &block)
+  conf = Chef::Resource::LxcConfig.new("lxc_config[#{self.name} - #{cname}]", nil)
+  conf.container self.name
+  conf.action :nothing
+  @subresources << [conf, block]
+end
+
 attr_reader :subresources
