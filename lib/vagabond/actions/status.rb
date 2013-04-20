@@ -18,14 +18,21 @@ module Vagabond
       end
       
       def _status
-        ui.info ui.color("Vagabond node status:\n", :bold)
+        status = [
+          ui.color('Name', :bold),
+          ui.color('State', :bold),
+          ui.color('PID', :bold),
+          ui.color('IP', :bold)
+        ]
         if(name)
-          status_for(name)
+          status += status_for(name)
         else
-          (Array(vagabondfile[:boxes].keys) | Array(internal_config[mappings_key].keys)).sort.each do |n|
-            status_for(n)
+          names = (Array(vagabondfile[:boxes].keys) | Array(internal_config[mappings_key].keys))
+          names.sort.each do |n|
+            status += status_for(n)
           end
         end
+        puts ui.list(status, :uneven_columns_across, 4)
       end
 
       private
@@ -37,25 +44,22 @@ module Vagabond
         if(Lxc.exists?(m_name))
           @lxc = Lxc.new(m_name) unless lxc.name == m_name
           info = Lxc.info(m_name)
-          state = info[:state]
-          status << "PID: #{info[:pid] == -1 ? 'N/A' : info[:pid]}"
-          status << "Address: #{lxc.container_ip || 'unknown'}"
-          status << "\n"
+          case info[:state]
+          when :running
+            color = :green
+          when :frozen
+            color = :blue
+          when :stopped
+            color = :yellow
+          else
+            color = :red
+          end
+          status << ui.color(c_name, color)
+          status << (info[:state] || 'N/A').to_s
+          status << (info[:pid] == -1 ? 'N/A' : info[:pid]).to_s
+          status << (lxc.container_ip || 'unknown')
         end
-        case state
-        when :running
-          color = :green
-        when :frozen
-          color = :blue
-        when :stopped
-          color = :yellow
-        else
-          color = :red
-        end
-        ui.info ui.color("  #{c_name}: #{state || "Not currently created\n"}", color)
-        unless(status.empty?)
-          ui.info(status.map{|s| "    #{s}"}.join("\n").chomp)
-        end
+        status
       end
     end
   end
