@@ -9,7 +9,7 @@ LXC_BIND=""
 UNION="overlayfs"
 
 usage() {
-    echo "usage: lxc-awesome-ephemeral [-I ip_address] [-G gateway] [-N netmask] [-D size] [-z rdir] [-U uniontype] [-d|--daemon] [-h] [-b bdir] [-u user] [-S key] -o orig -- [COMMAND [ARGS...]]"
+    echo "usage: lxc-awesome-ephemeral [-I ipaddress] [-G gateway] [-N netmask] [-D size] [-z rdir] [-U uniontype] [-d|--daemon] [-h] [-b bdir] [-u user] [-S key] -o orig -- [COMMAND [ARGS...]]"
 }
 
 help() {
@@ -24,7 +24,7 @@ help() {
     echo "key         : the path to the SSH key to use to connect"
     echo "size        : size of virtual device in M"
     echo "rdir        : host directory to store rootfs overlay"
-    echo "ip_address  : static ipv4 to use instead of dhcp"
+    echo "ipaddress   : static ipv4 to use instead of dhcp"
     echo "-d          : run in the background"
     echo "-U          : type of union (aufs or overlayfs)"
     echo "              Default is overlayfs"
