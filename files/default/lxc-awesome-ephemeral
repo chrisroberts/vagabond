@@ -282,6 +282,22 @@ setup_container()
         fi
     done
 
+    dist=`cat  $LXC_DIR/rootfs/etc/issue | head -n 1 | cut -f1 -d\ `
+    if [ $dist = 'CentOS' ] ; then
+        DISTRO="EL"
+    else
+        DISTRO="DEBIAN"
+    fi
+
+    # special tweaks for the centos family of distributions
+    if [ $DISTRO = "EL" ] ; then
+        cat <<EOF > $LXC_DIR/rootfs/etc/sysconfig/network
+NETWORKING=yes
+HOSTNAME=$LXC_NAME
+EOF
+    echo "hostname $LXC_NAME" >> $LXC_DIR/rootfs/etc/rc.local
+    fi
+
     # Update the fstab to have all bind mounts be ephemeral.
     sudo cp $LXC_DIR/fstab $LXC_DIR/fstab.old
     while read line; do
@@ -425,7 +441,21 @@ start_container()
 
 write_custom_networking()
 {
-    cat <<EOF > $LXC_DIR/rootfs/etc/network/interfaces
+    if [ $DISTRO = "EL" ] ; then
+        cat <<EOF > $LXC_DIR/rootfs/etc/sysconfig/network-scripts/ifcfg-eth0
+DEVICE=eth0
+BOOTPROTO=static
+NETMASK=$CUSTOM_NETMASK
+IPADDR=$CUSTOM_IPADDRESS
+ONBOOT=yes
+TYPE=Ethernet
+USERCTL=yes
+PEERDNS=yes
+IPV6INIT=no
+GATEWAY=$CUSTOM_GATEWAY
+EOF
+    else
+        cat <<EOF > $LXC_DIR/rootfs/etc/network/interfaces
 auto lo
 iface lo inet loopback
 auto eth0
@@ -434,6 +464,7 @@ address $CUSTOM_IPADDRESS
 netmask $CUSTOM_NETMASK
 gateway $CUSTOM_GATEWAY
 EOF
+    fi
 }
 
 stop_container()
