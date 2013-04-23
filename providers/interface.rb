@@ -31,6 +31,8 @@ action :create do
     net_set[:address] = new_resource.address
     net_set[:gateway] = new_resource.gateway
     net_set[:netmask] = new_resource.netmask
+    net_set[:up] = new_resource.up if new_resource.up
+    net_set[:down] = new_resource.down if new_resource.down
     net_set[:ipv6] = new_resource.ipv6
   end
 

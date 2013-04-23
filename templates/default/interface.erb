@@ -17,5 +17,10 @@ iface <%= net_set[:device] %> inet<%= '6' if net_set[:ipv6] %> static
   gateway <%= net_set[:gateway] %>
 <% end -%>
   netmask <%= net_set[:netmask] %>
+<% if net_set[:up] -%>
+  up <%= net_set[:up] %>
+<% end -%>
+<% if net_set[:down] -%>
+  down <%= net_set[:down] %>
 <% end -%>
 <% end %>
