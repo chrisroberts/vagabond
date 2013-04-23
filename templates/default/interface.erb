@@ -23,4 +23,5 @@ iface <%= net_set[:device] %> inet<%= '6' if net_set[:ipv6] %> static
 <% if net_set[:down] -%>
   down <%= net_set[:down] %>
 <% end -%>
+<% end -%>
 <% end %>
