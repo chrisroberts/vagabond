@@ -130,7 +130,8 @@ module Vagabond
       end
       setup_ui(_ui)
       load_configurations
-      validate!
+      validate! unless action == 'cluster' # TODO -> allow action
+      # method to check for validation run
     end
 
     def name_required!
