@@ -125,9 +125,10 @@ module Vagabond
       @name = name
       @options = options.dup
       if(args.last.is_a?(Hash))
-        _ui = args.delete(:ui)
+        _ui = args.last.delete(:ui)
         @options.merge!(args.last)
       end
+      @leftover_args = args
       setup_ui(_ui)
       load_configurations
       validate! unless action == 'cluster' # TODO -> allow action
