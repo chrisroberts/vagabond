@@ -23,10 +23,13 @@ module Vagabond
           ui.fatal "Template requested for node does not exist: #{tmpl}"
           exit EXIT_CODES[:invalid_template]
         end
-        device_size = config[:disk_size].to_i
-        device_size = 2000 unless device_size > 0
+        opts = %w(ipaddress device directory gateway netmask union)
+        config[:device] ||= 2000
+        lxc_opts = opts.map do |opt|
+          "--#{opt} #{config[opt]}" unless config[opt].nil?
+        end.compact.join(' ')
         bind_path = File.expand_path(File.dirname(vagabondfile.store_path))
-        com = "#{sudo}lxc-awesome-ephemeral -D #{device_size} -d -b #{bind_path} -o #{tmpl}"
+        com = "#{sudo}lxc-awesome-ephemeral #{lxc_opts} -d -b #{bind_path} -o #{tmpl}"
         debug(com)
         c = Mixlib::ShellOut.new("#{com} && sleep 3", :live_stream => options[:debug])
         c.run_command
