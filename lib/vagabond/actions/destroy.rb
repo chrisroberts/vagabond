@@ -4,12 +4,16 @@ module Vagabond
 
       def _destroy
         name_required!
-        if(lxc.exists?)
-          ui.info "#{ui.color('Vagabond:', :bold)} Destroying node: #{ui.color(name, :red)}"
-          do_destroy
-          ui.info ui.color('  -> DESTROYED', :red)
-        else
-          ui.error "Node not created: #{name}"
+        [name, @leftover_args].flatten.compact.each do |n|
+          @name = n
+          load_configurations
+          if(lxc.exists?)
+            ui.info "#{ui.color('Vagabond:', :bold)} Destroying node: #{ui.color(name, :red)}"
+            do_destroy
+            ui.info ui.color('  -> DESTROYED', :red)
+          else
+            ui.error "Node not created: #{name}"
+          end
         end
       end
 
