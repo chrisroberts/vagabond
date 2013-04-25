@@ -58,6 +58,9 @@ module Vagabond
           status << (info[:state] || 'N/A').to_s
           status << (info[:pid] == -1 ? 'N/A' : info[:pid]).to_s
           status << (lxc.container_ip || 'unknown')
+        else
+          status << ui.color(c_name, :red)
+          status += ['N/A'] * 3
         end
         status
       end
