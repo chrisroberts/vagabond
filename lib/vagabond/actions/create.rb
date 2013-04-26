@@ -24,7 +24,7 @@ module Vagabond
           exit EXIT_CODES[:invalid_template]
         end
         opts = %w(ipaddress device directory gateway netmask union)
-        config[:device] ||= 2000
+        config[:device] = 2000 unless config.has_key?(:device)  # Check for key so nil can disable
         lxc_opts = opts.map do |opt|
           "--#{opt} #{config[opt]}" unless config[opt].nil?
         end.compact.join(' ')
