@@ -1,4 +1,5 @@
 require 'vagabond/constants'
+require 'uuidtools'
 
 module Vagabond
   module Helpers
@@ -17,6 +18,11 @@ module Vagabond
     def debug(s)
       ui.info "#{ui.color('DEBUG:', :red, :bold)} #{s}" if options[:debug]
     end
+
+    def random_name(n=nil)
+      n = name unless n
+      [n, SecureRandom.hex].compact.join('-')
+    end
     
     def generated_name(n=nil)
       n = name unless n
@@ -29,15 +35,16 @@ module Vagabond
       @_gn[n]
     end
 
-    def setup_ui(ui=nil)
-      unless(ui)
+    def setup_ui(*args)
+      unless(args.first.is_a?(Chef::Knife::UI))
         Chef::Config[:color] = options[:color].nil? ? true : options[:color]
         @ui = Chef::Knife::UI.new(STDOUT, STDERR, STDIN, {})
       else
-        @ui = ui
+        @ui = args.first
       end
       options[:debug] = STDOUT if options[:debug]
-      self.class.ui = @ui
+      self.class.ui = @ui unless args.include?(:no_class_set)
+      @ui
     end
 
     def execute
