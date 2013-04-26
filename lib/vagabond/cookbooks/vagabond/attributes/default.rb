@@ -15,3 +15,4 @@ default[:vagabond][:bases][:debian_6][:create_environment] = {'SUITE' => 'squeez
 default[:vagabond][:bases][:debian_7][:template] = 'debian'
 default[:vagabond][:bases][:debian_7][:create_environment] = {'SUITE' => 'wheezy'}
 default[:vagabond][:customs] = {}
+defautl[:vagabond][:server_base] = true
