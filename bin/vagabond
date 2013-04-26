@@ -20,6 +20,10 @@ else
   when 'test', 'kitchen'
     require 'vagabond/kitchen'
     Vagabond::Kitchen
+  when 'spec'
+    require 'vagabond/spec'
+    ARGV.unshift(arg) unless ARGV.empty?
+    Vagabond::Spec
   else
     require 'vagabond/vagabond'
     ARGV.unshift(arg)
