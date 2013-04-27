@@ -27,7 +27,11 @@ module Vagabond
         if(name)
           status += status_for(name)
         else
-          names = (Array(vagabondfile[:boxes].keys) | Array(internal_config[mappings_key].keys))
+          if(self.is_a?(Vagabond))
+            names = (Array(vagabondfile[:boxes].keys) | Array(internal_config[mappings_key].keys))
+          else
+            names = Array(internal_config[mappings_key].keys)
+          end
           names.sort.each do |n|
             status += status_for(n)
           end
