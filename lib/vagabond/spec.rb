@@ -61,7 +61,7 @@ module Vagabond
       lxc = Lxc.new(lxc_name)
       config[:run_list].each do |item|
         r_item = Chef::RunList::RunListItem.new(item)
-        dir = File.join(File.dirname(@vagabondfile.path), "spec/#{r_item.type}/#{r_item.name}")
+        dir = File.join(File.dirname(@vagabondfile.path), "spec/#{r_item.type}/#{r_item.name.sub('::', '_')}")
         Dir.glob(File.join(dir, '*.rb')).each do |path|
           com = "#{sudo}LXC_TEST_HOST='#{lxc.container_ip}' rspec #{path}"
           debug(com)
