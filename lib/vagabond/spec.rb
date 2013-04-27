@@ -64,7 +64,7 @@ module Vagabond
         if(r_item.role?)
           dir = File.join(File.dirname(@vagabondfile.path), "spec/#{r_item.name}")
           Dir.glob(File.join(dir, '*.rb')).each do |path|
-            com = "rvmsudo LXC_TEST_HOST='#{lxc.container_ip}' rspec #{path}"
+            com = "#{sudo}LXC_TEST_HOST='#{lxc.container_ip}' rspec #{path}"
             debug(com)
             cmd = Mixlib::ShellOut.new(com, :live_stream => STDOUT, :env => {'LXC_TEST_HOST' => lxc.container_ip})
             cmd.run_command
