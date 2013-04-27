@@ -2,7 +2,7 @@ require 'thor'
 require 'chef'
 require 'kitchen/busser'
 
-%w(helpers vagabondfile vagabond server helpers/cheffile_loader).each do |dep|
+%w(helpers vagabondfile vagabond server helpers/cheffile_loader actions/status).each do |dep|
   require "vagabond/#{dep}"
 end
 
@@ -11,6 +11,7 @@ module Vagabond
     
     include Thor::Actions
     include Helpers
+    include Actions::Status
 
     class << self
       def basename
@@ -26,6 +27,7 @@ module Vagabond
     attr_reader :ui
     attr_reader :name
     attr_reader :action
+    attr_reader :internal_config
 
     def initialize(*args)
       super
@@ -126,9 +128,19 @@ module Vagabond
         end
       end
     end
+
+    desc 'status [NAME]', 'Show test node status'
+    def status(name=nil)
+      setup(name, :status)
+      _status
+    end
     
     protected
 
+    def mappings_key
+      :test_mappings
+    end
+    
     def local_server_provision_node(platform, suite_name)
       run_list = generate_runlist(platform, suite_name)
       v_inst = vagabond_instance(:up, platform, :suite_name => suite_name, :run_list => run_list)
@@ -167,9 +179,10 @@ module Vagabond
       @options = options.dup
       @vagabondfile = Vagabondfile.new(options[:vagabond_file], :allow_missing)
       setup_ui
-      load_kitchen_yml(name)
+      @internal_config = InternalConfiguration.new(@vagabondfile, ui, options)
+      load_kitchen_yml(name) unless action == :status
       @solo = !name
-      @name = name ? name : discover_name
+      @name = name || action == :status ? name : discover_name
       @action = action
     end
 
