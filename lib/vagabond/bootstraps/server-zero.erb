@@ -1,0 +1,18 @@
+bash -c '
+
+apt-get install -y -q wget
+curl -L https://www.opscode.com/chef/install.sh | sudo bash
+
+wget -qO- https://github.com/hw-cookbooks/vagabond/tarball/master | tar xvzC /var/chef/cookbooks/vagabond --strip-components=1
+
+(
+echo "
+{
+  \"run_list\": [ \"recipe[vagabond::zero]\" ]
+}
+"
+) > /tmp/chef-server.json
+
+chef-solo -j /tmp/chef-server.json
+
+'
