@@ -15,8 +15,8 @@ instead of full blown VMs which means things are faster. Lots
 faster.
 
 Vagabond is built for Chef. The tooling within Vagabond is targeted
-at Chef. As the initial development push on Vagabond slows, this
-tooling will become optionally swappable (applicable bits at least).
+at Chef. After the initial development has slowed, the Chef specifics
+will be pulled into a plugin.
 
 ## Installation
 
@@ -130,6 +130,103 @@ and all the other fun things nodes may be doing that require a
 chef server. Looking for example? See the `USAGE` file!
 
 Double awesome
+
+## Infrastructure testing
+
+Cookbook tests are great and they help keep cookbooks stable and prevent
+regressions. But what about tests for integrating cookbooks into an existing
+infrastructure? Or upgrading an existing cookbook? The tests bundled with
+the cookbook can happily pass with no indication of how it may affect other
+resources within the infrastructure. So lets fix this.
+
+Currently infrastructure tests are built using serverspec[1]. Test kitchen support
+for infrastructure testing is in the works, but is still a moving target. So
+lets look at how we can set this up. First, initialize the specs:
+
+```
+$ vagabond spec init
+```
+
+Next, we need to define the layout of the infrastructure. This is done by
+populating the `Layout` file in the `spec` directory. Just like everything
+else, this is just a ruby file that is expected to spit out a Hash. An
+example file would look like this:
+
+```ruby
+# spec/Layout
+{
+  :defaults => {
+    :platform => 'ubuntu_1204',
+    :environment => 'testing',
+    :union => 'aufs'
+  },
+  :definitions => {
+    :test_node => {
+      :run_list => %w(role[base])
+    }
+  },
+  :clusters => {
+    :my_cluster => {
+      :overrides => {
+        :environment => '_default'
+      },
+      :nodes => ['test_node'] * 3
+    }
+  }
+}
+```
+
+### :defaults
+
+These are the default configuration options used for creating the containers
+for testing. These are the same configurations used when creating the nodes
+in the Vagabondfile.
+
+### :definitions
+
+These are the definitions of your nodes. Any options here that were defined
+within the `:defaults` section will be overridden.
+
+### :clusters
+
+These are the clusters of nodes that describe the infrastructure. The key 
+provides the identifier name used from the `spec` command. The `:overrides`
+are cluster specific overrides that are applied to all nodes when created.
+The `:nodes` is an array of `:definitions` keys for nodes to build. The
+keys can be repeated `n` times to provide multiple nodes of a specific type.
+
+### Usage
+
+```
+$ vagabond spec my_cluster
+```
+
+### Applying specs
+
+Specs are applied based on the run list describing the node. After the local
+chef server has been created (if required), all nodes have been created, and
+all nodes provisioned vagabond will run back through all nodes applying the
+applicable specs. Specs are very straight forward and only use SSH connections
+to spec the node. An example spec:
+
+```ruby
+require 'spec_helper'
+
+describe 'cron' do
+  it{ should be_enabled }
+  it{ should be_running }
+end
+```
+
+### Spec real infrastructure
+
+Since specs only require an SSH connection to test nodes, we can run specs
+against actual live infrastructure to see if it is currently in a valid
+state based on existing specs. Awesome!
+
+```
+$ vagabond spec my_cluster --environment production
+```
 
 ## Important note
 
