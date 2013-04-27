@@ -147,7 +147,11 @@ module Vagabond
       ui.info ui.color('  -> Chef Server container created!', :cyan)
       lxc.start
       ui.info ui.color('  -> Bootstrapping erchef...', :cyan)
-      tem_file = File.expand_path(File.join(File.dirname(__FILE__), 'bootstraps/server.erb'))
+      if(vagabondfile[:local_chef_server][:zero])
+        tem_file = File.expand_path(File.join(File.dirname(__FILE__), 'bootstraps/server-zero.erb'))
+      else
+        tem_file = File.expand_path(File.join(File.dirname(__FILE__), 'bootstraps/server.erb'))
+      end
       com = "#{options[:sudo]}knife bootstrap #{lxc.container_ip(10, true)} --template-file #{tem_file} -i /opt/hw-lxc-config/id_rsa"
       debug(com)
       cmd = Mixlib::ShellOut.new(com, :live_stream => options[:debug], :timeout => 1200)
@@ -159,7 +163,12 @@ module Vagabond
     end
 
     def do_provision
-      ui.info "#{ui.color('Vagabond:', :bold)} Nothing to provision for node: #{ui.color(name, :magenta)}"
+      if(vagabondfile[:local_chef_server][:zero])
+        com = direct_container_command("chef-solo -j /tmp/chef-server.json")
+        cmd = Mixlib::ShellOut.new(com, :live_stream => options[:debug], :timeout => 30)
+      else
+        ui.info "#{ui.color('Vagabond:', :bold)} Nothing to provision for node: #{ui.color(name, :magenta)}"
+      end
     end
     
     def berks_upload
