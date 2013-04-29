@@ -58,6 +58,21 @@ Now, to create a node, simply run:
 $ vagabond up db
 ```
 
+This command will bootstrap the installation of LXC utilities and base
+containers prior to starting up a linux container. It does this by
+running the vagabond chef recipe embedded in this gem at
+`lib/vagabond/cookbooks/vagabond/recipes/default.rb`. 
+
+To only prepare your system for LXC fun and generate a simple vagabond
+file, do the following:
+
+```
+$ vagabond init
+```
+
+This command runs the chef recipe and generates a basic Vagabondfile
+but does not start a container.
+
 Pretty simple, right?
 
 ### Templates available
