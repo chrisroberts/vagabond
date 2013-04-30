@@ -1,7 +1,7 @@
 require 'thor'
 require File.join(File.dirname(__FILE__), 'cookbooks/lxc/libraries/lxc.rb')
 
-%w(layout vagabond server helpers vagabondfile internal_configuration).each do |dep|
+%w(layout vagabond server helpers vagabondfile internal_configuration actions/status).each do |dep|
   require "vagabond/#{dep}"
 end
 
@@ -10,20 +10,90 @@ module Vagabond
 
     include Thor::Actions
     include Helpers
+    include Actions::Status
 
-    attr_accessor :ui
     attr_accessor :layout
-    
+
     self.class_exec(&Vagabond::CLI_OPTIONS)
-    
-    def initialize(*args)
-      super
+
+    def self.basename
+      'vagabond spec'
     end
     
-    desc 'spec CLUSTER', 'Run specs for cluster'
-    def spec(cluster)
+    def initialize(*args)
+      @name = nil
+      super
+    end
+
+    method_option(:irl,
+      :type => :boolean,
+      :default => false,
+      :desc => 'Test In Real Life'
+    )
+    method_option(:environment,
+      :type => :string,
+      :desc => 'Specify environment to restrict node detection'
+    )
+    desc 'start [CLUSTER]', 'Run specs for cluster'
+    def start(cluster=nil)
       @options = options.dup
       setup_ui(nil, :no_class_set)
+      if(options[:irl])
+        irl_spec(cluster)
+      else
+        cluster_spec(cluster)
+      end
+    end
+
+    desc 'status [NAME]', 'Show status of existing nodes'
+    def status(name=nil)
+      base_setup
+      _status
+    end
+    
+    protected
+
+    def mappings_key
+      :spec_mappings
+    end
+    
+    def irl_spec(cluster)
+      if(cluster && load_layout[cluster])
+        valid_runlists = layout[:clusters][cluster][:nodes]
+        # Runlists composed of role AND/OR recipe
+        valid_runlists.each do |r_l|
+          runlist = r_l.map{|r| Chef::RunList::RunListItem.new(r)}
+          roles = runlist.find_all do |i|
+            i.role?
+          end
+          recipes = runlist.find_all do |i|
+            i.recipe?
+          end
+          terms = roles.map{|r| "role:#{r.name}"} + recipes.map{|r| "recipes:#{r.name}"}
+          query = terms.join(' AND ')
+          if(options[:environment])
+            query = "chef_environment:#{options[:environment]} AND (#{query})"
+          end
+          search(:node, query).each do |node|
+            n_r = node.run_list.map(&:to_s)
+            next unless n_r.size == r_l.size && (n_r - r_l).empty?
+            test_node!(node.name, node.ipaddress, node.run_list)
+          end
+        end
+      else
+        query = %w(*:*)
+        if(options[:environment])
+          query << "chef_environment:#{options[:environment]}"
+        end
+        Chef::Search::Query.new(:node, query.join(' AND ')) do |nodes|
+          nodes.each do |node|
+            test_node!(node.name, node.ipaddress, node.run_list)
+          end
+        end
+      end
+    end
+
+    def cluster_spec(cluster)
       @options[:auto_provision] = true
       @vagabondfile = Vagabondfile.new(options[:vagabond_file])
       options[:sudo] = sudo
@@ -37,8 +107,7 @@ module Vagabond
         srv.send(:execute)
       end
 
-      # Load up layouts and set defaults
-      @layout = Layout.new(File.dirname(@vagabondfile.path))
+      load_layout
       default_config = Chef::Mixin::DeepMerge.merge(
         Mash.new(:platform => 'ubuntu_1204', :union => 'aufs'), layout[:defaults]
       )
@@ -51,25 +120,29 @@ module Vagabond
         [v_n.name, v_n.lxc.name, config]
       end
       test_nodes.each do |node|
-        test_node!(*node)
+        name, lxc_name, config = node
+        lxc = Lxc.new(lxc_name)
+        test_node!(name, lxc.container_ip, config[:run_list])
       end
     end
-
-    protected
     
-    def test_node!(name, lxc_name, config)
-      lxc = Lxc.new(lxc_name)
-      config[:run_list].each do |item|
-        r_item = Chef::RunList::RunListItem.new(item)
+    def test_node!(name, ip_address, run_list)
+      run_list.each do |item|
+        r_item = item.is_a?(Chef::RunList::RunListItem) ? item : Chef::RunList::RunListItem.new(item)
         dir = File.join(File.dirname(@vagabondfile.path), "spec/#{r_item.type}/#{r_item.name.sub('::', '_')}")
         Dir.glob(File.join(dir, '*.rb')).each do |path|
-          com = "#{sudo}LXC_TEST_HOST='#{lxc.container_ip}' rspec #{path}"
+          com = "#{sudo}VAGABOND_TEST_HOST='#{ip_address}' rspec #{path}"
           debug(com)
-          cmd = Mixlib::ShellOut.new(com, :live_stream => STDOUT, :env => {'LXC_TEST_HOST' => lxc.container_ip})
+          cmd = Mixlib::ShellOut.new(com, :live_stream => STDOUT, :env => {'VAGABOND_TEST_HOST' => ip_address})
           cmd.run_command
           cmd.error!
         end
       end
+    end
+
+    def load_layout
+      # Load up layouts and set defaults
+      @layout = Layout.new(File.dirname(@vagabondfile.path))
     end
     
     def vagabond_instance(action, platform, args={})
