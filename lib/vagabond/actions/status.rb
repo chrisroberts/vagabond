@@ -46,7 +46,7 @@ module Vagabond
         state = nil
         status = []
         if(Lxc.exists?(m_name))
-          @lxc = Lxc.new(m_name) unless lxc.name == m_name
+          @lxc = Lxc.new(m_name) unless defined?(lxc) && lxc.name == m_name
           info = Lxc.info(m_name)
           case info[:state]
           when :running
@@ -61,7 +61,7 @@ module Vagabond
           status << ui.color(c_name, color)
           status << (info[:state] || 'N/A').to_s
           status << (info[:pid] == -1 ? 'N/A' : info[:pid]).to_s
-          status << (lxc.container_ip || 'unknown')
+          status << (@lxc.container_ip || 'unknown')
         else
           status << ui.color(c_name, :red)
           status += ['N/A'] * 3
