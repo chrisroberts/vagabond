@@ -4,6 +4,15 @@ require 'uuidtools'
 module Vagabond
   module Helpers
     private
+
+    def base_setup
+      @options = options.dup
+      @vagabondfile = Vagabondfile.new(options[:vagabond_file], :allow_missing)
+      Lxc.use_sudo = @vagabondfile[:sudo].nil? ? true : @vagabondfile[:sudo]
+      setup_ui
+      @internal_config = InternalConfiguration.new(@vagabondfile, ui, options)
+    end
+    
     def sudo
       case @vagabondfile[:sudo]
       when FalseClass
@@ -84,9 +93,9 @@ module Vagabond
           class << self
             attr_accessor :ui
           end
+          attr_accessor :vagabondfile, :internal_config, :name, :ui
         end
       end
     end
-    
   end
 end
