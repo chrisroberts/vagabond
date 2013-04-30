@@ -146,10 +146,11 @@ module Vagabond
       @internal_config.save
       ui.info ui.color('  -> Chef Server container created!', :cyan)
       lxc.start
-      ui.info ui.color('  -> Bootstrapping erchef...', :cyan)
       if(vagabondfile[:local_chef_server][:zero])
+        ui.info ui.color('  -> Bootstrapping chef zero...', :cyan)
         tem_file = File.expand_path(File.join(File.dirname(__FILE__), 'bootstraps/server-zero.erb'))
       else
+        ui.info ui.color('  -> Bootstrapping erchef...', :cyan)
         tem_file = File.expand_path(File.join(File.dirname(__FILE__), 'bootstraps/server.erb'))
       end
       com = "#{options[:sudo]}knife bootstrap #{lxc.container_ip(10, true)} --template-file #{tem_file} -i /opt/hw-lxc-config/id_rsa"
