@@ -6,7 +6,8 @@ module Vagabond
           klass.class_eval do
             class << self
               def _cluster_options
-                [[:auto_provision, :type => :boolean, :default => true]]
+                [[:auto_provision, :type => :boolean, :desc => 'Automatically provision nodes', :default => true],
+                 [:delay, :type => :numeric, :desc => 'Add delay between provisions (helpful for search)', :default => 0]]
               end
             end
           end
@@ -28,6 +29,10 @@ module Vagabond
             @config = @vagabondfile[:boxes][name]
             @lxc = Lxc.new(@internal_config[mappings_key][name] || '____nonreal____')
             _up
+            if(options[:delay].to_i > 0 && n != crl.last)
+              ui.warn "Delay requested between node processing. Sleeping for #{options[:delay].to_i} seconds."
+              sleep(options[:delay].to_i)
+            end
           end
           ui.info "  -> #{ui.color("Built cluster #{name}", :green)}"
         else
