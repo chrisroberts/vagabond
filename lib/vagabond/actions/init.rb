@@ -6,8 +6,7 @@ module Vagabond
           klass.class_eval do
             class << self
               def _init_desc
-                  ['init', 'initialize the Vagabondfile and setup LXC if needed.']
-                end
+                ['init', 'initialize the Vagabondfile and setup LXC if needed.']
               end
             end
           end
@@ -38,10 +37,17 @@ module Vagabond
           },
           :sudo => true
         }
-        bind_path = File.expand_path(File.dirname(vagabondfile.store_path))
-        File.open(bind_path, 'w') do |file|
+        vagabond_file = "#{Dir.pwd}/Vagabondfile"
+        if File.exists? vagabond_file
+          ui.warn "A Vagabondfile already exists, do you want to overwrite it?(Y/N)"
+          answer = $stdin.gets.chomp
+          return unless answer =~ /[Yy]/
+          ui.info "Overwriting existing Vagabondfile"
+        end
+        File.open(vagabond_file, 'w') do |file|
           file.write(dummy_hash)
         end
+      end
     end
   end
 end
