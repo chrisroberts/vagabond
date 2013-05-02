@@ -52,6 +52,14 @@ module Vagabond
     def store_path
       @store_path || @path
     end
+
+    def directory
+      File.dirname(@path)
+    end
+
+    def store_directory
+      File.dirname(@store_path || @path)
+    end
     
     def discover_path(path)
       d_path = Dir.glob(File.join(path, 'Vagabondfile')).first
