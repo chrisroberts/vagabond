@@ -28,6 +28,7 @@ module Vagabond
       ).merge(config)
       @force_bases = args[:force_bases] || []
       ensure_state
+      make_knife_config_if_required
     end
 
     def ensure_state
@@ -196,5 +197,41 @@ module Vagabond
       end
     end
 
+    def knife_config_available?
+      if(File.exists?(File.join(store_path, 'knife.rb')))
+        false
+      else
+        cwd = @vagabondfile.directory.split('/')
+        found = false
+        until(found || cwd.empty?)
+          found = File.exists?(File.join(*(cwd + ['.chef/knife.rb'])))
+        end
+        found
+      end
+    end
+    
+    def make_knife_config_if_required
+      if(@vagabondfile[:local_chef_server] && @vagabondfile[:local_chef_server][:enabled])
+        unless(knife_config_available?)
+          k_dir = File.join(store_dir, '.chef')
+          FileUtils.mkdir_p(k_dir)
+          unless(File.exists?(knife = File.join(k_dir, 'knife.rb')))
+            File.open(knife, 'w') do |file|
+              file <<-EOF
+node_name 'dummy'
+client_key File.join(File.dirname(__FILE__), 'client.pem')
+validation_client_name 'dummy-validator'
+validation_key File.join(File.dirname(__FILE__), 'validation.pem')
+EOF
+            end
+          end
+          %w(client.pem validation.pem).each do |name|
+            unless(File.exists?(pem = File.join(k_dir, name)))
+              %x{openssl genrsa -out #{pem} 1024}
+            end
+          end
+        end
+      end
+    end
   end
 end
