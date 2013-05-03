@@ -29,7 +29,7 @@ module Vagabond
             @config = @vagabondfile[:boxes][name]
             @lxc = Lxc.new(@internal_config[mappings_key][name] || '____nonreal____')
             _up
-            if(options[:delay].to_i > 0 && n != crl.last)
+            if(options[:delay].to_i > 0 && n != clr.last)
               ui.warn "Delay requested between node processing. Sleeping for #{options[:delay].to_i} seconds."
               sleep(options[:delay].to_i)
             end
