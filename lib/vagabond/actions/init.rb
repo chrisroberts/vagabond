@@ -27,7 +27,7 @@ module Vagabond
               :run_list => []
             },
             :centos6 => {
-              :template => 'centos',
+              :template => 'centos_63',
               :run_list => []
             }
           },
@@ -48,6 +48,10 @@ module Vagabond
           require 'pp'
           file.write(dummy_hash.pretty_inspect)
         end
+        @vagabondfile = Vagabondfile.new(options[:vagabond_file])
+        @internal_config = InternalConfiguration.new(@vagabondfile, ui, options)
+        ui.info "Re-running chef-solo with base containers specified by generated Vagabondfile"
+        @internal_config.run_solo
       end
     end
   end

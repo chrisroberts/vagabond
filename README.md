@@ -70,8 +70,10 @@ file, do the following:
 $ vagabond init
 ```
 
-This command runs the chef recipe and generates a basic Vagabondfile
-but does not start a container.
+This command runs the chef recipe and generates a basic Vagabondfile and
+creates the base containers specified in that file. Those base
+containers are Ubuntu 12.04 and CentOS 6.3. This creation process will
+take a while so now is a good time to get a fresh pot of coffee.
 
 Pretty simple, right?
 
