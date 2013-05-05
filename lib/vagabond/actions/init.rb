@@ -45,7 +45,8 @@ module Vagabond
           ui.info "Overwriting existing Vagabondfile"
         end
         File.open(vagabond_file, 'w') do |file|
-          file.write(dummy_hash)
+          require 'pp'
+          file.write(dummy_hash.pretty_inspect)
         end
       end
     end
