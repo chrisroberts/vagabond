@@ -151,6 +151,7 @@ module Vagabond
       ui.info ui.color('  -> Chef Server container created!', :cyan)
       lxc.start
       ui.info ui.color('  -> Chef Server CREATED!', :green)
+      do_provision
       options[:knife_opts] = " --server-url https://#{lxc.container_ip(20, true)}"
       auto_upload if vagabondfile[:local_chef_server][:auto_upload]
     end
