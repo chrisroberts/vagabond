@@ -24,7 +24,7 @@ module Vagabond
             srv.send(:setup, 'up')
             srv.execute
             # Reload so we get proper values
-            internal_configuration.load_existing
+            @internal_config.load_existing
           end
           clr.each do |n|
             @name = n
