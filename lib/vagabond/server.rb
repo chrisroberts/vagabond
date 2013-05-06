@@ -136,12 +136,16 @@ module Vagabond
     end
     
     def do_create
-      com = "#{options[:sudo]}lxc-clone -n #{generated_name} -o #{@base_template}"
-      debug(com)
-      cmd = Mixlib::ShellOut.new(com, :live_stream => options[:debug])
-      cmd.run_command
-      cmd.error!
       @lxc = Lxc.new(generated_name)
+      unless(@lxc.exists?)
+        com = "#{options[:sudo]}lxc-clone -n #{generated_name} -o #{@base_template}"
+        debug(com)
+        cmd = Mixlib::ShellOut.new(com, :live_stream => options[:debug])
+        cmd.run_command
+        cmd.error!
+      else
+        ui.warn 'Found server instance not if configuration. Adding and moving on.'
+      end
       @internal_config[:mappings][name] = generated_name
       @internal_config.save
       ui.info ui.color('  -> Chef Server container created!', :cyan)
