@@ -227,7 +227,7 @@ EOF
           end
           %w(client.pem validation.pem).each do |name|
             unless(File.exists?(pem = File.join(k_dir, name)))
-              %x{openssl genrsa -out #{pem} 1024}
+              %x{openssl genrsa -out #{pem} 2048}
             end
           end
         end
