@@ -168,8 +168,14 @@ module Vagabond
         com = direct_container_command("chef-solo -j /tmp/chef-server.json")
         cmd = Mixlib::ShellOut.new(com, :live_stream => options[:debug], :timeout => 30)
       else
-        ui.info "#{ui.color('Vagabond:', :bold)} Nothing to provision for node: #{ui.color(name, :magenta)}"
+        tem_file = File.expand_path(File.join(File.dirname(__FILE__), 'bootstraps/server.erb'))
+        com = "#{options[:sudo]}knife bootstrap #{lxc.container_ip(10, true)} --template-file #{tem_file} -i /opt/hw-lxc-config/id_rsa"
+        debug(com)
+        cmd = Mixlib::ShellOut.new(com, :live_stream => options[:debug], :timeout => 1200)
       end
+      debug(com)
+      cmd.run_command
+      cmd.error!
     end
     
     def berks_upload
@@ -183,13 +189,11 @@ module Vagabond
     end
 
     def raw_upload
-      if(File.directory?(base_dir, 'cookbooks'))
-        com = "knife cookbook upload#{options[:knife_opts]} --all"
-        debug(com)
-        cmd = Mixlib::ShellOut.new(com, :live_stream => options[:debug])
-        cmd.run_command
-        cmd.error!
-      end
+      com = "knife cookbook upload#{options[:knife_opts]} --all"
+      debug(com)
+      cmd = Mixlib::ShellOut.new(com, :live_stream => options[:debug])
+      cmd.run_command
+      cmd.error!
     end
 
   end
