@@ -1,6 +1,7 @@
 require 'thor'
 require 'chef'
 require 'kitchen/busser'
+require 'vagabond/monkey/kitchen_config'
 
 %w(helpers vagabondfile vagabond server helpers/cheffile_loader actions/status).each do |dep|
   require "vagabond/#{dep}"
@@ -84,14 +85,14 @@ module Vagabond
       platforms = [options[:platform] || platform_map.keys].flatten
       if(options[:cluster])
         ui.info ui.color("  -> Cluster Testing #{options[:cluster]}!", :yellow)
-        if(kitchen[:clusters].nil? || kitchen[:clusters][options[:cluster]].nil?)
+        if(kitchen.clusters.empty? || kitchen.clusters[options[:cluster]].nil?)
           ui.fatal "Requested cluster is not defined: #{options[:cluster]}"
           exit EXIT_CODES[:cluster_invalid]
         end
         serv = Server.new
         serv.options = options
         serv.auto_upload # upload everything : make optional?
-        suites = kitchen[:clusters][options[:cluster]]
+        suites = kitchen.clusters[options[:cluster]]
         platforms.each do |platform|
           %w(local_server_provision test destroy).each do |action|
             suites.each do |suite_name|
@@ -221,7 +222,7 @@ module Vagabond
       key = args.include?(:integration) ? :integration_suites : :suites
       dna = Mash.new
       dna.merge!(platform_map[platform][:attributes] || {})
-      s_args = kitchen[:suites].detect{|s|s[:name] == suite_name}
+      s_args = kitchen.suites.detect{|s|s.name == suite_name}
       if(s_args)
         dna.merge!(s_args)
       end
@@ -294,44 +295,47 @@ module Vagabond
       v
     end
 
+    # TODO: Need to load knife config and check all available cookbook paths
     def load_kitchen_yml(name)
-      if(name)
-        y_path = File.join(File.dirname(vagabondfile.path), 'cookbooks', name, '.kitchen.yml')
+      if(File.exists?(File.join(vagabondfile.directory, 'metadata.rb')))
+        ckbk_path = vagabondfile.directory
       else
-        y_path = File.join(File.dirname(vagabondfile.path), '.kitchen.yml')
+        ckbk_path = File.join(vagabondfile.directory, 'cookbooks', name)
       end
-      if(File.exists?(y_path))
-        @kitchen = Mash.new(YAML.load(File.read(y_path)))
-      else
-        ui.fatal "Cookbook #{name} does not have a .kitchen.yml file defined!"
-        ui.info ui.color("  -> Path: #{y_path}", :red)
-        exit EXIT_CODES[:kitchen_missing_yml]
-      end
+      @kitchen = Kitchen::Config.new(
+        :kitchen_root => ckbk_path,
+        :test_base_path => File.join(ckbk_path, 'test/integration'),
+        :loader => Kitchen::Loader::YAML.new(
+          File.join(ckbk_path, '.kitchen.yml')
+        )
+      )
     end
 
     def platform_map
-      @platform_map ||= Mash.new(Hash[*(
-          kitchen[:platforms].map do |plat|
-            [
-              plat[:name], Mash.new(
-                  :template => plat[:driver_config][:box].scan(
-                    %r{([^-]+-[^-]+)$}
-                  ).flatten.first.to_s.gsub('.', '').gsub('-', '_'),
-                  :run_list => plat[:run_list],
-                  :attributes => plat[:attributes]
-              )
-            ]
-          end.flatten
-      )])
+      @platform_map ||= Mash.new(
+        Hash[
+          *(
+            kitchen.platforms.map do |plat|
+              [
+                plat.name, Mash.new(
+                  :template => plat.name.gsub('.', '').gsub('-', '_'),
+                  :run_list => plat.run_list,
+                  :attributes => plat.attributes
+                )
+              ]
+            end.flatten
+          )
+        ]
+      )
     end
 
     def generate_runlist(platform, suite)
       r = platform_map[platform][:run_list]
-      kitchen_suite = kitchen[:suites].detect do |k_s|
-        k_s[:name] == suite
+      kitchen_suite = kitchen.suites.detect do |k_s|
+        k_s.name == suite
       end
-      if(kitchen_suite && kitchen_suite[:run_list])
-        r |= kitchen_suite[:run_list]
+      if(kitchen_suite && kitchen_suite.run_list)
+        r |= kitchen_suite.run_list
       end
       r.uniq
     end
