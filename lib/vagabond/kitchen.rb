@@ -234,10 +234,16 @@ module Vagabond
 
     def cookbook_path
       if(@solo)
-        File.dirname(vagabondfile.path)
+        vagabondfile.directory
       else
+        require 'chef/knife'
+        begin
+          Chef::Knife.new.configure_chef
+        rescue
+          # ignore
+        end
         Chef::CookbookLoader.new(
-          File.join(File.dirname(vagabondfile.path), 'cookbooks')
+          Chef::Config[:cookbook_path]
         ).load_cookbooks[name].root_dir
       end
     end
@@ -246,7 +252,6 @@ module Vagabond
       contents = ['site "http://community.opscode.com/api/v1"']
       contents << "cookbook '#{name}', :path => '#{cookbook_path}'"
       contents << "cookbook 'minitest-handler'"
-      # TODO - Customs from kitchen. Customs from root. Customs from cookbook
       File.open(File.join(dir, 'Cheffile'), 'w') do |file|
         file.write(contents.join("\n"))
       end
@@ -258,9 +263,10 @@ module Vagabond
     end
 
     def bus_node(v_inst, suite_name)
-      unless(::Kitchen::Busser::DEFAULT_TEST_ROOT == c_path = File.join(cookbook_path, 'test/integration'))
+      test_path = options[:cluster] ? 'test/cluster' : 'test/integration'
+      unless(::Kitchen::Busser::DEFAULT_TEST_ROOT == c_path = File.join(cookbook_path, test_path))
         ::Kitchen::Busser.send(:remove_const, :DEFAULT_TEST_ROOT)
-        ::Kitchen::Busser.const_set(:DEFAULT_TEST_ROOT, File.join(cookbook_path, 'test/integration'))
+        ::Kitchen::Busser.const_set(:DEFAULT_TEST_ROOT, c_path)
       end
       busser = ::Kitchen::Busser.new(suite_name)
       ui.info "#{ui.color('Kitchen:', :bold)} Setting up..."
@@ -295,16 +301,10 @@ module Vagabond
       v
     end
 
-    # TODO: Need to load knife config and check all available cookbook paths
     def load_kitchen_yml(name)
-      if(File.exists?(File.join(vagabondfile.directory, 'metadata.rb')))
-        ckbk_path = vagabondfile.directory
-      else
-        ckbk_path = File.join(vagabondfile.directory, 'cookbooks', name)
-      end
       @kitchen = Kitchen::Config.new(
-        :kitchen_root => ckbk_path,
-        :test_base_path => File.join(ckbk_path, 'test/integration'),
+        :kitchen_root => cookbook_path,
+        :test_base_path => File.join(cookbook_path, 'test/integration'),
         :loader => Kitchen::Loader::YAML.new(
           File.join(ckbk_path, '.kitchen.yml')
         )
