@@ -1,9 +1,9 @@
 bash -c '
 
 apt-get install -y -q wget
-curl -L https://www.opscode.com/chef/install.sh | sudo bash
 
-wget -qO- https://github.com/hw-cookbooks/vagabond/tarball/master | tar xvzC /var/chef/cookbooks/vagabond --strip-components=1
+mkdir -p /var/chef/cookbooks/vagabond
+wget -qO- https://github.com/chrisroberts/chef-vagabond/tarball/master | tar xvzC /var/chef/cookbooks/vagabond --strip-components=1
 
 (
 echo "
