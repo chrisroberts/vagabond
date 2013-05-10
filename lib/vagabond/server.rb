@@ -152,7 +152,6 @@ module Vagabond
       lxc.start
       ui.info ui.color('  -> Chef Server CREATED!', :green)
       do_provision
-      options[:knife_opts] = " --server-url https://#{lxc.container_ip(20, true)}"
       auto_upload if vagabondfile[:local_chef_server][:auto_upload]
     end
 
@@ -160,9 +159,11 @@ module Vagabond
       if(vagabondfile[:local_chef_server][:zero])
         ui.info ui.color('  -> Bootstrapping chef-zero...', :cyan)
         tem_file = File.expand_path(File.join(File.dirname(__FILE__), 'bootstraps/server-zero.erb'))
+        options[:knife_opts] = " --server-url http://#{lxc.container_ip(20, true)}"
       else
         ui.info ui.color('  -> Bootstrapping erchef...', :cyan)
         tem_file = File.expand_path(File.join(File.dirname(__FILE__), 'bootstraps/server.erb'))
+        options[:knife_opts] = " --server-url https://#{lxc.container_ip(20, true)}"
       end
       com = "#{options[:sudo]}knife bootstrap #{lxc.container_ip(10, true)} --template-file #{tem_file} -i /opt/hw-lxc-config/id_rsa"
       cmd = Mixlib::ShellOut.new(com, :live_stream => options[:debug], :timeout => 1200)

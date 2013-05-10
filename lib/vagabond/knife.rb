@@ -27,7 +27,8 @@ module Vagabond
         if(@vagabondfile[:local_chef_server] && @vagabondfile[:local_chef_server][:enabled])
           srv = Lxc.new(@internal_config[:mappings][:server])
           if(srv.running?)
-            options[:knife_opts] = " -s https://#{srv.container_ip(10, true)}"
+            proto = @vagabondfile[:local_chef_server][:zero] ? 'http' : 'https'
+            options[:knife_opts] = " --server-url #{proto}://#{srv.container_ip(10, true)}"
           else
             options[:knife_opts] = ' -s https://no-local-server'
           end
