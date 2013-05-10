@@ -19,36 +19,43 @@ module Vagabond
 
       private
 
-      def do_init
-        dummy_hash = {
-          :nodes => {
-            :precise => {
-              :template => 'ubuntu_1204',
-              :run_list => []
-            },
-            :centos6 => {
-              :template => 'centos_63',
+      def empty_vagabondfile_hash
+        node = Chef::Node.from_file(
+          File.join(
+            File.dirname(__FILE__),
+            '../cookbooks/vagabond/attributes/default.rb'
+          )
+        )
+        nodes = {}
+        node[:vagabond][:bases].keys.each do |template|
+          answer = ui.ask("Include template: #{template} (Y/N):")
+          if(answer == 'y')
+            node[template.gsub('_', '').to_sym] = {
+              :template => template,
               :run_list => []
             }
-          },
+          end
+        end
+        {
+          :nodes => nodes,
           :local_chef_server => {
             :enabled => false,
             :auto_upload => true
           },
           :sudo => true
         }
-        vagabond_file = "#{Dir.pwd}/Vagabondfile"
-        if File.exists? vagabond_file
-          ui.warn "A Vagabondfile already exists, do you want to overwrite it?(Y/N)"
-          answer = $stdin.gets.chomp
-          return unless answer =~ /[Yy]/
-          ui.info "Overwriting existing Vagabondfile"
+      end
+        
+      def do_init
+        if(File.exists?(vagabondfile.path))
+          ui.confirm('Overwrite existing Vagabondfile', true)
+          ui.info 'Overwriting existing Vagabondfile'
         end
-        File.open(vagabond_file, 'w') do |file|
-          require 'pp'
-          file.write(dummy_hash.pretty_inspect)
+        require 'pp'
+        File.open(vagabondfile.path, 'w') do |file|
+          file.write(empty_vagabondfile_hash.pretty_inspect)
         end
-        @vagabondfile = Vagabondfile.new(options[:vagabond_file])
+        @vagabondfile.load_configuration!
         @internal_config = InternalConfiguration.new(@vagabondfile, ui, options)
         ui.info "Re-running chef-solo with base containers specified by generated Vagabondfile"
         @internal_config.run_solo
