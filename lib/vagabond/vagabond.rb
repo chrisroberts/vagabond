@@ -165,7 +165,8 @@ module Vagabond
           srv_name = @internal_config[:mappings][:server]
           srv = Lxc.new(srv_name) if srv_name
           if(srv_name && srv.running?)
-            options[:knife_opts] = " --server-url https://#{srv.container_ip(10, true)}"
+            proto = @vagabondfile[:local_chef_server][:zero] ? 'http' : 'https'
+            options[:knife_opts] = " --server-url #{proto}://#{srv.container_ip(10, true)}"
           else
             unless(@action.to_sym == :status || name.to_s =='server')
               ui.warn 'Local chef server is not currently running!' unless @action.to_sym == :status
