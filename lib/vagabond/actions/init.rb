@@ -28,17 +28,26 @@ module Vagabond
         )
         nodes = {}
         node[:vagabond][:bases].keys.each do |template|
-          answer = ui.ask("Include template: #{template} (Y/N):")
-          if(answer == 'y')
+          answer = nil
+          until(%w(n y).include?(answer))
+            answer = ui.ask_question("Include template: #{template} ", :default => 'y').downcase
+          end
+          if(answer.downcase == 'y')
+            ui.info "Enabling template #{template} with node name #{template.gsub('_', '')}"
             node[template.gsub('_', '').to_sym] = {
               :template => template,
               :run_list => []
             }
+          else
+            ui.warn "Skipping instance for template #{template}"
           end
         end
         {
           :nodes => nodes,
+          :clusters => {},
           :local_chef_server => {
+            :zero => false,
+            :berkshelf => false,
             :enabled => false,
             :auto_upload => true
           },
