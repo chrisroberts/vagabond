@@ -3,7 +3,9 @@ bash -c '
 apt-get install -y -q wget
 
 mkdir -p /var/chef/cookbooks/vagabond
+mkdir -p /var/chef/cookbooks/lxc
 wget -qO- https://github.com/chrisroberts/chef-vagabond/tarball/master | tar xvzC /var/chef/cookbooks/vagabond --strip-components=1
+wget -qO- https://github.com/hw-cookbooks/lxc/tarball/master | tar xvzC /var/chef/cookbooks/lxc --strip-components=1
 
 (
 echo "
