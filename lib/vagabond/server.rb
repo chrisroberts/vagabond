@@ -159,15 +159,13 @@ module Vagabond
     def do_provision
       if(vagabondfile[:local_chef_server][:zero])
         ui.info ui.color('  -> Bootstrapping chef-zero...', :cyan)
-        com = direct_container_command("chef-solo -j /tmp/chef-server.json")
-        cmd = Mixlib::ShellOut.new(com, :live_stream => options[:debug], :timeout => 30)
+        tem_file = File.expand_path(File.join(File.dirname(__FILE__), 'bootstraps/server-zero.erb'))
       else
         ui.info ui.color('  -> Bootstrapping erchef...', :cyan)
         tem_file = File.expand_path(File.join(File.dirname(__FILE__), 'bootstraps/server.erb'))
-        com = "#{options[:sudo]}knife bootstrap #{lxc.container_ip(10, true)} --template-file #{tem_file} -i /opt/hw-lxc-config/id_rsa"
-        debug(com)
-        cmd = Mixlib::ShellOut.new(com, :live_stream => options[:debug], :timeout => 1200)
       end
+      com = "#{options[:sudo]}knife bootstrap #{lxc.container_ip(10, true)} --template-file #{tem_file} -i /opt/hw-lxc-config/id_rsa"
+      cmd = Mixlib::ShellOut.new(com, :live_stream => options[:debug], :timeout => 1200)
       debug(com)
       cmd.run_command
       cmd.error!
