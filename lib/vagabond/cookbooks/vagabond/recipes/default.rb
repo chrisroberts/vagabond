@@ -57,6 +57,16 @@ node[:vagabond][:bases].each do |name, options|
   end
 end
 
+lxc_container 'chef-server' do
+  clone 'ubuntu_1204'
+  initialize_commands [
+    
+  ]
+  only_if do
+    node[:vagabond][:server_base]
+  end
+end
+
 node[:vagabond][:customs].each do |name, options|
 
   lxc_container name do
