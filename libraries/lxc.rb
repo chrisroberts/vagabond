@@ -122,7 +122,7 @@ class Lxc
     (retries.to_i + 1).times do
       ip = proc_detected_address || hw_detected_address || leased_address || lxc_stored_address
       return ip if ip && self.class.connection_alive?(ip)
-      Chef::Log.warn "LXC IP discovery: Failed to detect live IP"
+      log.warn "LXC IP discovery: Failed to detect live IP"
       sleep(3) if retries > 0
     end
     raise "Failed to detect live IP address for container: #{name}" if raise_on_fail
@@ -137,7 +137,7 @@ class Lxc
       if(ip.to_s.empty?)
         nil
       else
-        Chef::Log.info "LXC Discovery: Found container address via storage: #{ip}"
+        log.info "LXC Discovery: Found container address via storage: #{ip}"
         ip
       end
     end
@@ -157,7 +157,7 @@ class Lxc
     if(ip.to_s.empty?)
       nil
     else
-      Chef::Log.info "LXC Discovery: Found container address via DHCP lease: #{ip}"
+      log.info "LXC Discovery: Found container address via DHCP lease: #{ip}"
       ip
     end
   end
@@ -175,7 +175,7 @@ class Lxc
         if(ip.to_s.empty?)
           nil
         else
-          Chef::Log.info "LXC Discovery: Found container address via HW addr: #{ip}"
+          log.info "LXC Discovery: Found container address via HW addr: #{ip}"
           ip
         end
       end
@@ -291,7 +291,7 @@ class Lxc
     retries = args[:allow_failure_retry].to_i
     begin
       shlout = Mixlib::ShellOut.new(cmd, 
-        :logger => Chef::Log.logger, 
+        :logger => defined?(Chef) ? Chef::Log.logger : log,
         :live_stream => STDOUT,
         :timeout => args[:timeout] || 1200,
         :environment => {'HOME' => detect_home}
@@ -300,8 +300,8 @@ class Lxc
       shlout.error!
     rescue Mixlib::ShellOut::ShellCommandFailed, CommandFailed, Mixlib::ShellOut::CommandTimeout
       if(retries > 0)
-        Chef::Log.warn "LXC run command failed: #{cmd}"
-        Chef::Log.warn "Retrying command. #{args[:allow_failure_retry].to_i - retries} of #{args[:allow_failure_retry].to_i} retries remain"
+        log.warn "LXC run command failed: #{cmd}"
+        log.warn "Retrying command. #{args[:allow_failure_retry].to_i - retries} of #{args[:allow_failure_retry].to_i} retries remain"
         sleep(0.3)
         retries -= 1
         retry
@@ -340,14 +340,26 @@ class Lxc
       )
     rescue => e
       if(retries.to_i > 0)
-        Chef::Log.info "Encountered error running container command (#{cmd}): #{e}"
-        Chef::Log.info "Retrying command..."
+        log.info "Encountered error running container command (#{cmd}): #{e}"
+        log.info "Retrying command..."
         retries = retries.to_i - 1
         sleep(1)
         retry
       else
         raise e
       end
+    end
+  end
+
+  def log
+    if(defined?(Chef))
+      Chef::Log
+    else
+      unless(@logger)
+        require 'logger'
+        @logger = Logger.new('/dev/null')
+      end
+      @logger
     end
   end
 
