@@ -282,8 +282,7 @@ setup_container()
         fi
     done
 
-    dist=`cat  $LXC_DIR/rootfs/etc/issue | head -n 1 | cut -f1 -d\ `
-    if [ $dist = 'CentOS' ] ; then
+    if [ -e $LXC_DIR/rootfs/etc/redhat-release ]; then
         DISTRO="EL"
     else
         DISTRO="DEBIAN"
@@ -295,7 +294,7 @@ setup_container()
 NETWORKING=yes
 HOSTNAME=$LXC_NAME
 EOF
-    echo "hostname $LXC_NAME" >> $LXC_DIR/rootfs/etc/rc.local
+        echo "hostname $LXC_NAME" >> $LXC_DIR/rootfs/etc/rc.local
     fi
 
     # Update the fstab to have all bind mounts be ephemeral.
