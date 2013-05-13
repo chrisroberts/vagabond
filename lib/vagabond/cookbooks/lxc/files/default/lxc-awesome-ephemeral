@@ -9,7 +9,7 @@ LXC_BIND=""
 UNION="overlayfs"
 
 usage() {
-    echo "usage: lxc-awesome-ephemeral [-I ip_address] [-G gateway] [-N netmask] [-D size] [-z rdir] [-U uniontype] [-d|--daemon] [-h] [-b bdir] [-u user] [-S key] -o orig -- [COMMAND [ARGS...]]"
+    echo "usage: lxc-awesome-ephemeral [-I ipaddress] [-G gateway] [-N netmask] [-D size] [-z rdir] [-U uniontype] [-d|--daemon] [-h] [-b bdir] [-u user] [-S key] -o orig -- [COMMAND [ARGS...]]"
 }
 
 help() {
@@ -24,7 +24,7 @@ help() {
     echo "key         : the path to the SSH key to use to connect"
     echo "size        : size of virtual device in M"
     echo "rdir        : host directory to store rootfs overlay"
-    echo "ip_address  : static ipv4 to use instead of dhcp"
+    echo "ipaddress   : static ipv4 to use instead of dhcp"
     echo "-d          : run in the background"
     echo "-U          : type of union (aufs or overlayfs)"
     echo "              Default is overlayfs"
@@ -48,31 +48,40 @@ DAEMON=0
 
 cleanup_dirs()
 {
+    if [ $LXC_DIR = '/' ]; then
+        echo "ABORT ABORT ABORT -> LXC Directory set to root. Will. Not. Delete!"
+        exit 42
+    fi
     # echo "umounting ephemeral_bind_dir $EPHEMERAL_BIND_DIR" >&2
-    sudo umount $EPHEMERAL_BIND_DIR
+    sudo umount $EPHEMERAL_BIND_DIR > /dev/null 2>&1
     # echo "umounting lxc_dir $LXC_DIR" >&2
-    sudo umount $LXC_DIR/rootfs
+    sudo umount $LXC_DIR/rootfs > /dev/null 2>&1
     # echo "umounting overlay" >&2
     if [ ! $HOST_OVERLAY_DIRECTORY ]; then
-        sudo umount $OVERLAY_DIR
+        sudo umount $OVERLAY_DIR > /dev/null 2>&1
     fi
     # remove all contents of the content dir
-    sudo rmdir $LXC_DIR/ephemeralbind
-    sudo rmdir $LXC_DIR/rootfs
-    sudo rm -f $LXC_DIR/*
+    sudo rm -rf $LXC_DIR
 
-    # echo "rming lxc_dir $LXC_DIR" >&2
-    sudo rmdir $LXC_DIR
     # echo "rming overlay dir $OVERLAY_DIR" >&2
     if [ $HOST_OVERLAY_DIRECTORY ]; then
+        if [ $HOST_OVERLAY_DIRECTORY = '/' ]; then
+            echo "ABORT ABORT ABORT -> Overlay Directory set to root. Will. Not. Delete!"
+            exit 42
+        fi
+
         if [ $VIRT_DIR ]; then
-            sudo umount $VIRT_MNT
-            sudo rmdir $VIRT_MNT
-            sudo rm $VIRT_DEV
+            sudo umount $VIRT_MNT > /dev/null 2>&1
+            sudo rmdir $VIRT_MNT > /dev/null 2>&1
+            sudo rm -f $VIRT_DEV
         fi
         sudo rm -rf $HOST_OVERLAY_DIRECTORY
     else
-        sudo rmdir $OVERLAY_DIR
+        if [ $OVERLAY_DIR = '/' ]; then
+            echo "ABORT ABORT ABORT -> Overlay Directory set to root. Will. Not. Delete!"
+            exit 42
+        fi
+        sudo rm -rf $OVERLAY_DIR
     fi
 }
 
@@ -273,6 +282,21 @@ setup_container()
         fi
     done
 
+    if [ -e $LXC_DIR/rootfs/etc/redhat-release ]; then
+        DISTRO="EL"
+    else
+        DISTRO="DEBIAN"
+    fi
+
+    # special tweaks for the centos family of distributions
+    if [ $DISTRO = "EL" ] ; then
+        cat <<EOF > $LXC_DIR/rootfs/etc/sysconfig/network
+NETWORKING=yes
+HOSTNAME=$LXC_NAME
+EOF
+        echo "hostname $LXC_NAME" >> $LXC_DIR/rootfs/etc/rc.local
+    fi
+
     # Update the fstab to have all bind mounts be ephemeral.
     sudo cp $LXC_DIR/fstab $LXC_DIR/fstab.old
     while read line; do
@@ -280,11 +304,11 @@ setup_container()
         path=`echo -n $line | awk '{print $2}'`
         # If LXC_BIND is not set, or the mount destination of this line is not
         # LXC_BIND...
-        if [ -z "$LXC_BIND" -o "`readlink -f $path`" != "`readlink -f $LXC_DIR/rootfs$LXC_BIND`" ];
+        if [ -n "$path" ] && [ -z "$LXC_BIND" -o "`readlink -f $path`" != "`readlink -f $LXC_DIR/rootfs$LXC_BIND`" ];
             then
             # ...then we should write some form of this line.
             # If this line is a bind...
-            if [ `echo -n $line | awk '{print $4}'` == "bind" ]; then
+            if [ `echo -n $line | awk '{print $4}'` = "bind" ]; then
                 # ...we should rewrite it as an overlay.
                 source=`echo -n $line | awk '{print $1}'`
                 upperdir=$EPHEMERAL_BIND_DIR$source
@@ -416,7 +440,21 @@ start_container()
 
 write_custom_networking()
 {
-    cat <<EOF > $LXC_DIR/rootfs/etc/network/interfaces
+    if [ $DISTRO = "EL" ] ; then
+        cat <<EOF > $LXC_DIR/rootfs/etc/sysconfig/network-scripts/ifcfg-eth0
+DEVICE=eth0
+BOOTPROTO=static
+NETMASK=$CUSTOM_NETMASK
+IPADDR=$CUSTOM_IPADDRESS
+ONBOOT=yes
+TYPE=Ethernet
+USERCTL=yes
+PEERDNS=yes
+IPV6INIT=no
+GATEWAY=$CUSTOM_GATEWAY
+EOF
+    else
+        cat <<EOF > $LXC_DIR/rootfs/etc/network/interfaces
 auto lo
 iface lo inet loopback
 auto eth0
@@ -425,6 +463,7 @@ address $CUSTOM_IPADDRESS
 netmask $CUSTOM_NETMASK
 gateway $CUSTOM_GATEWAY
 EOF
+    fi
 }
 
 stop_container()
@@ -442,6 +481,9 @@ handle_container()
     start_container
     RET=$?
     stop_container
+    if [ $DAEMON -eq 1 ]; then
+      cleanup
+    fi
     exit $RET
 }
 
