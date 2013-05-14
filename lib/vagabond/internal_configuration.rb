@@ -79,11 +79,11 @@ module Vagabond
     end
 
     def store_path
-      FileUtils.mkdir_p(
-        File.join(
-          File.dirname(@vagabondfile.store_path), '.vagabond'
-        )
-      )
+      path = File.join(File.dirname(@vagabondfile.store_path), '.vagabond')
+      unless(File.directory?(path))
+        FileUtils.mkdir_p(path)
+      end
+      path
     end
 
     def dna_path
@@ -205,6 +205,7 @@ module Vagabond
         found = false
         until(found || cwd.empty?)
           found = File.exists?(File.join(*(cwd + ['.chef/knife.rb'])))
+          cwd.pop
         end
         found
       end
@@ -213,11 +214,12 @@ module Vagabond
     def make_knife_config_if_required
       if(@vagabondfile[:local_chef_server] && @vagabondfile[:local_chef_server][:enabled])
         unless(knife_config_available?)
+          store_dir = File.dirname(store_path)
           k_dir = File.join(store_dir, '.chef')
           FileUtils.mkdir_p(k_dir)
           unless(File.exists?(knife = File.join(k_dir, 'knife.rb')))
             File.open(knife, 'w') do |file|
-              file <<-EOF
+              file.write <<-EOF
 node_name 'dummy'
 client_key File.join(File.dirname(__FILE__), 'client.pem')
 validation_client_name 'dummy-validator'
