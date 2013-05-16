@@ -165,6 +165,7 @@ class Lxc
     @name = name
     @base_path = args[:base_path] || '/var/lib/lxc'
     @lease_file = args[:dnsmasq_lease_file] || '/var/lib/misc/dnsmasq.leases'
+    @preferred_device = args[:net_device]
   end
 
   # Returns if container exists
@@ -192,6 +193,18 @@ class Lxc
   def container_ip(retries=0, raise_on_fail=false)
     (retries.to_i + 1).times do
       ip = proc_detected_address || hw_detected_address || leased_address || lxc_stored_address
+      if(ip.is_a?(Array))
+        # Filter any found loopbacks
+        ip.delete_if{|info| info[:device].start_with?('lo') }
+        ip = ip.detect do |info|
+          if(@preferred_device)
+            info[:device] == @preferred_device
+          else
+            true
+          end
+        end
+        ip = ip[:address] if ip
+      end
       return ip if ip && self.class.connection_alive?(ip)
       log.warn "LXC IP discovery: Failed to detect live IP"
       sleep(3) if retries > 0
@@ -262,8 +275,11 @@ class Lxc
         system("#{sudo}ln -s /proc/#{pid}/ns/net #{path}")
         res = %x{#{sudo}ip netns exec #{name} ip -4 addr show scope global | grep inet}
         system("#{sudo}rm -f #{path}")
-        ip = res.strip.split(' ')[1].to_s.sub(%r{/.*$}, '').strip
-        ip.empty? ? nil : ip
+        ips = res.split("\n").map do |line|
+          parts = line.split(' ')
+          {:address => parts[1].to_s.sub(%r{/.+$}, ''), :device => parts.last}
+        end
+        ips.empty? ? nil : ips
       end
     end
   end
