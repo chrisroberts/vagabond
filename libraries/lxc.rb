@@ -406,7 +406,7 @@ class Lxc
   end
 
   def wait_for_state(desired_state, args={})
-    args[:sleep_interval] ||= 0.4
+    args[:sleep_interval] ||= 1.0
     wait_total = 0.0
     until(state == desired_state.to_sym || (args[:timeout].to_i > 0 && wait_total.to_i > args[:timeout].to_i))
       sleep(args[:sleep_interval])
