@@ -164,6 +164,42 @@ action :create do
     end
   end
 
+  ruby_block "lxc lock_default_users" do
+    block do
+      contents = File.readlines(_lxc.rootfs.join('etc/shadow').to_path)
+      File.open(_lxc.rootfs.join('etc/shadow').to_path, 'w') do |file|
+        contents.each do |line|
+          parts = line.split(':')
+          if(node[:lxc][:user_locks].include?(parts.first) && !parts[1].start_with?('!'))
+            parts[1] = "!#{parts[1]}"
+          end
+          file.write parts.join(':')
+        end
+      end
+    end
+    only_if do
+      File.readlines(_lxc.rootfs.join('etc/shadow').to_path).detect do |line|
+        parts = line.split(':')
+        node[:lxc][:user_locks].include?(parts.first) && !parts[1].start_with?('!')
+      end
+    end
+  end
+
+  ruby_block "lxc default_password_scrub" do
+    block do
+      contents = File.readlines(_lxc.rootfs.join('etc/shadow').to_path)
+      File.open(_lxc.rootfs.join('etc/shadow'), 'w') do |file|
+        contents.each do |line|
+          if(line.start_with?('root:'))
+            line.sub!(%r{root:.+?:}, 'root:*')
+          end
+          file.write line
+        end
+      end
+    end
+    not_if "grep 'root:*' #{_lxc.rootfs.join('etc/shadow').to_path}"
+  end
+
   ruby_block "lxc start[#{new_resource.name}]" do
     block do
       _lxc.start
