@@ -17,9 +17,7 @@ default[:lxc][:knife] = {}
 default[:lxc][:knife][:static_range] = ''
 default[:lxc][:knife][:static_ips] = []
 
-default[:lxc][:user_pass][:debian] = {:username => 'root', :password => 'root'}
-default[:lxc][:user_pass][:ubuntu] = {:username => 'ubuntu', :password => 'ubuntu'}
-default[:lxc][:user_pass][:fedora] = {:username => 'root', :password => 'root'}
+default[:lxc][:user_locks] = %w(ubuntu)
 
 default[:lxc][:packages] = %w(lxc)
 default[:lxc][:mirror] = 'http://archive.ubuntu.com/ubuntu'
