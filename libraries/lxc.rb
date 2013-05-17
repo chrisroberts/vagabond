@@ -77,7 +77,7 @@ class Lxc
   
   include Helpers
 
-  attr_reader :name
+  attr_reader :name, :base_path, :lease_file, :preferred_device
 
   class << self
 
@@ -117,9 +117,12 @@ class Lxc
 
     # List of containers
     def list
-      %x{#{sudo}lxc-ls}.split("\n").uniq
+      Dir.glob(File.join(base_dir, '*')).map do |item|
+        if(File.directory?(item) && File.exists?(File.join(item, 'config')))
+          File.basename(item)
+        end
+      end.compact
     end
-  
     
     # name:: Name of container
     # Returns information about given container
@@ -161,6 +164,7 @@ class Lxc
   # args:: Argument hash
   #   - :base_path -> path to container directory
   #   - :dnsmasq_lease_file -> path to lease file
+  #   - :net_device -> network device to use within container for ssh connection
   def initialize(name, args={})
     @name = name
     @base_path = args[:base_path] || '/var/lib/lxc'
