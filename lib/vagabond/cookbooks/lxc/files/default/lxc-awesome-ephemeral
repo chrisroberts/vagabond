@@ -96,11 +96,15 @@ create_virt_device() {
     sudo mkdir -p $VIRT_IMG_DIR
     sudo mkdir -p $VIRT_MNT
     # Create empty disk
-    dd if=/dev/zero of=$VIRT_DEV bs=1k seek=${OVERLAY_DEVICE}k count=1 > /dev/null
+    sudo dd if=/dev/zero of=$VIRT_DEV bs=1k seek=${OVERLAY_DEVICE}k count=1 > /dev/null
     # format device
-    echo "y" | mkfs -t ext4 $VIRT_DEV > /dev/null
+    echo "y" | sudo mkfs -t ext4 $VIRT_DEV > /dev/null
     # mount loopback
-    mount -o loop $VIRT_DEV $VIRT_MNT
+    sudo mount -o loop $VIRT_DEV $VIRT_MNT
+    if [ $? -ne 0 ]; then
+        echo "Failed to create and mount virtual device!"
+        exit 100
+    fi
     HOST_OVERLAY_DIRECTORY=$VIRT_MNT
 }
 
