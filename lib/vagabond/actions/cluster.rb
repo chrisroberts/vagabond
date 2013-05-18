@@ -37,7 +37,8 @@ module Vagabond
             # Reload so we get proper values
             load_configurations
           end
-          cluster_instances = clr.each do |n|
+          cluster_instances = clr.map do |n|
+            ui.info "Building #{n} for cluster!"
             v_inst = Vagabond.new
             v_inst.options = options.dup
             v_inst.send(:setup, 'up', n, :ui => ui)
@@ -49,6 +50,7 @@ module Vagabond
             v_inst
           end
           if(options[:parallel])
+            ui.info "Waiting for parallel completes!"
             cluster_instances.map do |inst|
               inst.wait_for_completion
             end
