@@ -84,6 +84,11 @@ class Lxc
     include Helpers
     
     attr_accessor :use_sudo
+    attr_accessor :base_path
+
+    def base_path
+      @base_path || '/var/lib/lxc'
+    end
 
     def sudo
       case use_sudo
@@ -117,7 +122,7 @@ class Lxc
 
     # List of containers
     def list
-      Dir.glob(File.join(base_dir, '*')).map do |item|
+      Dir.glob(File.join(base_path, '*')).map do |item|
         if(File.directory?(item) && File.exists?(File.join(item, 'config')))
           File.basename(item)
         end
@@ -167,7 +172,7 @@ class Lxc
   #   - :net_device -> network device to use within container for ssh connection
   def initialize(name, args={})
     @name = name
-    @base_path = args[:base_path] || '/var/lib/lxc'
+    @base_path = args[:base_path] || self.class.base_path
     @lease_file = args[:dnsmasq_lease_file] || '/var/lib/misc/dnsmasq.leases'
     @preferred_device = args[:net_device]
   end
