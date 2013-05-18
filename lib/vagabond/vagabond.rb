@@ -78,6 +78,7 @@ module Vagabond
     # Creates an instance    
     def initialize(*args)
       super
+      @threads = Mash.new
       @mappings_key = :mappings
     end
 
@@ -206,6 +207,18 @@ module Vagabond
 
     def lxc_installed?
       system('which lxc-info > /dev/null')
+    end
+
+    def wait_for_completion(type=nil)
+      if(type)
+        Array(@threads[:type]).map(&:join)
+      else
+        @threads.values.map do |threads|
+          threads.each do |thread_set|
+            Array(thread_set).map(&:join)
+          end
+        end
+      end
     end
   end
 end
