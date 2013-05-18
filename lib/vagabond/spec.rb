@@ -109,7 +109,7 @@ module Vagabond
 
       load_layout
       default_config = Chef::Mixin::DeepMerge.merge(
-        Mash.new(:platform => 'ubuntu_1204', :union => 'aufs'), layout[:defaults]
+        Mash.new(:platform => 'ubuntu_1204'), layout[:defaults]
       )
       test_nodes = layout[:clusters][cluster][:nodes].map do |node|
         config = Chef::Mixin::DeepMerge.merge(default_config, layout[:definitions][node])
