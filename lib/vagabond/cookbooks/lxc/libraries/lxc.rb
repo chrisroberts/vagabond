@@ -1,3 +1,4 @@
+require 'mixlib/shellout'
 require 'pathname'
 require 'tmpdir'
 
