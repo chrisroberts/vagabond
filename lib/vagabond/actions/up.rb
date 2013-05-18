@@ -15,6 +15,7 @@ module Vagabond
 
       def _up
         name_required!
+        create_node = false
         if(lxc.exists?)
           if(lxc.running?)
             ui.error "Node already exists and is running: #{name}"
@@ -24,9 +25,18 @@ module Vagabond
             ui.info ui.color('  -> STARTED', :green)
           end
         else
-          _create
+          create_node = true
         end
-        do_provision if options[:auto_provision]
+        if(options[:parallel])
+          @threads[:up] ||= []
+          @threads[:up] << Thread.new do
+            _create
+            do_provision if options[:auto_provision]
+          end
+        else
+          _create
+          do_provision if options[:auto_provision]
+        end
       end
 
     end
