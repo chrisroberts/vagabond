@@ -77,4 +77,7 @@ node[:vagabond][:customs].each do |name, options|
   end
 end
 
-
+default[:lxc][:container_directory] = '/var/lib/lxc'
+execute "chown -R :admin #{node[:lxc][:container_directory]}"
+execute "find #{node[:lxc][:container_directory]} -type d -exec chmod 715 {} +"
+execute "find #{node[:lxc][:container_directory]} -type f -exec chmod 664 {} +"
