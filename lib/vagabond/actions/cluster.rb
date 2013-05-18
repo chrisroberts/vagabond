@@ -6,8 +6,19 @@ module Vagabond
           klass.class_eval do
             class << self
               def _cluster_options
-                [[:auto_provision, :type => :boolean, :desc => 'Automatically provision nodes', :default => true],
-                 [:delay, :type => :numeric, :desc => 'Add delay between provisions (helpful for search)', :default => 0]]
+                [[
+                    :auto_provision, :type => :boolean,
+                    :desc => 'Automatically provision nodes', :default => true
+                  ],
+                  [
+                    :delay, :type => :numeric, :default => 0,
+                    :desc => 'Add delay between provisions (helpful for indexing)'
+                  ],
+                  [
+                    :parallel, :type => :boolean, :default => false,
+                    :desc => 'Build nodes in parallel'
+                  ]
+                ]
               end
             end
           end
@@ -26,14 +37,20 @@ module Vagabond
             # Reload so we get proper values
             load_configurations
           end
-          clr.each do |n|
-            @name = n
-            @config = @vagabondfile[:boxes][name]
-            @lxc = Lxc.new(@internal_config[mappings_key][name] || '____nonreal____')
-            _up
+          cluster_instances = clr.each do |n|
+            v_inst = Vagabond.new
+            v_inst.options = options.dup
+            v_inst.send(:setup, 'up', n, :ui => ui)
+            v_inst.execute
             if(options[:delay].to_i > 0 && n != clr.last)
               ui.warn "Delay requested between node processing. Sleeping for #{options[:delay].to_i} seconds."
               sleep(options[:delay].to_i)
+            end
+            v_inst
+          end
+          if(options[:parallel])
+            cluster_instances.map do |inst|
+              inst.wait_for_completion
             end
           end
           ui.info "  -> #{ui.color("Built cluster #{name}", :green)}"
