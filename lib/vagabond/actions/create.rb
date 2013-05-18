@@ -1,3 +1,5 @@
+require 'elecksee/ephemeral'
+
 module Vagabond
   module Actions
     module Create
@@ -23,21 +25,14 @@ module Vagabond
           ui.fatal "Template requested for node does not exist: #{tmpl}"
           exit EXIT_CODES[:invalid_template]
         end
-        opts = %w(ipaddress device directory gateway netmask union)
         unless(config[:device])
-          config[:directory] = '/tmp/vagabond/overlays'
+          config[:directory] = true
           FileUtils.mkdir_p(config[:directory])
         end
-        lxc_opts = opts.map do |opt|
-          "--#{opt} #{config[opt]}" unless config[opt].nil?
-        end.compact.join(' ')
-        bind_path = File.expand_path(File.dirname(vagabondfile.store_path))
-        com = "#{sudo}lxc-awesome-ephemeral #{lxc_opts} -d -b #{bind_path} -o #{tmpl}"
-        debug(com)
-        c = Mixlib::ShellOut.new("#{com} && sleep 3", :live_stream => options[:debug])
-        c.run_command
-        c.error!
-        e_name = c.stdout.split("\n").last.split(' ').last.strip
+        config[:bind] = File.expand_path(File.dirname(vagabondfile.store_path))
+        ephemeral = Lxc::Ephemeral.new(config)
+        ephemeral.start!(:fork)
+        e_name = ephemeral.name
         @internal_config[mappings_key][name] = e_name
         @internal_config.save
         @lxc = Lxc.new(e_name)
