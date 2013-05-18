@@ -27,8 +27,9 @@ module Vagabond
         end
         unless(config[:device])
           config[:directory] = true
-          FileUtils.mkdir_p(config[:directory])
         end
+        config[:daemon] = true
+        config[:original] = tmpl
         config[:bind] = File.expand_path(File.dirname(vagabondfile.store_path))
         ephemeral = Lxc::Ephemeral.new(config)
         ephemeral.start!(:fork)
