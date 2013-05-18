@@ -8,6 +8,19 @@ require 'vagabond'
 if(ARGV.include?('--version') || ARGV.include?('-v'))
   require 'vagabond/vagabond'
   Vagabond::Vagabond.new.send(:version)
+elsif(%w(help --help -h).include?(ARGV.first))
+  puts "-- Vagabond --\n"
+  require 'vagabond/vagabond'
+  Object.send(:remove_const, :ARGV)
+  ARGV = %w(help)
+  Vagabond::Vagabond.start
+  %w(server knife kitchen spec).each do |key|
+    puts "-- #{key.capitalize} --\n"
+    require "vagabond/#{key}"
+    Object.send(:remove_const, :ARGV)
+    ARGV = %w(help)
+    Vagabond.const_get(key.capitalize).start
+  end
 else
   case arg = ARGV.shift
   when 'server'
