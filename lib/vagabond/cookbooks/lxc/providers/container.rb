@@ -166,8 +166,8 @@ action :create do
 
   ruby_block "lxc lock_default_users" do
     block do
-      contents = File.readlines(_lxc.rootfs.join('etc/shadow').to_path)
-      File.open(_lxc.rootfs.join('etc/shadow').to_path, 'w') do |file|
+      contents = ::File.readlines(_lxc.rootfs.join('etc/shadow').to_path)
+      ::File.open(_lxc.rootfs.join('etc/shadow').to_path, 'w') do |file|
         contents.each do |line|
           parts = line.split(':')
           if(node[:lxc][:user_locks].include?(parts.first) && !parts[1].start_with?('!'))
@@ -178,7 +178,7 @@ action :create do
       end
     end
     only_if do
-      File.readlines(_lxc.rootfs.join('etc/shadow').to_path).detect do |line|
+      ::File.readlines(_lxc.rootfs.join('etc/shadow').to_path).detect do |line|
         parts = line.split(':')
         node[:lxc][:user_locks].include?(parts.first) && !parts[1].start_with?('!')
       end
@@ -187,8 +187,8 @@ action :create do
 
   ruby_block "lxc default_password_scrub" do
     block do
-      contents = File.readlines(_lxc.rootfs.join('etc/shadow').to_path)
-      File.open(_lxc.rootfs.join('etc/shadow'), 'w') do |file|
+      contents = ::File.readlines(_lxc.rootfs.join('etc/shadow').to_path)
+      ::File.open(_lxc.rootfs.join('etc/shadow'), 'w') do |file|
         contents.each do |line|
           if(line.start_with?('root:'))
             line.sub!(%r{root:.+?:}, 'root:*')
