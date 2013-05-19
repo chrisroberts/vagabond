@@ -196,10 +196,16 @@ module Vagabond
         exit # TODO: Make better
       end
     end
+
+    def config_path
+      File.join(store_path, 'vagabond.json')
+    end
     
     def save
-      File.open(File.join(store_path, 'vagabond.json'), 'r+') do |file|
+      mode = File.exists?(config_path) ? 'r+' : 'w+'
+      File.open(config_path, mode) do |file|
         file.flock(File::LOCK_EX)
+        file.rewind
         if(sha = file_changed?(file.path))
           @checksums[file.path] = sha
           load_existing(file)
