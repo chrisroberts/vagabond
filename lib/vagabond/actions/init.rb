@@ -20,7 +20,9 @@ module Vagabond
       private
 
       def empty_vagabondfile_hash
-        node = Chef::Node.from_file(
+        require 'chef/node'
+        node = Chef::Node.new
+        node.from_file(
           File.join(
             File.dirname(__FILE__),
             '../cookbooks/vagabond/attributes/default.rb'
@@ -34,7 +36,7 @@ module Vagabond
           end
           if(answer.downcase == 'y')
             ui.info "Enabling template #{template} with node name #{template.gsub('_', '')}"
-            node[template.gsub('_', '').to_sym] = {
+            nodes[template.gsub('_', '').to_sym] = {
               :template => template,
               :run_list => []
             }
@@ -66,8 +68,6 @@ module Vagabond
         end
         @vagabondfile.load_configuration!
         @internal_config = InternalConfiguration.new(@vagabondfile, ui, options)
-        ui.info "Re-running chef-solo with base containers specified by generated Vagabondfile"
-        @internal_config.run_solo
       end
     end
   end
