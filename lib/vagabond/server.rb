@@ -98,6 +98,13 @@ module Vagabond
         if(vagabondfile[:local_chef_server][:berkshelf])
           berks_upload
         else
+          if(vagabondfile[:local_chef_server][:librarian])
+            com = "librarian-chef update"
+            debug(com)
+            c = Mixlib::ShellOut.new(com, :live_stream => options[:debug], :dir => vagabondfile.directory)
+            c.run_command
+            c.error!
+          end
           raw_upload
         end
       end
