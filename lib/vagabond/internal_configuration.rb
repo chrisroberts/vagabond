@@ -2,6 +2,7 @@ require 'digest/sha2'
 require 'json'
 require 'vagabond/helpers'
 require 'vagabond/constants'
+require 'chef/mixin/deep_merge'
 
 module Vagabond
   class InternalConfiguration
@@ -66,13 +67,18 @@ module Vagabond
       FileUtils.mkdir_p(store_path)
     end
 
-    def load_existing
+    def load_existing(file=nil)
       if(File.exists?(path = File.join(store_path, 'vagabond.json')))
-        @config = Mash.new(
-          JSON.load(
-            File.read(path)
-          )
+        if(file)
+          file.rewind
+          content = file.read
+        else
+          content = File.read(path)
+        end
+        config = Mash.new(
+          JSON.load(content)
         )
+        @config = Chef::Mixin::DeepMerge.merge(config, @config)
       else
         @config = Mash.new
       end
@@ -192,8 +198,15 @@ module Vagabond
     end
     
     def save
-      File.open(File.join(store_path, 'vagabond.json'), 'w') do |file|
-        file.write(JSON.dump(@config))
+      File.open(File.join(store_path, 'vagabond.json'), 'r+') do |file|
+        file.flock(File::LOCK_EX)
+        if(sha = file_changed?(file.path))
+          @checksums[file.path] = sha
+          load_existing(file)
+        end
+        file.rewind
+        file.write(JSON.pretty_generate(@config))
+        file.truncate(file.pos)
       end
     end
 
@@ -210,6 +223,11 @@ module Vagabond
         found
       end
     end
+
+    def file_changed?(path)
+      checksum = get_checksum(path)
+      checksum unless @checksums[path] == checksum
+     end
     
     def make_knife_config_if_required
       if(@vagabondfile[:local_chef_server] && @vagabondfile[:local_chef_server][:enabled])
