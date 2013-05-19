@@ -26,10 +26,10 @@ module Vagabond
       if(ALIASES.has_key?(k))
         v = [@config[k], @config[ALIASES[k]]].compact
         if(v.size > 1)
-          case v.first.class
+          case v.first
           when Array
             m = :|
-          when Hash
+          when Hash, Mash
             m = :merge
           else
             m = :+
