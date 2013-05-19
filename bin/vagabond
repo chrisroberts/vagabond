@@ -24,7 +24,7 @@ elsif(%w(help --help -h).include?(ARGV.first))
 else
   require 'etc'
 
-  unless(Etc.getlogin == 'root')
+  unless(Etc.getlogin == 'root' || ARGV.first == 'init')
     require 'vagabond/vagabondfile'
     vagabondfile = Vagabond::Vagabondfile.new
     command = []
