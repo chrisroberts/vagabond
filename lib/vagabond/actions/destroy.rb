@@ -25,8 +25,7 @@ module Vagabond
         debug(com)
         cmd = Mixlib::ShellOut.new(com, :live_stream => options[:debug])
         cmd.run_command
-        cmd.error!
-        force_umount_if_required!
+#        force_umount_if_required!
         internal_config[mappings_key].delete(name)
         internal_config.save
       end
@@ -46,7 +45,6 @@ module Vagabond
             debug(com)
             cmd = Mixlib::ShellOut.new(com, :live_stream => options[:debug])
             cmd.run_command
-            cmd.error!
           end
           # check for tmpfs and umount too
           tmp = mount.detect{|x|x.include?('rootfs')}.scan(%r{upperdir=[^,]+}).first.to_s.split('=').last
