@@ -22,6 +22,24 @@ elsif(%w(help --help -h).include?(ARGV.first))
     Vagabond.const_get(key.capitalize).start
   end
 else
+  require 'etc'
+
+  unless(Etc.getlogin == 'root')
+    require 'vagabond/vagabondfile'
+    vagabondfile = Vagabond::Vagabondfile.new
+    command = []
+    sudo = vagabondfile[:sudo]
+    unless(sudo == false)
+      command.push sudo.is_a?(String) ? sudo : 'sudo'
+    end
+    if(defined?(Bundler))
+      command << 'bundle exec'
+    end
+    command << $PROGRAM_NAME.sub(Dir.pwd, '')
+    command += ARGV
+    exec(command.join(' '))
+  end
+
   case arg = ARGV.shift
   when 'server'
     require 'vagabond/server'
