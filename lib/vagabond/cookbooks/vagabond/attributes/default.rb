@@ -16,4 +16,3 @@ default[:vagabond][:bases][:debian_7][:template] = 'debian'
 default[:vagabond][:bases][:debian_7][:create_environment] = {'SUITE' => 'wheezy'}
 default[:vagabond][:customs] = {}
 default[:vagabond][:server_base] = true
-default[:vagabond][:user_admin_group] = 'admin'
