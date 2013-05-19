@@ -21,10 +21,10 @@ elsif(%w(help --help -h).include?(ARGV.first))
     ARGV = %w(help)
     Vagabond.const_get(key.capitalize).start
   end
+  exit -1
 else
-  require 'etc'
 
-  unless(Etc.getlogin == 'root' || ARGV.first == 'init')
+  unless(Process.uid == 0 || ARGV.first == 'init')
     require 'vagabond/vagabondfile'
     vagabondfile = Vagabond::Vagabondfile.new
     command = []
