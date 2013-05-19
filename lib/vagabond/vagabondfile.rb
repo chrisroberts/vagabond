@@ -6,6 +6,7 @@ module Vagabond
     attr_reader :path
     attr_reader :config
 
+    DEFAULT_KEYS = %w(boxes mappings test_mappings spec_mappings)
     ALIASES = Mash.new(:boxes => :nodes, :nodes => :boxes)
     
     def initialize(path=nil, *args)
@@ -15,6 +16,9 @@ module Vagabond
     end
 
     def [](k)
+      if(DEFAULT_KEYS.include?(k.to_s))
+        @config[k] ||= Mash.new
+      end
       aliased(k) || @config[k]
     end
 
@@ -45,7 +49,7 @@ module Vagabond
         @path = File.expand_path(File.join(Dir.pwd, 'Vagabondfile'))
         @store_path = File.join('/tmp/vagabond-solos', Dir.pwd.gsub(%r{[^0-9a-zA-Z]}, '-'), 'Vagabondfile')
         FileUtils.mkdir_p(File.dirname(@store_path))
-        @config = Mash.new(:boxes => {})
+        @config = Mash[*DEFAULT_KEYS.map{|k| [k, Mash.new]}.flatten]
       end
     end
 
