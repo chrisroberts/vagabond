@@ -1,6 +1,7 @@
 require 'thor'
 require 'chef'
 require 'kitchen/busser'
+require 'kitchen/loader/yaml'
 require 'vagabond/monkey/kitchen_config'
 
 %w(helpers vagabondfile vagabond server helpers/cheffile_loader actions/status).each do |dep|
@@ -181,9 +182,9 @@ module Vagabond
       @vagabondfile = Vagabondfile.new(options[:vagabond_file], :allow_missing)
       setup_ui
       @internal_config = InternalConfiguration.new(@vagabondfile, ui, options)
+      @name = name || action == :status ? name : discover_name
       load_kitchen_yml(name) unless action == :status
       @solo = !name
-      @name = name || action == :status ? name : discover_name
       @action = action
     end
 
@@ -302,11 +303,11 @@ module Vagabond
     end
 
     def load_kitchen_yml(name)
-      @kitchen = Kitchen::Config.new(
+      @kitchen = ::Kitchen::Config.new(
         :kitchen_root => cookbook_path,
         :test_base_path => File.join(cookbook_path, 'test/integration'),
-        :loader => Kitchen::Loader::YAML.new(
-          File.join(ckbk_path, '.kitchen.yml')
+        :loader => ::Kitchen::Loader::YAML.new(
+          File.join(cookbook_path, '.kitchen.yml')
         )
       )
     end
