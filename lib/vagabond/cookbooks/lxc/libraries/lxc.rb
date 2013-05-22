@@ -13,7 +13,7 @@ class Lxc
       retries = args[:allow_failure_retry].to_i
       begin
         shlout = Mixlib::ShellOut.new(cmd, 
-          :logger => defined?(Chef) ? Chef::Log.logger : log,
+          :logger => defined?(Chef::Log) ? Chef::Log.logger : log,
           :live_stream => args[:livestream] ? STDOUT : nil,
           :timeout => args[:timeout] || 1200,
           :environment => {'HOME' => detect_home}
@@ -41,7 +41,7 @@ class Lxc
     end
     
     def log
-      if(defined?(Chef))
+      if(defined?(Chef::Log))
         Chef::Log
       else
         unless(@logger)
@@ -392,7 +392,7 @@ class Lxc
     retries = args[:allow_failure_retry].to_i
     begin
       shlout = Mixlib::ShellOut.new(cmd, 
-        :logger => defined?(Chef) ? Chef::Log.logger : log,
+        :logger => defined?(Chef::Log) ? Chef::Log.logger : log,
         :live_stream => args[:livestream] ? nil : STDOUT,
         :timeout => args[:timeout] || 1200,
         :environment => {'HOME' => detect_home}
@@ -463,7 +463,7 @@ class Lxc
   end
 
   def log
-    if(defined?(Chef))
+    if(defined?(Chef::Log))
       Chef::Log
     else
       unless(@logger)

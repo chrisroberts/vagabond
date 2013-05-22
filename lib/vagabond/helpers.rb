@@ -1,8 +1,13 @@
 require 'vagabond/constants'
+require 'tmpdir'
 require 'uuidtools'
 
 module Vagabond
   module Helpers
+
+    RAND_CHARS = ('a'..'z').map(&:to_s) + ('A'..'Z').map(&:to_s) + (0..9).map(&:to_s)
+    GEN_NAME_LENGTH = 10
+    
     private
 
     def base_setup
@@ -34,12 +39,15 @@ module Vagabond
     end
     
     def generated_name(n=nil)
+      seed = Dir.pwd.chars.map(&:ord).inject(&:+)
+      srand(seed)
       n = name unless n
       if(@_gn.nil? || @_gn[n].nil?)
         @_gn ||= Mash.new
-        s = Digest::MD5.new
-        s << @vagabondfile.path
-        @_gn[n] = "#{n}-#{s.hexdigest}"
+        @_gn[n] = "#{n}-"
+        GEN_NAME_LENGTH.times do
+          @_gn[n] << RAND_CHARS[rand(RAND_CHARS.size)]
+        end
       end
       @_gn[n]
     end

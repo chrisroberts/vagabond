@@ -1,5 +1,6 @@
 require 'thor'
 require 'chef'
+require 'kitchen'
 require 'kitchen/busser'
 require 'kitchen/loader/yaml'
 require 'vagabond/monkey/kitchen_config'
@@ -55,7 +56,7 @@ module Vagabond
       end
     end
 
-    desc 'test COOKBOOK', 'Run test kitchen on COOKBOOK'
+    desc 'test [COOKBOOK]', 'Run test kitchen on COOKBOOK'
     method_option(:platform,
       :type => :string,
       :desc => 'Specify platform to test'
@@ -78,20 +79,25 @@ module Vagabond
       :type => :string,
       :desc => 'Specify suites to test [suite1,suite2,...]'
     )
-    def test(cookbook=nil)
+    def test(*args)
+      cookbook = args.first
       setup(cookbook, :test)
       
       ui.info "#{ui.color('Vagabond:', :bold)} - Kitchen testing for cookbook #{ui.color(name, :cyan)}"
       results = Mash.new
       platforms = [options[:platform] || platform_map.keys].flatten
-      if(options[:cluster])
-        ui.info ui.color("  -> Cluster Testing #{options[:cluster]}!", :yellow)
-        if(kitchen.clusters.empty? || kitchen.clusters[options[:cluster]].nil?)
+      if(cluster_name = options[:cluster])
+        ui.info ui.color("  -> Cluster Testing #{cluster_name}!", :yellow)
+        if(kitchen.clusters.empty? || kitchen.clusters[cluster_name].nil?)
           ui.fatal "Requested cluster is not defined: #{options[:cluster]}"
           exit EXIT_CODES[:cluster_invalid]
         end
         serv = Server.new
+        if(@solo && serv.vagabondfile[:local_chef_server].empty?)
+          serv.vagabondfile[:local_chef_server].update(:enabled => true, :zero => true)
+        end
         serv.options = options
+        serv.send(:do_create)
         serv.auto_upload # upload everything : make optional?
         suites = kitchen.clusters[options[:cluster]]
         platforms.each do |platform|
@@ -108,6 +114,7 @@ module Vagabond
             end
           end
         end
+        serv.destroy
       else
         suites = options[:suites] ? options[:suites].split(',') : ['default']
         platforms.each do |platform|
@@ -178,13 +185,13 @@ module Vagabond
     end
     
     def setup(name, action)
+      @solo = name.to_s.strip.empty?
       @options = options.dup
       @vagabondfile = Vagabondfile.new(options[:vagabond_file], :allow_missing)
       setup_ui
       @internal_config = InternalConfiguration.new(@vagabondfile, ui, options)
       @name = name || action == :status ? name : discover_name
-      load_kitchen_yml(name) unless action == :status
-      @solo = !name
+      load_kitchen_yml(@name) unless action == :status
       @action = action
     end
 
@@ -222,10 +229,10 @@ module Vagabond
     def write_dna(l_name, suite_name, dir, platform, runlist, *args)
       key = args.include?(:integration) ? :integration_suites : :suites
       dna = Mash.new
-      dna.merge!(platform_map[platform][:attributes] || {})
-      s_args = kitchen.suites.detect{|s|s.name == suite_name}
-      if(s_args)
-        dna.merge!(s_args)
+      dna.merge!(platform_map[platform][:attributes] || Mash.new)
+      suite = kitchen.suites.detect{|s|s.name == suite_name}
+      if(suite)
+        dna.merge!(suite.attributes)
       end
       dna[:run_list] = runlist
       File.open(File.join(dir, 'dna.json'), 'w') do |file|
@@ -313,24 +320,25 @@ module Vagabond
     end
 
     def platform_map
-      @platform_map ||= Mash.new(
-        Hash[
-          *(
-            kitchen.platforms.map do |plat|
-              [
-                plat.name, Mash.new(
-                  :template => plat.name.gsub('.', '').gsub('-', '_'),
-                  :run_list => plat.run_list,
-                  :attributes => plat.attributes
-                )
-              ]
-            end.flatten
-          )
-        ]
-      )
+      @platform_map ||= Mash[
+        *(
+          kitchen.platforms.map do |plat|
+            [
+              plat.name, Mash.new(
+                :template => plat.name.gsub('.', '').gsub('-', '_'),
+                :run_list => plat.run_list,
+                :attributes => plat.attributes
+              )
+            ]
+          end.flatten
+        )
+      ]
     end
 
     def generate_runlist(platform, suite)
+      unless(platform_map[platform])
+        raise "Invalid platform #{platform}. Valid: #{platform_map.keys.sort.join(', ')}"
+      end
       r = platform_map[platform][:run_list]
       kitchen_suite = kitchen.suites.detect do |k_s|
         k_s.name == suite

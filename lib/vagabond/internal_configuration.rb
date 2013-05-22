@@ -75,9 +75,13 @@ module Vagabond
         else
           content = File.read(path)
         end
-        config = Mash.new(
-          JSON.load(content)
-        )
+        if(content.strip.empty?)
+          config = Mash.new
+        else
+          config = Mash.new(
+            JSON.load(content)
+          )
+        end
         @config = Chef::Mixin::DeepMerge.merge(config, @config)
       else
         @config = Mash.new
@@ -235,8 +239,8 @@ module Vagabond
       checksum unless @checksums[path] == checksum
      end
     
-    def make_knife_config_if_required
-      if(@vagabondfile[:local_chef_server] && @vagabondfile[:local_chef_server][:enabled])
+    def make_knife_config_if_required(force=false)
+      if((@vagabondfile[:local_chef_server] && @vagabondfile[:local_chef_server][:enabled]) || force)
         unless(knife_config_available?)
           store_dir = File.dirname(store_path)
           k_dir = File.join(store_dir, '.chef')

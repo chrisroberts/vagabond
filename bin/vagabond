@@ -26,7 +26,7 @@ else
 
   unless(Process.uid == 0 || ARGV.first == 'init')
     require 'vagabond/vagabondfile'
-    vagabondfile = Vagabond::Vagabondfile.new
+    vagabondfile = Vagabond::Vagabondfile.new(nil, :allow_missing)
     command = []
     sudo = vagabondfile[:sudo]
     unless(sudo == false)

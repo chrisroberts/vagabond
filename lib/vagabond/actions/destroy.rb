@@ -5,6 +5,7 @@ module Vagabond
       def _destroy
         name_required!
         [name, @leftover_args].flatten.compact.each do |n|
+          next unless n.is_a?(String)
           @name = n
           load_configurations
           if(lxc.exists?)
@@ -21,11 +22,18 @@ module Vagabond
 
       def do_destroy
         lxc.shutdown if lxc.running?
-        com = "#{options[:sudo]}lxc-destroy -n #{lxc.name}"
-        debug(com)
-        cmd = Mixlib::ShellOut.new(com, :live_stream => options[:debug])
-        cmd.run_command
-#        force_umount_if_required!
+        ui.info 'Waiting for graceful shutdown and cleanup...'
+        5.times do
+          break unless lxc.exists?
+          sleep(1)
+        end
+        if(lxc.exists?)
+          com = "#{options[:sudo]}lxc-destroy -n #{lxc.name}"
+          debug(com)
+          cmd = Mixlib::ShellOut.new(com, :live_stream => options[:debug])
+          cmd.run_command
+          force_umount_if_required!
+        end
         internal_config[mappings_key].delete(name)
         internal_config.save
       end

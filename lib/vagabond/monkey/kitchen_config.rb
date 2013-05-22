@@ -4,13 +4,17 @@ module Vagabond
   module MonkeyPatch
     module KitchenConfig
       def clusters
-        @clusters = Mash[
-          *(
-            Array(data[:clusters]).map{ |name|
-              [name, suites.detect{ |suite| suite.name == name }]
-            }.flatten
-          )
-        ]
+        unless(@clusters)
+          @clusters = Hash[
+            *(
+              Array(data[:clusters]).map{ |name, suite_names|
+                [name, suite_names]
+              }.flatten(1)
+            )
+          ]
+          @clusters = Mash.new(@clusters)
+        end
+        @clusters
       end
     end
   end
