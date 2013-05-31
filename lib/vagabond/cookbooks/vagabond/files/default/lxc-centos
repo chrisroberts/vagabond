@@ -156,16 +156,23 @@ YUM="yum --installroot $INSTALL_ROOT -y --nogpgcheck"
 PKG_LIST="yum initscripts passwd rsyslog vim-minimal dhclient chkconfig"
 PKG_LIST="$PKG_LIST rootfiles policycoreutils centos-release openssh-server avahi"
 MIRRORLIST_URL="http://mirrorlist.centos.org/?release=$release.$releaseminor&arch=$arch&repo=os"
- 
+
+FOUND_MIRRORS=$(curl -s -S -f "$MIRRORLIST_URL")
+AVAIL_MIRRORS="${FOUND_MIRRORS} http://vault.centos.org/$release.$releaseminor/os/$arch"
+
 DOWNLOAD_OK=no
-for trynumber in 1 2 3; do
-[ $trynumber != 1 ] && echo "Trying again..."
-MIRROR_URL=$(curl -s -S -f "$MIRRORLIST_URL" | head -n2 | tail -n1)
+for MIRROR_URL in $AVAIL_MIRRORS; do
 if [ $? -ne 0 ] || [ -z "$MIRROR_URL" ]; then
 echo "Failed to get a mirror"
 continue
 fi
-RELEASE_URL="$MIRROR_URL/Packages/centos-release-$release-$releaseminor.el6.centos.9.$arch.rpm"
+if [ $release = "6" ]; then
+PACKAGE_NAME=`wget -q -O - ${MIRROR_URL}/Packages/ | grep centos-release-${release}.${releaseminor} | sed -r 's/.+rpm">//g' | sed -r 's/<.+//g'`
+RELEASE_URL="$MIRROR_URL/Packages/${PACKAGE_NAME}"
+else
+PACKAGE_NAME=`wget -q -O - ${MIRROR_URL}/CentOS/ | grep centos-release-${release}.${releaseminor} | sed -r 's/.+rpm">//g' | sed -r 's/<.+//g'`
+RELEASE_URL="$MIRROR_URL/CentOS/${PACKAGE_NAME}"
+fi
 echo "Fetching from $RELEASE_URL"
 curl -f "$RELEASE_URL" > $INSTALL_ROOT/centos-release-$release-$releaseminor.centos.$arch.rpm
 if [ $? -ne 0 ]; then
@@ -412,7 +419,7 @@ fi
  
 rootfs_path=$path/rootfs
 config_path=$default_path/$name
-cache=$cache_base/$release
+cache=$cache_base/$release.$releaseminor
  
 revert()
 {
