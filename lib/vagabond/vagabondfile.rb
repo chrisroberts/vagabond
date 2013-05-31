@@ -74,5 +74,9 @@ module Vagabond
       end
       d_path
     end
+
+    def local_chef_server?
+      self[:local_chef_server] && self[:local_chef_server][:enabled]
+    end
   end
 end
