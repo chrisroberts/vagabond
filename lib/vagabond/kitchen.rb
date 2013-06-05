@@ -136,6 +136,7 @@ module Vagabond
           ui.info "    Suite: #{res[:suite_name]} -> #{res[:result] ? ui.color('SUCCESS!', :green) : ui.color('FAILED!', :red)}"
         end
       end
+      exit EXIT_CODES[:kitchen_test_failed] if infos.detect{|res| !res[:result]}
     end
 
     desc 'status [NAME]', 'Show test node status'

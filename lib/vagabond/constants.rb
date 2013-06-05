@@ -31,6 +31,7 @@ module Vagabond
     :kitchen_too_many_args => 8,
     :kitchen_invalid_platform => 9,
     :missing_node_name => 10,
-    :cluster_invalid => 11
+    :cluster_invalid => 11,
+    :kitchen_test_failed => 12
   )
 end
