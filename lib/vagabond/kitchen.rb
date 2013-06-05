@@ -11,7 +11,7 @@ end
 
 module Vagabond
   class Kitchen < Thor
-    
+
     include Thor::Actions
     include Helpers
     include Actions::Status
@@ -23,7 +23,7 @@ module Vagabond
     end
 
     self.class_exec(&Vagabond::CLI_OPTIONS)
-    
+
     attr_reader :kitchen
     attr_reader :platform_map
     attr_reader :vagabondfile
@@ -82,7 +82,7 @@ module Vagabond
     def test(*args)
       cookbook = args.first
       setup(cookbook, :test)
-      
+
       ui.info "#{ui.color('Vagabond:', :bold)} - Kitchen testing for cookbook #{ui.color(name, :cyan)}"
       results = Mash.new
       platforms = [options[:platform] || platform_map.keys].flatten
@@ -143,20 +143,20 @@ module Vagabond
       setup(name, :status)
       _status
     end
-    
+
     protected
 
     def mappings_key
       :test_mappings
     end
-    
+
     def local_server_provision_node(platform, suite_name)
       run_list = generate_runlist(platform, suite_name)
       v_inst = vagabond_instance(:up, platform, :suite_name => suite_name, :run_list => run_list)
       raise "ERROR! No local chef!" unless v_inst.options[:knife_opts]
       v_inst.send(:execute)
     end
-    
+
     # TODO: Handle failed provision!
     def provision_node(platform, suite_name)
       run_list = generate_runlist(platform, suite_name)
@@ -183,7 +183,7 @@ module Vagabond
         v_inst.send(:execute)
       end
     end
-    
+
     def setup(name, action)
       @solo = name.to_s.strip.empty?
       @options = options.dup
@@ -225,7 +225,7 @@ module Vagabond
         file.write("cookbook_path '#{File.join(dir, 'cookbooks')}'\n")
       end
     end
-    
+
     def write_dna(l_name, suite_name, dir, platform, runlist, *args)
       key = args.include?(:integration) ? :integration_suites : :suites
       dna = Mash.new
@@ -255,19 +255,55 @@ module Vagabond
         ).load_cookbooks[name].root_dir
       end
     end
-    
-    def load_cookbooks(l_name, suite_name, dir, platform, runlist, *_args)
+
+
+    def write_cook_manager_file(file, contents)
+      debug "Writing: #{file}\n\t#{contents}"
+      File.open(file, 'w') do |file|
+        file.write(contents.join("\n"))
+      end
+    end
+
+    def install_cookbooks(command, dir)
+      debug(command)
+      c = Mixlib::ShellOut.new(command, :live_stream => options[:debug], :cwd => dir)
+      c.run_command
+      c.error!
+    end
+
+    def load_berks_cookbooks(berksfile, dir)
+      ui.warn "Installing Cooks with  Berkshelf"
+      contents = File.read(berksfile).split("\n")
+      #contents << "cookbook '#{name}', :path => '#{cookbook_path}'"
+      contents <<  "cookbook 'minitest-handler'"
+
+      new_berks =    File.join(dir, "Berksfile")
+      install_path = File.join(dir, "cookbooks")
+      write_cook_manager_file(new_berks, contents)
+      command ="berks install -p #{install_path} -c #{new_berks}"
+      install_cookbooks(command, dir)
+    end
+
+    def load_librarian_cookbooks(cheffile, dir)
+      ui.warn "Installing Cooks with Librarian"
       contents = ['site "http://community.opscode.com/api/v1"']
       contents << "cookbook '#{name}', :path => '#{cookbook_path}'"
       contents << "cookbook 'minitest-handler'"
-      File.open(File.join(dir, 'Cheffile'), 'w') do |file|
-        file.write(contents.join("\n"))
+
+      write_cook_manager_file(cheffile, contents)
+      install_cookbooks("librarian-chef update", dir)
+    end
+
+    def load_cookbooks(l_name, suite_name, dir, platform, runlist, *_args)
+      # TODO: UNHACK THE
+      # Would be nice to have some "CookBundler" class or something
+      # allso a better way to find this
+      berksfile =  "#{dir}/../../../Berksfile"
+      if File.exists? berksfile
+        load_berks_cookbooks(berksfile, dir)
+      else
+        load_librarian_cookbooks(File.join(dir, 'Cheffile'), dir)
       end
-      com = "librarian-chef update"
-      debug(com)
-      c = Mixlib::ShellOut.new(com, :live_stream => options[:debug], :cwd => dir)
-      c.run_command
-      c.error!
     end
 
     def bus_node(v_inst, suite_name)
@@ -285,7 +321,7 @@ module Vagabond
       end
       busser
     end
-    
+
     def vagabond_instance(action, platform, args={})
       options[:disable_name_validate] = true
       v = Vagabond.new
