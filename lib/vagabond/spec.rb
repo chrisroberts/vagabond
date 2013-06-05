@@ -50,9 +50,50 @@ module Vagabond
       base_setup
       _status
     end
+
+    desc 'init', 'Initalize spec configuration'
+    def init
+      setup_ui(nil, :no_class_set)
+      ui.info "Initializing spec configuration..."
+      make_spec_directory
+      populate_spec_directory
+      # - dump empty layout
+      ui.info "  -> #{ui.color('COMPLETE!', :green)}"
+    end
     
     protected
 
+    def make_spec_directory
+      FileUtils.mkdir_p(spec_directory)
+    end
+
+    def spec_directory
+      File.join(vagabondfile.directory, 'spec')
+    end
+
+    def populate_spec_directory
+      write_default_file('Layout')
+      write_default_file('spec_helper')
+    end
+
+    def write_default_file(file)
+      write = true
+      if(File.exists?(path = File.join(spec_directory, file)))
+        until(%w(y n).include?(answer))
+          answer = ui.ask_question("Overwrite existing #{file}", :default => 'y').downcase
+        end
+        write = answer == 'y'
+      end
+      if(write)
+        File.open(path, 'w') do |file|
+          file.write self.class.const_get("CONTENT_DEFAULT_#{file.upcase}")
+        end
+        ui.info "New file has been written: #{file}"
+      else
+        ui.warn "Skipping file: #{file}"
+      end
+    end
+    
     def mappings_key
       :spec_mappings
     end
@@ -93,14 +134,20 @@ module Vagabond
       end
     end
 
+    def vagabondfile
+      unless(@vagabondfile)
+        @vagabondfile = Vagabondfile.new(options[:vagabond_file])
+      end
+      @vagabondfile
+    end
+    
     def cluster_spec(cluster)
       @options[:auto_provision] = true
-      @vagabondfile = Vagabondfile.new(options[:vagabond_file])
       options[:sudo] = sudo
-      Lxc.use_sudo = @vagabondfile[:sudo].nil? ? true : @vagabondfile[:sudo]
-      @internal_config = InternalConfiguration.new(@vagabondfile, nil, options)
+~      Lxc.use_sudo = vagabondfile[:sudo].nil? ? true : vagabondfile[:sudo]
+      @internal_config = InternalConfiguration.new(vagabondfile, nil, options)
       # First, setup server
-      if(@vagabondfile[:local_chef_server][:enabled])
+      if(vagabondfile[:local_chef_server][:enabled])
         require 'vagabond/server'
         srv = ::Vagabond::Server.new
         srv.send(:setup, 'up')
@@ -129,7 +176,7 @@ module Vagabond
     def test_node!(name, ip_address, run_list)
       run_list.each do |item|
         r_item = item.is_a?(Chef::RunList::RunListItem) ? item : Chef::RunList::RunListItem.new(item)
-        dir = File.join(File.dirname(@vagabondfile.path), "spec/#{r_item.type}/#{r_item.name.sub('::', '_')}")
+        dir = File.join(File.dirname(vagabondfile.path), "spec/#{r_item.type}/#{r_item.name.sub('::', '_')}")
         Dir.glob(File.join(dir, '*.rb')).each do |path|
           com = "#{sudo}VAGABOND_TEST_HOST='#{ip_address}' rspec #{path}"
           debug(com)
@@ -142,7 +189,7 @@ module Vagabond
 
     def load_layout
       # Load up layouts and set defaults
-      @layout = Layout.new(File.dirname(@vagabondfile.path))
+      @layout = Layout.new(File.dirname(vagabondfile.path))
     end
     
     def vagabond_instance(action, platform, args={})
@@ -167,6 +214,48 @@ module Vagabond
       ) if v.internal_config[v.mappings_key][v.name]
       v
     end
+
+    CONTENT_DEFAULT_LAYOUT = <<-EOF
+{
+  :defaults => {
+    :platform => 'ubuntu_1204',
+    :environment => nil
+  },
+  :definitions => {
+    :example_node => {
+      :run_list => %w(role[example])
+    }
+  },
+  :clusters => {
+    :example_cluster => {
+      :nodes => ['example_node']
+    }
+  }
+}
+EOF
+    CONTENT_DEFAULT_SPEC_HELPER = <<-EOF
+require 'serverspec'
+require 'pathname'
+require 'net/ssh'
+
+RSpec.configure do |c|
+  # Include backend helper
+  c.include(Serverspec::Helper::Ssh)
+  # Add SSH before hook in case you use the SSH backend
+  # (not required for the Exec backend)
+  c.include(Serverspec::Helper::DetectOS)
+  c.before do
+    host = ENV['VAGABOND_TEST_HOST']
+    if(c.host != host)
+      c.ssh.close if c.ssh
+      c.host = host
+      options = Net::SSH::Config.for(c.host)
+      c.ssh = Net::SSH.start(c.host, 'root', options.update(:keys => ['/opt/hw-lxc-config/id_rsa']))
+      c.os = backend(Serverspec::Commands::Base).check_os
+    end
+  end
+end
+EOF
     
   end
 end
