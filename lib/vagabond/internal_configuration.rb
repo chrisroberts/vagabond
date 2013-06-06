@@ -118,7 +118,7 @@ module Vagabond
           conf[:customs][generated_name(t_name)] = opts
           config[:template_mappings][t_name] = generated_name(t_name)
         else
-          ui.fatal "Invalid base template encountered: #{t}"
+          ui.fatal "Invalid base template encountered: #{t_name}"
           ui.info ui.color("  -> Valid base templates: #{BASE_TEMPLATES.sort.join(', ')}", :red)
           exit EXIT_CODES[:invalid_base_template]
         end
