@@ -21,9 +21,7 @@ elsif(%w(help --help -h).include?(ARGV.first))
     ARGV = %w(help)
     Vagabond.const_get(key.capitalize).start
   end
-  exit -1
 else
-
   unless(Process.uid == 0 || ARGV.first == 'init')
     require 'vagabond/vagabondfile'
     vagabondfile = Vagabond::Vagabondfile.new(nil, :allow_missing)
@@ -40,23 +38,27 @@ else
     exec(command.join(' '))
   end
 
-  case arg = ARGV.shift
-  when 'server'
-    require 'vagabond/server'
-    Vagabond::Server
-  when 'knife'
-    require 'vagabond/knife'
-    ARGV.unshift(arg) unless ARGV.empty?
-    Vagabond::Knife
-  when 'test', 'kitchen'
-    require 'vagabond/kitchen'
-    Vagabond::Kitchen
-  when 'spec'
-    require 'vagabond/spec'
-    Vagabond::Spec
-  else
-    require 'vagabond/vagabond'
-    ARGV.unshift(arg)
-    Vagabond::Vagabond
-  end.start
+  begin
+    case arg = ARGV.shift
+    when 'server'
+      require 'vagabond/server'
+      Vagabond::Server
+    when 'knife'
+      require 'vagabond/knife'
+      ARGV.unshift(arg) unless ARGV.empty?
+      Vagabond::Knife
+    when 'test', 'kitchen'
+      require 'vagabond/kitchen'
+      Vagabond::Kitchen
+    when 'spec'
+      require 'vagabond/spec'
+      Vagabond::Spec
+    else
+      require 'vagabond/vagabond'
+      ARGV.unshift(arg)
+      Vagabond::Vagabond
+    end.start
+  rescue VagabondError => e
+    exit e.exit_code
+  end
 end
