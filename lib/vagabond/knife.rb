@@ -14,7 +14,7 @@ module Vagabond
     def initialize(*args)
       super
     end
-    
+
     desc 'knife COMMAND', 'Run knife commands against local Chef server'
     def knife(command, *args)
       @options = options.dup
@@ -34,9 +34,9 @@ module Vagabond
           end
         end
       end
+      # TODO Need to add shellwords escaping in here since this breaks
+      # quoted stuff in annoying ways (like doing searches)
       exec("knife #{[command, args].flatten.compact.join(' ')} #{options[:knife_opts]}")
     end
-
-    
   end
 end
