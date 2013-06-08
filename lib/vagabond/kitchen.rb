@@ -257,54 +257,48 @@ module Vagabond
       end
     end
 
-
-    def write_cook_manager_file(file, contents)
-      debug "Writing: #{file}\n\t#{contents}"
-      File.open(file, 'w') do |file|
-        file.write(contents.join("\n"))
-      end
-    end
-
-    def install_cookbooks(command, dir)
-      debug(command)
-      c = Mixlib::ShellOut.new(command, :live_stream => options[:debug], :cwd => dir)
-      c.run_command
-      c.error!
-    end
-
-    def load_berks_cookbooks(berksfile, dir)
-      ui.warn "Installing Cooks with  Berkshelf"
-      contents = File.read(berksfile).split("\n")
-      #contents << "cookbook '#{name}', :path => '#{cookbook_path}'"
-      contents <<  "cookbook 'minitest-handler'"
-
-      new_berks =    File.join(dir, "Berksfile")
-      install_path = File.join(dir, "cookbooks")
-      write_cook_manager_file(new_berks, contents)
-      command ="berks install -p #{install_path} -c #{new_berks}"
-      install_cookbooks(command, dir)
-    end
-
-    def load_librarian_cookbooks(cheffile, dir)
+    def custom_cheffile
       ui.warn "Installing Cooks with Librarian"
       contents = ['site "http://community.opscode.com/api/v1"']
       contents << "cookbook '#{name}', :path => '#{cookbook_path}'"
       contents << "cookbook 'minitest-handler'"
-
-      write_cook_manager_file(cheffile, contents)
-      install_cookbooks("librarian-chef update", dir)
+      contents.join("\n")
     end
 
     def load_cookbooks(l_name, suite_name, dir, platform, runlist, *_args)
-      # TODO: UNHACK THE
-      # Would be nice to have some "CookBundler" class or something
-      # allso a better way to find this
-      berksfile =  "#{dir}/../../../Berksfile"
-      if File.exists? berksfile
-        load_berks_cookbooks(berksfile, dir)
+      if(File.exists?(File.join(vagabondfile.directory, 'Berksfile')))
+        berks_vendor
       else
-        load_librarian_cookbooks(File.join(dir, 'Cheffile'), dir)
+        librarian_vendor
       end
+    end
+          
+    def berks_vendor
+      ui.info 'Cookbooks being vendored via berks'
+      berk_uploader = Uploader::Berkshelf.new(
+        vagabondfile.generate_store_path, options.merge(
+          :ui => ui,
+          :berksfile => File.join(vagabondfile.directory, 'Berksfile'),
+          :chef_server_url => options[:knife_opts].to_s.split(' ').last
+        )
+      )
+      berk_uploader.upload
+    end
+
+    def librarian_vendor
+      ui.info 'Cookbooks being vendored with librarian'
+      unless(File.exists?(cheffile = File.join(vagabondfile.directory, 'Cheffile')))
+        File.open(cheffile = vagabond.generate_store_path, 'w') do |file|
+          file.write custom_cheffile
+        end
+      end
+      librarian_uploader = Uploader::Librarian.new(
+        vagabondfile.generate_store_path, options.merge(
+          :ui => ui,
+          :cheffile => cheffile
+        )
+      )
+      librarian_uploader.prepare
     end
 
     def bus_node(v_inst, suite_name)
