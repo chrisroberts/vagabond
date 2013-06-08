@@ -1,5 +1,7 @@
 
 # TODO: Move this to lxc cookbook proper at some point
+# TODO: Test this on fresh node to ensure start up scripts actuall do
+# what they are expected to
 =begin
 dpkg_autostart 'lxc' do
   allow false
@@ -11,14 +13,16 @@ end
 =end
 # Start at 0 and increment up if found
 unless(node[:network][:interfaces][:lxcbr0])
-  node.default[:vagabond][:lxc_network][:oct] = node.network.interfaces.map do |name, val|
+  max = node.network.interfaces.map do |name, val|
     Array(val[:routes]).map do |route|
-      if(route['family'] == 'inet')
+      if(route[:family] == 'inet' && route[:destination].start_with?('10.0'))
         route[:destination].split('/').first.split('.')[3].to_i
       end
     end
-  end.compact.max + 1
+  end.compact.max
 
+  node.default[:vagabond][:lxc_network][:oct] = max ? max + 1 : 0
+  
   # Test for existing bridge. Use different subnet if found
   l_net = "10.0.#{node[:vagabond][:lxc_network][:oct]}"
 
