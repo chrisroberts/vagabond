@@ -30,7 +30,7 @@ module Vagabond
     end
 
     def debug(s)
-      ui.info "#{ui.color('DEBUG:', :red, :bold)} #{s}" if options[:debug]
+      ui.info "#{ui.color('DEBUG:', :red, :bold)} #{s}" if options[:debug] && ui
     end
 
     def random_name(n=nil)
