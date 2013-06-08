@@ -95,16 +95,11 @@ module Vagabond
     desc 'upload_cookbooks', 'Upload all cookbooks'
     def upload_cookbooks
       am_uploading('cookbooks') do
-        if(vagabondfile[:local_chef_server][:berkshelf])
+        if(vagabondfile[:local_chef_server][:librarian])
+          librarian_upload
+        elsif(vagabondfile[:local_chef_server][:berkshelf])
           berks_upload
         else
-          if(vagabondfile[:local_chef_server][:librarian])
-            com = "librarian-chef update"
-            debug(com)
-            c = Mixlib::ShellOut.new(com, :live_stream => options[:debug], :dir => vagabondfile.directory)
-            c.run_command
-            c.error!
-          end
           raw_upload
         end
       end
@@ -123,23 +118,6 @@ module Vagabond
       ui.info "#{ui.color('Local chef server:', :bold)} Uploading #{ui.color(thing, :green)}"
       yield
       ui.info ui.color("  -> UPLOADED #{thing.upcase}", :green)
-    end
-
-    def write_berks_config
-      path = File.join(vagabond_dir, 'berks.json')
-      if(File.exists?(path))
-        cur = Mash.new(JSON.load(File.read(path)))
-      else
-        cur = Mash.new
-      end
-      url = "https://#{lxc.container_ip(10, true)}"
-      if(cur[:chef].nil? || cur[:chef][:chef_server_url] != url)
-        cur[:chef] = Mash.new(:chef_server_url => url)
-        cur[:ssl] = Mash.new(:verify => false)
-        File.open(path, 'w') do |file|
-          file.write(JSON.dump(cur))
-        end
-      end
     end
     
     def do_create
@@ -180,21 +158,32 @@ module Vagabond
     end
     
     def berks_upload
-      write_berks_config
-      ui.warn 'Cookbooks being uploaded via berks'
-      com = "berks upload -c #{File.join(vagabond_dir, 'berks.json')}"
-      debug(com)
-      cmd = Mixlib::ShellOut.new(com, :live_stream => options[:debug])
-      cmd.run_command
-      cmd.error!
+      ui.info 'Cookbooks being uploaded via berks'
+      berk_uploader = Uploader::Berkshelf.new(
+        vagabondfile.directory, options.merge(
+          :ui => ui,
+          :berksfile => File.join(vagabondfile.directory, 'Berksfile'),
+          :chef_server_url => options[:knife_opts].to_s.split(' ').last
+        )
+      )
+      berk_uploader.upload
     end
 
+    def librarian_upload
+      ui.info 'Cookbooks being uploaded with librarian'
+      librarian_uploader = Uploader::Librarian.new(
+        vagabondfile.generate_store_path, options.merge(
+          :ui => ui,
+          :cheffile => File.join(vagabondfile.directory, 'Cheffile')
+        )
+      )
+      librarian_uploader.upload
+    end
+    
     def raw_upload
-      com = "knife cookbook upload#{options[:knife_opts]} --all"
-      debug(com)
-      cmd = Mixlib::ShellOut.new(com, :live_stream => options[:debug])
-      cmd.run_command
-      cmd.error!
+      ui.info 'Cookbooks being uploaded via knife'
+      knife_uploader = Uploader::Knife.new(vagabondfile.directory, options.merge(:ui => ui))
+      knife_uploader.upload
     end
 
   end
