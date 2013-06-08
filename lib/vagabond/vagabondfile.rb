@@ -41,16 +41,27 @@ module Vagabond
       end
     end
     
-    def load_configuration!(no_raise = false)
+    def load_configuration!(*args)
+      unless(args.empty?)
+        no_raise = args.first == true
+        force_store = args.include?(:force_store_path)
+        no_raise ||= force_store
+      end
       if(@path && File.exists?(@path))
         @config = Mash.new(self.instance_eval(IO.read(@path), @path, 1))
-      else
+      end
+      if(!@config || force_store)
         raise 'No Vagabondfile file found!' unless no_raise
-        @path = File.expand_path(File.join(Dir.pwd, 'Vagabondfile'))
-        @store_path = File.join('/tmp/vagabond-solos', Dir.pwd.gsub(%r{[^0-9a-zA-Z]}, '-'), 'Vagabondfile')
-        FileUtils.mkdir_p(File.dirname(@store_path))
+        generate_store_path
         @config = Mash[*DEFAULT_KEYS.map{|k| [k, Mash.new]}.flatten]
       end
+    end
+
+    def generate_store_path
+      @path ||= File.expand_path(File.join(Dir.pwd, 'Vagabondfile'))
+      @store_path = File.join('/tmp/vagabond-solos', directory.gsub(%r{[^0-9a-zA-Z]}, '-'), 'Vagabondfile').sub('-', '/')
+      FileUtils.mkdir_p(File.dirname(@store_path))
+      @store_path
     end
 
     def store_path
