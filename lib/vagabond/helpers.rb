@@ -69,7 +69,7 @@ module Vagabond
         send(@action)
       else
         ui.error "Invalid action received: #{@action}"
-        exit EXIT_CODES[:invalid_action]
+        raise VagabondError::InvalidAction.new(@action)
       end
     end
 

@@ -18,20 +18,4 @@ module Vagabond
     :destroyed => :red,
     :kitchen => [:cyan, :bold]
   )
-  
-  EXIT_CODES = Mash.new(
-    :success => 0,
-    :reserved_name => 1,
-    :invalid_name => 2,
-    :invalid_base_template => 3,
-    :invalid_action => 4,
-    :invalid_template => 5,
-    :kitchen_missing_yml => 6,
-    :kitchen_no_cookbook_arg => 7,
-    :kitchen_too_many_args => 8,
-    :kitchen_invalid_platform => 9,
-    :missing_node_name => 10,
-    :cluster_invalid => 11,
-    :kitchen_test_failed => 12
-  )
 end

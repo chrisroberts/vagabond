@@ -90,7 +90,7 @@ module Vagabond
         ui.info ui.color("  -> Cluster Testing #{cluster_name}!", :yellow)
         if(kitchen.clusters.empty? || kitchen.clusters[cluster_name].nil?)
           ui.fatal "Requested cluster is not defined: #{options[:cluster]}"
-          exit EXIT_CODES[:cluster_invalid]
+          raise VagabondError::ClusterInvalid.new(cluster_name)
         end
         serv = Server.new
         if(@solo && serv.vagabondfile[:local_chef_server].empty?)
@@ -136,7 +136,7 @@ module Vagabond
           ui.info "    Suite: #{res[:suite_name]} -> #{res[:result] ? ui.color('SUCCESS!', :green) : ui.color('FAILED!', :red)}"
         end
       end
-      exit EXIT_CODES[:kitchen_test_failed] if infos.detect{|res| !res[:result]}
+      raise KitchenTestFailed.new(infos.map{|res| res[:suite_name] unless res[:result]}.compact)
     end
 
     desc 'status [NAME]', 'Show test node status'
@@ -384,7 +384,7 @@ module Vagabond
       unless(platform_map[plat])
         ui.fatal "Requested platform does not exist: #{ui.color(plat, :red)}"
         ui.info "  -> Available platforms: #{platform_map.keys.sort.join(', ')}"
-        exit EXIT_CODES[:kitchen_invalid_platform]
+        raise VagabondError::KitchenInvalidPlatform.new(plat)
       end
     end
   end

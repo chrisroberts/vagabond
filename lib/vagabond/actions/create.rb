@@ -23,7 +23,7 @@ module Vagabond
           tmpl = internal_config[:template_mappings][tmpl]
         elsif(!BASE_TEMPLATES.include?(tmpl))
           ui.fatal "Template requested for node does not exist: #{tmpl}"
-          exit EXIT_CODES[:invalid_template]
+          raise VagabondError::InvalidTemplate.new(tmpl)
         end
         unless(config[:device])
           config[:directory] = true

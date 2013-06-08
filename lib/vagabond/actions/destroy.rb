@@ -2,9 +2,38 @@ module Vagabond
   module Actions
     module Destroy
 
+      class << self
+        def included(klass)
+          klass.class_eval do
+            class << self
+              def _cluster_options
+                [
+                  [
+                    :cluster, :type => :boolean,
+                    :desc => 'Destroy cluster of nodes with provided name', :default => false
+                  ]
+                ]
+              end
+            end
+          end
+        end
+      end
+
+      
       def _destroy
         name_required!
-        [name, @leftover_args].flatten.compact.each do |n|
+        if(options[:cluster])
+          nodes = vagabondfile[:clusters][name] if vagabondfile[:clusters]
+          if(nodes)
+            ui.info "#{ui.color('Vagabond:', :bold)} Destroying cluster - #{ui.color(name, :red)}"
+          else
+            ui.error "Cluster name provided does not exist: #{name}"
+            nodes = []
+          end
+        else
+          nodes = [name, @leftover_args].flatten.compact
+        end
+        nodes.each do |n|
           next unless n.is_a?(String)
           @name = n
           load_configurations

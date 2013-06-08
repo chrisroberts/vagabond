@@ -1,3 +1,33 @@
+
+# TODO: Move this to lxc cookbook proper at some point
+=begin
+dpkg_autostart 'lxc' do
+  allow false
+end
+
+dpkg_autostart 'lxc-net' do
+  allow false
+end
+=end
+# Start at 0 and increment up if found
+unless(node[:network][:interfaces][:lxcbr0])
+  node.default[:vagabond][:lxc_network][:oct] = node.network.interfaces.map do |name, val|
+    Array(val[:routes]).map do |route|
+      if(route['family'] == 'inet')
+        route[:destination].split('/').first.split('.')[3].to_i
+      end
+    end
+  end.compact.max + 1
+
+  # Test for existing bridge. Use different subnet if found
+  l_net = "10.0.#{node[:vagabond][:lxc_network][:oct]}"
+
+  node.set[:lxc][:addr] = "#{l_net}.1"
+  node.set[:lxc][:network] = "#{l_net}.0/24"
+  node.set[:lxc][:dhcp_range] = "#{l_net}.2,#{l_net}.199"
+  node.set[:lxc][:dhcp_max] = '199'
+end
+
 include_recipe 'lxc'
 
 ruby_block 'LXC template: lxc-centos' do

@@ -115,7 +115,7 @@ module Vagabond
       setup_ui
       ui.info "#{ui.color('Vagabond:', :yellow, :bold)} - Advocating idleness and work-shyness"
       ui.info "  #{ui.color('Version:', :blue)} - #{VERSION.version} (#{VERSION.codename})"
-      exit EXIT_CODES[:success]
+      exit
     end
     
     def execute
@@ -140,7 +140,7 @@ module Vagabond
     def name_required!
       unless(name)
         ui.fatal "Node name is required!"
-        exit EXIT_CODES[:missing_node_name]
+        raise VagabondError::MissingNodeName.new
       end
     end
 
@@ -182,12 +182,12 @@ module Vagabond
       if(name.to_s == 'server')
         ui.fatal "RESERVED node name supplied: #{ui.color(name, :red)}"
         ui.info ui.color("  -> Try: vagabond server #{@action}", :cyan)
-        exit EXIT_CODES[:reserved_name]
+        raise VagabondError::ReservedName.new(name)
       end
       if(name && config.nil? && !options[:disable_name_validate])
         ui.fatal "Invalid node name supplied: #{ui.color(name, :red)}"
         ui.info ui.color("  -> Available: #{vagabondfile[:nodes].keys.sort.join(', ')}", :cyan)
-        exit EXIT_CODES[:invalid_name]
+        raise VagabondError::InvalidName.new(name)
       end
     end
     

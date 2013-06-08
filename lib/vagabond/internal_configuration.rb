@@ -120,7 +120,7 @@ module Vagabond
         else
           ui.fatal "Invalid base template encountered: #{t_name}"
           ui.info ui.color("  -> Valid base templates: #{BASE_TEMPLATES.sort.join(', ')}", :red)
-          exit EXIT_CODES[:invalid_base_template]
+          raise VagabondError::InvalidBaseTemplate.new(t_name)
         end
       end
       File.open(dna_path, 'w') do |file|
@@ -197,7 +197,7 @@ module Vagabond
         ui.info e.to_s
         FileUtils.rm(solo_path)
         ui.info ui.color('  -> FAILED!', :red, :bold)
-        exit # TODO: Make better
+        raise VagabondError::HostProvisionFailed.new(e)
       end
     end
 
