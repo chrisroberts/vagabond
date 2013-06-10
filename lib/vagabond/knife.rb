@@ -34,9 +34,9 @@ module Vagabond
           end
         end
       end
-      # TODO Need to add shellwords escaping in here since this breaks
-      # quoted stuff in annoying ways (like doing searches)
-      exec("knife #{[command, args].flatten.compact.join(' ')} #{options[:knife_opts]}")
+      require 'shellwords' unless defined?(Shellwords)
+      command_string = Shellwords.escape([command, args].flatten.compact.join(' '))
+      exec("knife #{command_string} #{options[:knife_opts]}")
     end
   end
 end
