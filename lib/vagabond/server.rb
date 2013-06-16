@@ -162,8 +162,9 @@ module Vagabond
       berk_uploader = Uploader::Berkshelf.new(
         vagabondfile.directory, options.merge(
           :ui => ui,
-          :berksfile => File.join(vagabondfile.directory, 'Berksfile'),
-          :chef_server_url => options[:knife_opts].to_s.split(' ').last
+          :berksfile => File.join(vagabondfile.directory, vagabondfile[:local_chef_server][:berkshelf][:path] || 'Berksfile'),
+          :chef_server_url => options[:knife_opts].to_s.split(' ').last,
+          :berks_opts => vagabondfile[:local_chef_server][:berkshelf][:options]
         )
       )
       berk_uploader.upload

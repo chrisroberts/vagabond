@@ -34,7 +34,7 @@ module Vagabond
         prepare unless args.include?(:no_prepare)
         com = "berks upload -b #{options[:berksfile]} -c #{File.join(store, 'berks.json')}#{" #{Array(options[:berks_opts]).join(' ')}"}"
         debug(com)
-        cmd = Mixlib::ShellOut.new(com, :live_stream => options[:debug])
+        cmd = Mixlib::ShellOut.new(com, :live_stream => options[:debug], :env => {'HOME' => ENV['HOME']})
         cmd.run_command
         cmd.error!
       end

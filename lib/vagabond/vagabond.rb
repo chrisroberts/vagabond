@@ -3,7 +3,7 @@ require 'chef/knife/core/ui'
 require 'vagabond/uploader'
 require File.join(File.dirname(__FILE__), 'cookbooks/lxc/libraries/lxc.rb')
 
-%w(vagabondfile internal_configuration helpers).each do |dep|
+%w(constants errors vagabondfile internal_configuration helpers).each do |dep|
   require "vagabond/#{dep}"
 end
 
