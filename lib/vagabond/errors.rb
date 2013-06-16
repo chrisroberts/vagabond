@@ -13,7 +13,7 @@ module Vagabond
         kitchen_invalid_platform missing_node_name cluster_invalid
         kitchen_test_failed host_provision_failed
     ).each_with_index do |klass_name, i|
-      klass = klass_name.split('_').map(&:capitalize)
+      klass = klass_name.split('_').map(&:capitalize).join
       self.class_eval("class #{klass} < VagabondError; self.exit_code = #{i + 1}; end")
     end
   end
