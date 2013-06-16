@@ -5,7 +5,7 @@ require 'kitchen/busser'
 require 'kitchen/loader/yaml'
 require 'vagabond/monkey/kitchen_config'
 
-%w(helpers vagabondfile vagabond server helpers/cheffile_loader actions/status).each do |dep|
+%w(constants errors helpers vagabondfile vagabond server helpers/cheffile_loader actions/status).each do |dep|
   require "vagabond/#{dep}"
 end
 
