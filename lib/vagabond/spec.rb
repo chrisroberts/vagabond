@@ -64,7 +64,9 @@ module Vagabond
     protected
 
     def make_spec_directory
-      FileUtils.mkdir_p(spec_directory)
+      %w(role recipe).each do |leaf|
+        FileUtils.mkdir_p(File.join(spec_directory, leaf))
+      end
     end
 
     def spec_directory
@@ -79,14 +81,15 @@ module Vagabond
     def write_default_file(file)
       write = true
       if(File.exists?(path = File.join(spec_directory, file)))
+        answer = ''
         until(%w(y n).include?(answer))
-          answer = ui.ask_question("Overwrite existing #{file}", :default => 'y').downcase
+          answer = ui.ask_question("Overwrite existing #{file} ", :default => 'y').downcase
         end
         write = answer == 'y'
       end
       if(write)
         File.open(path, 'w') do |file|
-          file.write self.class.const_get("CONTENT_DEFAULT_#{file.upcase}")
+          file.write self.class.const_get("CONTENT_DEFAULT_#{File.basename(path).upcase}")
         end
         ui.info "New file has been written: #{file}"
       else
