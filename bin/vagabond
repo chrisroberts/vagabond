@@ -4,6 +4,7 @@ Signal.trap('INT'){ exit 255 }
 
 require 'rubygems'
 require 'vagabond'
+require 'vagabond/errors'
 
 if(ARGV.include?('--version') || ARGV.include?('-v'))
   require 'vagabond/vagabond'
@@ -22,22 +23,6 @@ elsif(%w(help --help -h).include?(ARGV.first))
     Vagabond.const_get(key.capitalize).start
   end
 else
-  unless(Process.uid == 0 || ARGV.first == 'init')
-    require 'vagabond/vagabondfile'
-    vagabondfile = Vagabond::Vagabondfile.new(nil, :allow_missing)
-    command = []
-    sudo = vagabondfile[:sudo]
-    unless(sudo == false)
-      command.push sudo.is_a?(String) ? sudo : 'sudo'
-    end
-    if(defined?(Bundler))
-      command << 'bundle exec'
-    end
-    command << $PROGRAM_NAME.sub(Dir.pwd, '')
-    command += ARGV
-    exec(command.join(' '))
-  end
-
   begin
     case arg = ARGV.shift
     when 'server'
@@ -58,7 +43,10 @@ else
       ARGV.unshift(arg)
       Vagabond::Vagabond
     end.start
-  rescue VagabondError => e
+  rescue Vagabond::VagabondError => e
     exit e.exit_code
+  rescue Exception => e
+    $stderr.puts "UNEXPECTED ERROR: #{e}"
+    exit -1
   end
 end
