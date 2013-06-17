@@ -15,18 +15,15 @@ module Vagabond
       end
 
       def prepare
-        File.open(File.join(store, 'Cheffile'), 'w') do |file|
-          file.puts File.read(options[:cheffile])
-          file.puts "cookbook 'minitest-handler'"
-        end
-        com = "librarian-chef update"
+        com = "librarian-chef install --path=#{store}"
         debug(com)
         cmd = Mixlib::ShellOut.new(com,
           :live_stream => options[:debug],
-          :cwd => store
+          :cwd => File.dirname(options[:cheffile])
         )
         cmd.run_command
         cmd.error!
+        options[:cookbook_paths] = [store]
       end
       
     end
