@@ -40,7 +40,7 @@ module Vagabond
     end
     
     def generated_name(n=nil)
-      seed = Dir.pwd.chars.map(&:ord).inject(&:+)
+      seed = vagabondfile.directory.chars.map(&:ord).inject(&:+)
       srand(seed)
       n = name unless n
       if(@_gn.nil? || @_gn[n].nil?)
