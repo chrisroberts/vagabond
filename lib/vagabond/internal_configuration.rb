@@ -25,7 +25,8 @@ module Vagabond
         :mappings => Mash.new,
         :template_mappings => Mash.new,
         :test_mappings => Mash.new,
-        :spec_mappings => Mash.new
+        :spec_mappings => Mash.new,
+        :spec_clusters => Mash.new
       ).merge(config)
       @force_bases = args[:force_bases] || []
       ensure_state
