@@ -13,17 +13,18 @@ module Vagabond
     def base_setup
       @options = options.dup
       @vagabondfile = Vagabondfile.new(options[:vagabond_file], :allow_missing)
-      Lxc.use_sudo = @vagabondfile[:sudo].nil? ? true : @vagabondfile[:sudo]
+      Lxc.use_sudo = sudo
+      options[:sudo] = sudo
       setup_ui
       @internal_config = InternalConfiguration.new(@vagabondfile, ui, options)
     end
     
     def sudo
-      case @vagabondfile[:sudo]
+      case vagabondfile[:sudo]
       when FalseClass
         ''
       when String
-        "#{@vagabondfile[:sudo]} "
+        "#{vagabondfile[:sudo]} "
       else
         'sudo '
       end
