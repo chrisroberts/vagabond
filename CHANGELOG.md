@@ -1,3 +1,19 @@
+## v0.2.4
+* Migration to elecksee gem for LXC management
+* Addition of chef-zero support for local chef server
+* Updated testing for standalone cookbook testing
+* Updated support for dependency resolvers (librarian and berkshelf)
+* Addition of `spec` support
+* Better isolation around sudo usage
+* Cleaned `internal_configuration` and added automatic reloading on detected changes
+* Added `cluster` support to Vagabondfile for easily building multiple nodes
+* New `init` command for base setup
+* Lots and lots of bug fixes and feature enhancements
+* Huge thanks to all those that helped test, debug, and add features especially:
+  * Jesse Nelson - https://github.com/spheromak
+  * Bryan Berry - https://github.com/bryanwb
+  * Sean Escriva - https://github.com/webframp
+
 ## v0.2.2
 * Output relevant information on bad command (thanks [Xabier de Zuazo](https://github.com/zuazo))
 

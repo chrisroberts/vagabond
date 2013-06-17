@@ -277,6 +277,12 @@ get help making things better!
 * Base updates and pull requests on the `develop` branch
 * Please don't update core files like `version.rb` or `vagabond.gemspec`
 
+## Contributors
+
+* {Bryan Berry}[https://github.com/bryanwb]
+* {Jesse Nelson}[https://github.com/spheromak]
+* {Sean Escriva}[https://github.com/webframp]
+
 ## Infos
 
 * Repository: https://github.com/chrisroberts/vagabond
