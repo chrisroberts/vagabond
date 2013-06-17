@@ -20,4 +20,5 @@ Gem::Specification.new do |s|
   s.add_dependency 'thor'
   s.add_dependency 'uuidtools'
   s.add_dependency 'elecksee', '>= 1.0.3'
+  s.add_dependency 'serverspec'
 end
