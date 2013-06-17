@@ -279,9 +279,10 @@ get help making things better!
 
 ## Contributors
 
-* {Bryan Berry}[https://github.com/bryanwb]
-* {Jesse Nelson}[https://github.com/spheromak]
-* {Sean Escriva}[https://github.com/webframp]
+* [Bryan Berry](https://github.com/bryanwb)
+* [Jesse Nelson](https://github.com/spheromak)
+* [Sean Escriva](https://github.com/webframp)
+* [Xabier de Zuazo](https://github.com/zuazo)
 
 ## Infos
 
