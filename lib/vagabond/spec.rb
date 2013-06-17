@@ -34,15 +34,39 @@ module Vagabond
       :type => :string,
       :desc => 'Specify environment to restrict node detection'
     )
+    method_option(:auto_destroy,
+      :type => :boolean,
+      :desc => 'Automatically destroy created nodes after spec tests (not valid with --irl)',
+      :default => true
+    )
     desc 'start [CLUSTER]', 'Run specs for cluster'
     def start(cluster=nil)
       @options = options.dup
       setup_ui(nil, :no_class_set)
-      if(options[:irl])
-        irl_spec(cluster)
-      else
-        cluster_spec(cluster)
+      error = nil
+      begin
+        if(options[:irl])
+          irl_spec(cluster)
+        else
+          cluster_spec(cluster)
+        end
+      rescue => error
+      ensure
+        cluster_destroy(cluster) if options[:auto_destroy] && !options[:irl]
+        result = error ? ui.color('FAILED', :red, :bold) : ui.color('PASSED', :green, :bold)
+        ui.info "--> Specs for cluster #{cluster}: #{result}"
+        raise VagabondError::SpecFailed.new(error) if error
       end
+    end
+    
+    method_option(:node,
+      :type => :string,
+      :desc => 'Destroy named node within cluster cluster'
+    )
+    desc 'destroy NAME', 'Destroy the given cluster/node'
+    def destroy(cluster)
+      base_setup
+      options[:node] ? node_destroy(cluster, options[:node]) : cluster_destroy(cluster)
     end
 
     desc 'status [NAME]', 'Show status of existing nodes'
@@ -63,6 +87,20 @@ module Vagabond
     
     protected
 
+    def cluster_destroy(cluster)
+      ui.info "#{ui.color('Destroying cluster:', :bold)} #{ui.color(cluster, :red)}"
+      Array(internal_config[:spec_clusters][cluster]).each do |n|
+        node_destroy(cluster, n)
+      end
+      ui.info ui.color(" --> Cluster #{cluster} DESTROYED", :red)
+    end
+
+    def node_destroy(cluster, node_name)
+      v_n = vagabond_instance(:destroy, :cluster => cluster, :name => node_name)
+      v_n.send(:execute)
+      remove_node_from_cluster(cluster, node_name)
+    end
+    
     def make_spec_directory
       %w(role recipe).each do |leaf|
         FileUtils.mkdir_p(File.join(spec_directory, leaf))
@@ -75,7 +113,7 @@ module Vagabond
 
     def populate_spec_directory
       write_default_file('Layout')
-      write_default_file('spec_helper')
+      write_default_file('spec_helper.rb')
     end
 
     def write_default_file(file)
@@ -89,7 +127,7 @@ module Vagabond
       end
       if(write)
         File.open(path, 'w') do |file|
-          file.write self.class.const_get("CONTENT_DEFAULT_#{File.basename(path).upcase}")
+          file.write self.class.const_get("CONTENT_DEFAULT_#{File.basename(path).upcase.sub(%r{\..*$}, '')}")
         end
         ui.info "New file has been written: #{file}"
       else
@@ -147,7 +185,7 @@ module Vagabond
     def cluster_spec(cluster)
       @options[:auto_provision] = true
       options[:sudo] = sudo
-~      Lxc.use_sudo = vagabondfile[:sudo].nil? ? true : vagabondfile[:sudo]
+      Lxc.use_sudo = vagabondfile[:sudo].nil? ? true : vagabondfile[:sudo]
       @internal_config = InternalConfiguration.new(vagabondfile, nil, options)
       # First, setup server
       if(vagabondfile[:local_chef_server][:enabled])
@@ -161,13 +199,18 @@ module Vagabond
       default_config = Chef::Mixin::DeepMerge.merge(
         Mash.new(:platform => 'ubuntu_1204'), layout[:defaults]
       )
-      test_nodes = layout[:clusters][cluster][:nodes].map do |node|
+      test_nodes = []
+      layout[:clusters][cluster][:nodes].each_with_index do |node, index|
         config = Chef::Mixin::DeepMerge.merge(default_config, layout[:definitions][node])
         config = Chef::Mixin::DeepMerge.merge(config, layout[:clusters][cluster][:overrides] || {})
-        v_n = vagabond_instance(:up, config[:platform], :base_name => node)
+        v_n = vagabond_instance(:up,
+          :platform => config[:platform],
+          :cluster => cluster,
+          :base_name => "s-#{node}-#{index}"
+        )
         v_n.config = Chef::Mixin::DeepMerge.merge(v_n.config, config)
         v_n.send(:execute)
-        [v_n.name, v_n.lxc.name, config]
+        test_nodes << [v_n.name, v_n.lxc.name, config]
       end
       test_nodes.each do |node|
         name, lxc_name, config = node
@@ -179,7 +222,8 @@ module Vagabond
     def test_node!(name, ip_address, run_list)
       run_list.each do |item|
         r_item = item.is_a?(Chef::RunList::RunListItem) ? item : Chef::RunList::RunListItem.new(item)
-        dir = File.join(File.dirname(vagabondfile.path), "spec/#{r_item.type}/#{r_item.name.sub('::', '_')}")
+        dir = File.join(File.dirname(vagabondfile.path), "spec/#{r_item.type}/#{r_item.name.sub('::', '/')}")
+        dir << '/default' if r_item.type.to_sym == :recipe && !r_item.name.include?('::')
         Dir.glob(File.join(dir, '*.rb')).each do |path|
           com = "#{sudo}VAGABOND_TEST_HOST='#{ip_address}' rspec #{path}"
           debug(com)
@@ -195,29 +239,68 @@ module Vagabond
       @layout = Layout.new(File.dirname(vagabondfile.path))
     end
     
-    def vagabond_instance(action, platform, args={})
+    def vagabond_instance(action, args={})
       @options[:disable_name_validate] = true
       v = Vagabond.new
       v.options = @options
-      v.send(:setup, action, random_name(args[:base_name]),
+      v.send(:setup, action, args[:name] || generated_name(args[:base_name]),
         :ui => ui,
-        :template => platform,
+        :template => args[:platform],
         :disable_name_validate => true,
         :ui => ui
       )
-      v.internal_config.force_bases = platform
-      v.internal_config.ensure_state
+      if(args[:platform])
+        v.internal_config.force_bases = args[:platform]
+        v.internal_config.ensure_state
+      end
       v.mappings_key = :spec_mappings
       v.config = Mash.new(
-        :template => platform,
+        :template => args[:platform],
         :run_list => args[:run_list]
       )
       v.lxc = Lxc.new(
         v.internal_config[v.mappings_key][v.name]
       ) if v.internal_config[v.mappings_key][v.name]
+      add_node_to_cluster(v.name, args[:cluster])
       v
     end
 
+    def _status
+      status = []
+      if(name)
+        clusters = [name]
+      else
+        load_layout
+        clusters = layout[:clusters].keys.sort
+      end
+      clusters.each do |cluster|
+        ui.info "#{ui.color('Status of spec cluster:', :bold)} #{ui.color(cluster, :yellow)}"
+        status = [
+          ui.color('Name', :bold),
+          ui.color('State', :bold),
+          ui.color('PID', :bold),
+          ui.color('IP', :bold)
+        ]
+        Array(internal_config[:spec_clusters][cluster]).sort.each do |n|
+          status += status_for(n)
+        end
+        puts ui.list(status, :uneven_columns_across, 4)
+      end
+    end
+
+    def add_node_to_cluster(node_name, cluster)
+      internal_config[:spec_clusters][cluster] ||= []
+      internal_config[:spec_clusters][cluster] |= [node_name]
+      internal_config.save
+    end
+
+    def remove_node_from_cluster(cluster, node_name)
+      internal_config[:spec_clusters][cluster] ||= []
+      internal_config[:spec_clusters][cluster] -= [node_name]
+      internal_config[mappings_key].delete(node_name)
+      internal_config.save
+    end
+    
     CONTENT_DEFAULT_LAYOUT = <<-EOF
 {
   :defaults => {
