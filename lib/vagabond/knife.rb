@@ -34,8 +34,10 @@ module Vagabond
           end
         end
       end
-      require 'shellwords' unless defined?(Shellwords)
-      command_string = Shellwords.escape([command, args].flatten.compact.join(' '))
+      command_string = [command, args.map{|s| "'#{s}'"}].flatten.compact.join(' ')
+      if(ENV['VAGABOND_KNIFE_DEBUG'])
+        puts "knife #{command_string} #{options[:knife_opts]}"
+      end
       exec("knife #{command_string} #{options[:knife_opts]}")
     end
   end
