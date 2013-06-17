@@ -59,9 +59,10 @@ module Vagabond
 
     def generate_store_path
       @path ||= File.expand_path(File.join(Dir.pwd, 'Vagabondfile'))
-      @store_path = File.join('/tmp/vagabond-solos', directory.gsub(%r{[^0-9a-zA-Z]}, '-'), 'Vagabondfile').sub('-', '/')
+      @store_path = File.join('/tmp/vagabond-solos', directory.gsub(%r{[^0-9a-zA-Z]}, '-'), 'Vagabondfile')
+      @store_path = File.expand_path(@store_path.gsub('-', '/'))
       FileUtils.mkdir_p(File.dirname(@store_path))
-      @store_path
+      File.dirname(@store_path)
     end
 
     def store_path
