@@ -50,6 +50,7 @@ module Vagabond
           :local_chef_server => {
             :zero => false,
             :berkshelf => false,
+            :librarian => false,
             :enabled => false,
             :auto_upload => true
           },
