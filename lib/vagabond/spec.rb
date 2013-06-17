@@ -324,12 +324,9 @@ require 'serverspec'
 require 'pathname'
 require 'net/ssh'
 
+include Serverspec::Helper::Ssh
+
 RSpec.configure do |c|
-  # Include backend helper
-  c.include(Serverspec::Helper::Ssh)
-  # Add SSH before hook in case you use the SSH backend
-  # (not required for the Exec backend)
-  c.include(Serverspec::Helper::DetectOS)
   c.before do
     host = ENV['VAGABOND_TEST_HOST']
     if(c.host != host)
@@ -337,7 +334,6 @@ RSpec.configure do |c|
       c.host = host
       options = Net::SSH::Config.for(c.host)
       c.ssh = Net::SSH.start(c.host, 'root', options.update(:keys => ['/opt/hw-lxc-config/id_rsa']))
-      c.os = backend(Serverspec::Commands::Base).check_os
     end
   end
 end
