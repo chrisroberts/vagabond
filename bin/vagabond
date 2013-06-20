@@ -9,7 +9,7 @@ require 'vagabond/errors'
 if(ARGV.include?('--version') || ARGV.include?('-v'))
   require 'vagabond/vagabond'
   Vagabond::Vagabond.new.send(:version)
-elsif(%w(help --help -h).include?(ARGV.first))
+elsif(%w(help --help -h).include?(ARGV.first) && ARGV.size == 1)
   puts "-- Vagabond --\n"
   require 'vagabond/vagabond'
   Object.send(:remove_const, :ARGV)
