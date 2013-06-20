@@ -6,7 +6,7 @@ module Vagabond
         def included(klass)
           klass.class_eval do
             class << self
-              def _cluster_options
+              def _destroy_options
                 [
                   [
                     :cluster, :type => :boolean,
@@ -18,7 +18,6 @@ module Vagabond
           end
         end
       end
-
       
       def _destroy
         name_required!
