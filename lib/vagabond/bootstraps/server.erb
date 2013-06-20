@@ -1,8 +1,8 @@
 bash -c '
 apt-get install -y -q wget
 mkdir -p /var/chef/cache /var/chef/cookbooks/chef-server /var/chef/cookbooks/chef-server-populator
-wget -qO- https://github.com/opscode-cookbooks/chef-server/archive/master.tar.gz | tar xvzC /var/chef/cookbooks/chef-server --strip-components=1
-wget -qO- https://github.com/hw-cookbooks/chef-server-populator/tarball/master | tar xvzC /var/chef/cookbooks/chef-server-populator --strip-components=1
+wget --no-check-certificate -qO- https://github.com/opscode-cookbooks/chef-server/archive/master.tar.gz | tar xvzC /var/chef/cookbooks/chef-server --strip-components=1
+wget --no-check-certificate -qO- https://github.com/hw-cookbooks/chef-server-populator/tarball/master | tar xvzC /var/chef/cookbooks/chef-server-populator --strip-components=1
 
 mkdir -p /tmp/chef-server-setup
 (
