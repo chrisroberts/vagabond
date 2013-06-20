@@ -1,3 +1,8 @@
+## v0.2.4
+* Use correct sudo within provision action
+* Fix options helper in `destroy` (implicitly fixes `cluster` options)
+* Only print full help if help is the only argument received
+
 ## v0.2.2
 * Migration to elecksee gem for LXC management
 * Addition of chef-zero support for local chef server
