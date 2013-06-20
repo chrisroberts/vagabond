@@ -10,7 +10,7 @@ end
 dpkg_autostart 'lxc-net' do
   allow false
 end
-=end
+
 # Start at 0 and increment up if found
 unless(node[:network][:interfaces][:lxcbr0])
   max = node.network.interfaces.map do |name, val|
@@ -31,6 +31,7 @@ unless(node[:network][:interfaces][:lxcbr0])
   node.set[:lxc][:dhcp_range] = "#{l_net}.2,#{l_net}.199"
   node.set[:lxc][:dhcp_max] = '199'
 end
+=end
 
 include_recipe 'lxc'
 
