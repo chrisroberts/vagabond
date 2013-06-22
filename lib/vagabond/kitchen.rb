@@ -136,7 +136,7 @@ module Vagabond
           ui.info "    Suite: #{res[:suite_name]} -> #{res[:result] ? ui.color('SUCCESS!', :green) : ui.color('FAILED!', :red)}"
         end
       end
-      raise KitchenTestFailed.new(infos.map{|res| res[:suite_name] unless res[:result]}.compact)
+      raise VagabondError::KitchenTestFailed.new(results.values.flatten.map{|res| res[:suite_name] unless res[:result]}.compact)
     end
 
     desc 'status [NAME]', 'Show test node status'
@@ -189,6 +189,7 @@ module Vagabond
       @solo = name.to_s.strip.empty?
       @options = options.dup
       @vagabondfile = Vagabondfile.new(options[:vagabond_file], :allow_missing)
+      base_setup
       setup_ui
       @internal_config = InternalConfiguration.new(@vagabondfile, ui, options)
       @name = name || action == :status ? name : discover_name
@@ -223,7 +224,7 @@ module Vagabond
 
     def write_solo_config(dir)
       File.open(File.join(dir, 'solo.rb'), 'w') do |file|
-        file.write("cookbook_path '#{File.join(dir, 'cookbooks')}'\n")
+        file.write("cookbook_path '#{File.join(vagabondfile.store_directory, 'cookbooks')}'\n")
       end
     end
 
@@ -288,12 +289,13 @@ module Vagabond
     def librarian_vendor
       ui.info 'Cookbooks being vendored with librarian'
       unless(File.exists?(cheffile = File.join(vagabondfile.directory, 'Cheffile')))
-        File.open(cheffile = vagabond.generate_store_path, 'w') do |file|
+        File.open(cheffile = File.join(vagabondfile.generate_store_path, 'Cheffile'), 'w') do |file|
           file.write custom_cheffile
         end
       end
       librarian_uploader = Uploader::Librarian.new(
-        vagabondfile.generate_store_path, options.merge(
+        File.join(vagabondfile.generate_store_path, 'cookbooks'),
+        options.merge(
           :ui => ui,
           :cheffile => cheffile
         )
@@ -327,6 +329,8 @@ module Vagabond
         :disable_name_validate => true,
         :ui => ui
       )
+      v.vagabondfile = vagabondfile
+      v.vagabondfile.generate_store_path
       v.internal_config.force_bases = platform_map[platform][:template]
       v.internal_config.ensure_state
       v.mappings_key = :test_mappings
