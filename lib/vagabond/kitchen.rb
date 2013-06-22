@@ -84,7 +84,7 @@ module Vagabond
       setup(cookbook, :test)
 
       ui.info "#{ui.color('Vagabond:', :bold)} - Kitchen testing for cookbook #{ui.color(name, :cyan)}"
-      results = Mash.new
+      @results = Mash.new
       platforms = [options[:platform] || platform_map.keys].flatten
       if(cluster_name = options[:cluster])
         ui.info ui.color("  -> Cluster Testing #{cluster_name}!", :yellow)
@@ -105,8 +105,8 @@ module Vagabond
             suites.each do |suite_name|
               res = self.send("#{action}_node", platform, suite_name)
               if(action == 'test')
-                results[platform] ||=[]
-                results[platform] << {
+                @results[platform] ||=[]
+                @results[platform] << {
                   :suite_name => suite_name,
                   :result => res
                 }
@@ -116,27 +116,43 @@ module Vagabond
         end
         serv.destroy
       else
-        suites = options[:suites] ? options[:suites].split(',') : ['default']
+        suites = options[:suites] ? options[:suites].split(',') : kitchen.suites.map(&:name)
+        @results = Hash[*platforms.zip([[]] * platforms.size).flatten(1)]
+        runners = []
         platforms.each do |platform|
           suites.each do |suite_name|
-            provision_node(platform, suite_name)
-            results[platform] ||= []
-            results[platform] << {
-              :suite_name => suite_name,
-              :result => test_node(platform, suite_name)
-            }
-            destroy_node(platform, suite_name)
+            runner = lambda do
+              provision_node(platform, suite_name)
+              @results[platform] << {
+                :suite_name => suite_name,
+                :result => test_node(platform, suite_name)
+              }
+              destroy_node(platform, suite_name)
+            end
+            if(options[:parallel])
+              runners << runner.call
+            else
+              runner.call
+            end
+          end
+        end
+        if(options[:parallel])
+          until(runners.empty?)
+            runners.each do |runner|
+              runner.join
+              runners.delete(runner)
+            end
           end
         end
       end
       ui.info ui.color('Kitchen Test Results:', :bold)
-      results.each do |platform, infos|
+      @results.each do |platform, infos|
         ui.info "  Platform: #{ui.color(platform, :blue, :bold)}"
         infos.each do |res|
           ui.info "    Suite: #{res[:suite_name]} -> #{res[:result] ? ui.color('SUCCESS!', :green) : ui.color('FAILED!', :red)}"
         end
       end
-      raise VagabondError::KitchenTestFailed.new(results.values.flatten.map{|res| res[:suite_name] unless res[:result]}.compact)
+      raise VagabondError::KitchenTestFailed.new(@results.values.flatten.map{|res| res[:suite_name] unless res[:result]}.compact)
     end
 
     desc 'status [NAME]', 'Show test node status'
@@ -283,7 +299,7 @@ module Vagabond
           :chef_server_url => options[:knife_opts].to_s.split(' ').last
         )
       )
-      berk_uploader.upload
+      berk_uploader.prepare
     end
 
     def librarian_vendor
@@ -294,7 +310,7 @@ module Vagabond
         end
       end
       librarian_uploader = Uploader::Librarian.new(
-        File.join(vagabondfile.generate_store_path, 'cookbooks'),
+        vagabondfile.generate_store_path,
         options.merge(
           :ui => ui,
           :cheffile => cheffile
