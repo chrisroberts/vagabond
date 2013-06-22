@@ -30,7 +30,7 @@ module Vagabond
         end
         config[:daemon] = true
         config[:original] = tmpl
-        config[:bind] = File.expand_path(File.dirname(vagabondfile.store_path))
+        config[:bind] = File.expand_path(vagabondfile.store_directory)
         ephemeral = Lxc::Ephemeral.new(config)
         ephemeral.start!(:fork)
         e_name = ephemeral.name
