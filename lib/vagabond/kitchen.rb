@@ -84,6 +84,7 @@ module Vagabond
       setup(cookbook, :test)
 
       ui.info "#{ui.color('Vagabond:', :bold)} - Kitchen testing for cookbook #{ui.color(name, :cyan)}"
+      load_cookbooks
       @results = Mash.new
       platforms = [options[:platform] || platform_map.keys].flatten
       if(cluster_name = options[:cluster])
@@ -130,7 +131,7 @@ module Vagabond
               destroy_node(platform, suite_name)
             end
             if(options[:parallel])
-              runners << runner.call
+              runners << Thread.new{ runner.call }
             else
               runner.call
             end
@@ -180,8 +181,8 @@ module Vagabond
       ui.info ui.color("  -> Provisioning suite #{suite_name} on platform: #{platform}", :cyan)
       v_inst = vagabond_instance(:create, platform, :suite_name => suite_name)
       v_inst.send(:execute)
-      solo_path = configure_for(v_inst.name, platform, suite_name, run_list, :dna, :cookbooks)
-      v_inst.send(:provision_solo, solo_path)
+      directory = configure_for(v_inst.name, platform, suite_name, run_list, :dna)
+      v_inst.send(:provision_solo, directory)
     end
 
     def test_node(platform, suite_name)
@@ -232,9 +233,12 @@ module Vagabond
       dir = File.join(File.dirname(vagabondfile.store_path), ".vagabond/node_configs/#{l_name}")
       FileUtils.mkdir_p(dir)
       _args = [args.include?(:integration) ? :integration : nil].compact
-      write_dna(l_name, suite_name, dir, platform, runlist, *_args) if args.include?(:dna)
-      load_cookbooks(l_name, suite_name, dir, platform, runlist, *_args) if args.include?(:cookbooks)
-      write_solo_config(dir) if args.include?(:cookbooks) && !args.include?(:integration)
+      if(args.include?(:dna))
+        write_dna(l_name, suite_name, dir, platform, runlist, *_args)
+      end
+      if(args.include?(:cookbooks) && !args.include?(:integration))
+        write_solo_config(dir, l_name)
+      end
       dir
     end
 
@@ -242,6 +246,7 @@ module Vagabond
       File.open(File.join(dir, 'solo.rb'), 'w') do |file|
         file.write("cookbook_path '#{File.join(vagabondfile.store_directory, 'cookbooks')}'\n")
       end
+      dir
     end
 
     def write_dna(l_name, suite_name, dir, platform, runlist, *args)
@@ -253,9 +258,10 @@ module Vagabond
         dna.merge!(suite.attributes)
       end
       dna[:run_list] = runlist
-      File.open(File.join(dir, 'dna.json'), 'w') do |file|
+      File.open(path = File.join(dir, "#{l_name}-dna.json"), 'w') do |file|
         file.write(JSON.dump(dna))
       end
+      path
     end
 
     def cookbook_path
@@ -282,7 +288,7 @@ module Vagabond
       contents.join("\n")
     end
 
-    def load_cookbooks(l_name, suite_name, dir, platform, runlist, *_args)
+    def load_cookbooks(*args)
       if(File.exists?(File.join(vagabondfile.directory, 'Berksfile')))
         berks_vendor
       else
