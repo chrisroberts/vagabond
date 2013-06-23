@@ -144,11 +144,11 @@ module Vagabond
       end
     end
 
-    def provision_solo(path)
+    def provision_solo(dir)
       ui.info "#{ui.color('Vagabond:', :bold)} Provisioning node: #{ui.color(name, :magenta)}"
       lxc.container_ip(20) # force wait for container to appear and do so quietly
       direct_container_command(
-        "chef-solo -c #{File.join(path, 'solo.rb')} -j #{File.join(path, 'dna.json')}",
+        "chef-solo -c #{File.join(dir, 'solo.rb')} -j #{File.join(dir, 'dna.json')}",
         :live_stream => STDOUT
       )
     end
