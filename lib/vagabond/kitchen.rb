@@ -84,10 +84,9 @@ module Vagabond
       setup(cookbook, :test)
 
       ui.info "#{ui.color('Vagabond:', :bold)} - Kitchen testing for cookbook #{ui.color(name, :cyan)}"
-      load_cookbooks
-      @results = Mash.new
       platforms = [options[:platform] || platform_map.keys].flatten
-      if(cluster_name = options[:cluster])
+      @results = Mash[*platforms.zip([[]] * platforms.size).flatten(1)]
+      if(cluster_name = options.delete(:cluster))
         ui.info ui.color("  -> Cluster Testing #{cluster_name}!", :yellow)
         if(kitchen.clusters.empty? || kitchen.clusters[cluster_name].nil?)
           ui.fatal "Requested cluster is not defined: #{options[:cluster]}"
@@ -97,28 +96,41 @@ module Vagabond
         if(@solo && serv.vagabondfile[:local_chef_server].empty?)
           serv.vagabondfile[:local_chef_server].update(:enabled => true, :zero => true)
         end
-        serv.options = options
+        internal_config.make_knife_config_if_required(:force)
+        serv.options = options.update(:auto_upload => false)
         serv.send(:do_create)
-        serv.auto_upload # upload everything : make optional?
-        suites = kitchen.clusters[options[:cluster]]
+        load_cookbooks(:upload)
+        suites = kitchen.clusters[cluster_name]
         platforms.each do |platform|
-          %w(local_server_provision test destroy).each do |action|
+          begin
             suites.each do |suite_name|
-              res = self.send("#{action}_node", platform, suite_name)
-              if(action == 'test')
-                @results[platform] ||=[]
+              unless(local_server_provision_node(platform, suite_name))
+                ui.error "Failed to provision #{suite_name} in platform #{platform}"
                 @results[platform] << {
                   :suite_name => suite_name,
-                  :result => res
-                }
+                  :result => false
+                } 
+                raise VagabondError::HostProvisionFailed.new("#{platform}[#{suite_name}]")
               end
+            end
+            suites.each do |suite_name|
+              @results[platform] << {
+                :suite_name => suite_name,
+                :result => test_node(platform, suite_name)
+              }
+            end
+          rescue VagabondError::HostProvisionFailed => e
+            debug("Caught failed provision error. Scrubbing nodes. - #{e}")
+          ensure
+            suites.each do |suite_name|
+              destroy_node(platform, suite_name)
             end
           end
         end
         serv.destroy
       else
+        load_cookbooks
         suites = options[:suites] ? options[:suites].split(',') : kitchen.suites.map(&:name)
-        @results = Hash[*platforms.zip([[]] * platforms.size).flatten(1)]
         runners = []
         platforms.each do |platform|
           suites.each do |suite_name|
@@ -171,6 +183,7 @@ module Vagabond
     def local_server_provision_node(platform, suite_name)
       run_list = generate_runlist(platform, suite_name)
       v_inst = vagabond_instance(:up, platform, :suite_name => suite_name, :run_list => run_list)
+      v_inst.options[:auto_provision] = true
       raise "ERROR! No local chef!" unless v_inst.options[:knife_opts]
       v_inst.send(:execute)
     end
@@ -290,13 +303,14 @@ module Vagabond
 
     def load_cookbooks(*args)
       if(File.exists?(File.join(vagabondfile.directory, 'Berksfile')))
-        berks_vendor
+        uploader = berks_vendor(args.include?(:upload))
       else
-        librarian_vendor
+        uploader = librarian_vendor(args.include?(:upload))
       end
+      uploader
     end
-          
-    def berks_vendor
+
+    def berks_vendor(upload=false)
       ui.info 'Cookbooks being vendored via berks'
       berk_uploader = Uploader::Berkshelf.new(
         vagabondfile.generate_store_path, options.merge(
@@ -305,10 +319,11 @@ module Vagabond
           :chef_server_url => options[:knife_opts].to_s.split(' ').last
         )
       )
-      berk_uploader.prepare
+      upload ? berk_uploader.upload : berk_uploader.prepare
+      berk_uploader
     end
 
-    def librarian_vendor
+    def librarian_vendor(upload=false)
       ui.info 'Cookbooks being vendored with librarian'
       unless(File.exists?(cheffile = File.join(vagabondfile.directory, 'Cheffile')))
         File.open(cheffile = File.join(vagabondfile.generate_store_path, 'Cheffile'), 'w') do |file|
@@ -322,7 +337,8 @@ module Vagabond
           :cheffile => cheffile
         )
       )
-      librarian_uploader.prepare
+      upload ? librarian_uploader.upload : librarian_uploader.prepare
+      librarian_uploader
     end
 
     def bus_node(v_inst, suite_name)
