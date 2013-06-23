@@ -1,8 +1,8 @@
-require 'vagabond/uploader/berkshelf'
+require 'vagabond/uploader/knife'
 
 module Vagabond
   class Uploader
-    class Berkshelf < Uploader
+    class Berkshelf < Knife
 
       def initialize(*args)
         super

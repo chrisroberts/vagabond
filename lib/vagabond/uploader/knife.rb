@@ -10,6 +10,9 @@ module Vagabond
         if(options[:cookbook_paths])
           com << " --cookbook-path #{Array(options[:cookbook_paths]).join(':')}"
         end
+        if(File.exists?(knife_config = File.join(store, '.chef/knife.rb')))
+          com << " --config #{knife_config}"
+        end
         debug(com)
         cmd = Mixlib::ShellOut.new(com,
           :live_stream => options[:debug],
