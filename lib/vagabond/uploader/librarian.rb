@@ -15,7 +15,11 @@ module Vagabond
       end
 
       def prepare
-        com = "librarian-chef install --path=#{File.join(store, 'cookbooks')}"
+        if(File.directory?(File.join(store, 'cookbooks')))
+          com = 'librarian-chef update' # TODO: Check path in .librarian config
+        else
+          com = "librarian-chef install --path=#{File.join(store, 'cookbooks')}"
+        end
         debug(com)
         cmd = Mixlib::ShellOut.new(com,
           :live_stream => options[:debug],
