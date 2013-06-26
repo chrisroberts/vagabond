@@ -133,8 +133,11 @@ module Vagabond
       @leftover_args = args
       setup_ui(_ui)
       load_configurations
-      validate! unless action == 'cluster' # TODO -> allow action
-      # method to check for validation run
+      if(respond_to?(check = "#{action}_validate?".to_sym))
+        validate! if send(check)
+      else
+        validate!
+      end
     end
 
     def name_required!
