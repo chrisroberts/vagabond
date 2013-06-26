@@ -1,3 +1,10 @@
+## v0.2.6
+* Better use of `store_path` for working in standalone cookbooks
+* Always vendor cookbooks when resolving, use knife to upload
+* Clean up cluster test-kitchen support. Only resolve cookbooks once when in cluster mode
+* Use `update` if `install` has already been preformed with librarian
+* Add node name validation smarts to short circuit if action does not require it
+
 ## v0.2.4
 * Use correct sudo within provision action
 * Fix options helper in `destroy` (implicitly fixes `cluster` options)
