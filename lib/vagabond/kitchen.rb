@@ -194,7 +194,7 @@ module Vagabond
       ui.info ui.color("  -> Provisioning suite #{suite_name} on platform: #{platform}", :cyan)
       v_inst = vagabond_instance(:create, platform, :suite_name => suite_name)
       v_inst.send(:execute)
-      directory = configure_for(v_inst.name, platform, suite_name, run_list, :dna)
+      directory = configure_for(v_inst.name, platform, suite_name, run_list, :dna, :cookbooks)
       v_inst.send(:provision_solo, directory)
     end
 
@@ -250,7 +250,7 @@ module Vagabond
         write_dna(l_name, suite_name, dir, platform, runlist, *_args)
       end
       if(args.include?(:cookbooks) && !args.include?(:integration))
-        write_solo_config(dir, l_name)
+        write_solo_config(dir)
       end
       dir
     end
@@ -271,7 +271,7 @@ module Vagabond
         dna.merge!(suite.attributes)
       end
       dna[:run_list] = runlist
-      File.open(path = File.join(dir, "#{l_name}-dna.json"), 'w') do |file|
+      File.open(path = File.join(dir, 'dna.json'), 'w') do |file|
         file.write(JSON.dump(dna))
       end
       path
