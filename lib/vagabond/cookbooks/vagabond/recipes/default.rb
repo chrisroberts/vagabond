@@ -33,6 +33,7 @@ unless(node[:network][:interfaces][:lxcbr0])
 end
 =end
 
+include_recipe 'apt::cacher-ng'
 include_recipe 'lxc'
 
 ruby_block 'LXC template: lxc-centos' do
@@ -66,6 +67,8 @@ node[:vagabond][:bases].each do |name, options|
   ]
   if(!options[:template].scan(%r{debian|ubuntu}).empty?)
     pkg_man = 'apt-get'
+    proxy = ["echo \"Acquire::http::Proxy \\\"http://#{node[:lxc][:addr]}:#{node[:apt][:cacher_port]}\\\";\" >> /etc/apt/apt.conf.d/01proxy"]
+    proxy << "echo \"Acquire::https::Proxy \\\"DIRECT\\\";\" >> /etc/apt/apt.conf.d/01proxy"
   elsif(!options[:template].scan(%r{fedora|centos}).empty?)
     pkg_man = 'yum'
   end
@@ -76,6 +79,7 @@ node[:vagabond][:bases].each do |name, options|
   else
     pkg_coms = []
   end
+  pkg_coms = proxy + pkg_coms if proxy
 
   lxc_container name do
     template options[:template]
