@@ -18,6 +18,10 @@ module Vagabond
           end
         end
       end
+
+      def destroy_validate?
+        !options[:cluster]
+      end
       
       def _destroy
         name_required!

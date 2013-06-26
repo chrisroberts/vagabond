@@ -25,6 +25,10 @@ module Vagabond
         end
       end
 
+      def cluster_validate?
+        false
+      end
+
       def _cluster
         clr = vagabondfile[:clusters][name] if vagabondfile[:clusters]
         if(clr)
