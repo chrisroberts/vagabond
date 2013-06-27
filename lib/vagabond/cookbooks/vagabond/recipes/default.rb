@@ -98,6 +98,8 @@ node[:vagabond][:bases].each do |name, options|
   end
 end
 
+=begin
+# TODO: This will be the base for building ephemeral servers
 lxc_container 'chef-server' do
   clone 'ubuntu_1204'
   initialize_commands [
@@ -107,6 +109,7 @@ lxc_container 'chef-server' do
     node[:vagabond][:server_base]
   end
 end
+=end
 
 node[:vagabond][:customs].each do |name, options|
 
