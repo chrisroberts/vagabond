@@ -67,7 +67,7 @@ node[:vagabond][:bases].each do |name, options|
   ]
   if(!options[:template].scan(%r{debian|ubuntu}).empty?)
     pkg_man = 'apt-get'
-    proxy = ["echo \"Acquire::http::Proxy \\\"http://#{node[:lxc][:addr]}:#{node[:apt][:cacher_port]}\\\";\" >> /etc/apt/apt.conf.d/01proxy"]
+    proxy = ["echo \"Acquire::http::Proxy \\\"http://#{node[:lxc][:addr]}:#{node[:apt][:cacher_port]}\\\";\" > /etc/apt/apt.conf.d/01proxy"]
     proxy << "echo \"Acquire::https::Proxy \\\"DIRECT\\\";\" >> /etc/apt/apt.conf.d/01proxy"
   elsif(!options[:template].scan(%r{fedora|centos}).empty?)
     pkg_man = 'yum'
