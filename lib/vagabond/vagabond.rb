@@ -159,10 +159,14 @@ module Vagabond
     def load_configurations
       @vagabondfile = Vagabondfile.new(options[:vagabond_file], :allow_missing)
       options[:sudo] = sudo
-      options[:disable_solo] = true if @action.to_s == 'status' && lxc_installed?
+      # TODO: provide action call back for full or partial solo disable
+      if((@action.to_s == 'status' && lxc_installed?) || @action.to_s == 'init')
+        options[:disable_solo] = true
+      end
       Chef::Log.init('/dev/null') unless options[:debug]
       Lxc.use_sudo = @vagabondfile[:sudo].nil? ? true : @vagabondfile[:sudo]
       @internal_config = InternalConfiguration.new(@vagabondfile, ui, options)
+      options[:disable_solo] = false if @action.to_s == 'init'
       @config = @vagabondfile[:boxes][name]
       @lxc = Lxc.new(@internal_config[mappings_key][name] || '____nonreal____')
       if(options[:local_server] && lxc_installed?)
