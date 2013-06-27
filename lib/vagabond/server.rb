@@ -159,12 +159,16 @@ module Vagabond
     
     def berks_upload
       ui.info 'Cookbooks being uploaded via berks'
+      if(vagabondfile[:local_chef_server][:berkshelf].is_a?(Hash))
+        berks_opts = vagabondfile[:local_chef_server][:berkshelf][:options]
+        berks_path = vagabondfile[:local_chef_server][:berkshelf][:path]
+      end
       berk_uploader = Uploader::Berkshelf.new(
         vagabondfile.directory, options.merge(
           :ui => ui,
-          :berksfile => File.join(vagabondfile.directory, vagabondfile[:local_chef_server][:berkshelf][:path] || 'Berksfile'),
+          :berksfile => File.join(vagabondfile.directory, berks_path || 'Berksfile'),
           :chef_server_url => options[:knife_opts].to_s.split(' ').last,
-          :berks_opts => vagabondfile[:local_chef_server][:berkshelf][:options]
+          :berks_opts => berks_opts
         )
       )
       berk_uploader.upload
