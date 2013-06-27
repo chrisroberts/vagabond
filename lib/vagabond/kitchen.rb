@@ -317,7 +317,7 @@ module Vagabond
         berks_path = vagabondfile[:local_chef_server][:berkshelf][:path]
       end
       berk_uploader = Uploader::Berkshelf.new(
-        vagabondfile.directory, options.merge(
+        vagabondfile.generate_store_path, options.merge(
           :ui => ui,
           :berksfile => File.join(vagabondfile.directory, berks_path || 'Berksfile'),
           :chef_server_url => options[:knife_opts].to_s.split(' ').last,
