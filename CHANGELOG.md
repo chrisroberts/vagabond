@@ -1,3 +1,8 @@
+## v0.2.8
+* Disable `chef-server` clone on provision (#14)
+* Temporarily disable provision on init action
+* Use a cacher for apt
+
 ## v0.2.6
 * Better use of `store_path` for working in standalone cookbooks
 * Always vendor cookbooks when resolving, use knife to upload
