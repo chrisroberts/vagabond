@@ -50,11 +50,13 @@ module Vagabond
     def upload_roles
       am_uploading('roles') do
         if(File.directory?(File.join(base_dir, 'roles')))
-          com = "knife role from file #{File.join(base_dir, 'roles/*')} #{options[:knife_opts]}"
-          debug(com)
-          cmd = Mixlib::ShellOut.new(com, :live_stream => options[:debug])
-          cmd.run_command
-          cmd.error!
+          %w(rb json js).each do |ext|
+            com = "knife role from file #{File.join(base_dir, "roles/*.#{ext}")} #{options[:knife_opts]}"
+            debug(com)
+            cmd = Mixlib::ShellOut.new(com, :live_stream => options[:debug])
+            cmd.run_command
+            cmd.error!
+          end
         end
       end
     end
@@ -64,7 +66,7 @@ module Vagabond
       am_uploading('data bags') do
         if(File.directory?(File.join(base_dir, 'data_bags')))
           Dir.glob(File.join(base_dir, "data_bags/*")).each do |b|
-            next if %w(. ..).include?(b)
+            next if %w(. ..).include?(b) || !File.directory?(b)
             coms = [
               "knife data bag create #{File.basename(b)} #{options[:knife_opts]}",
               "knife data bag from file #{File.basename(b)} #{options[:knife_opts]} --all"
@@ -83,11 +85,13 @@ module Vagabond
     def upload_environments
       am_uploading('environments') do
         if(File.directory?(File.join(base_dir, 'environments')))
-          com = "knife environment from file #{File.join(base_dir, 'environments/*')} #{options[:knife_opts]}"
-          debug(com)
-          cmd = Mixlib::ShellOut.new(com, :live_stream => options[:debug])
-          cmd.run_command
-          cmd.error!
+          %w(rb json js).each do |ext|
+            com = "knife environment from file #{File.join(base_dir, "environments/*.#{ext}")} #{options[:knife_opts]}"
+            debug(com)
+            cmd = Mixlib::ShellOut.new(com, :live_stream => options[:debug])
+            cmd.run_command
+            cmd.error!
+          end
         end
       end
     end
