@@ -1,3 +1,4 @@
+#encoding: utf-8
 require 'thor'
 require File.join(File.dirname(__FILE__), 'cookbooks/lxc/libraries/lxc.rb')
 

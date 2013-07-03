@@ -1,3 +1,4 @@
+#encoding: utf-8
 Dir.new(File.join(File.dirname(__FILE__), 'uploader')).each do |file|
   next if file.start_with?('.') || !file.end_with?('.rb')
   require "vagabond/uploader/#{file}"

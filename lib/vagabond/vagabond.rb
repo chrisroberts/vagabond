@@ -1,3 +1,4 @@
+#encoding: utf-8
 require 'thor'
 require 'chef/knife/core/ui'
 require 'vagabond/uploader'

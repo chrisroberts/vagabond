@@ -1,3 +1,4 @@
+#encoding: utf-8
 module Vagabond
   class VagabondError < StandardError
     class << self

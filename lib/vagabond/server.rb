@@ -1,3 +1,4 @@
+#encoding: utf-8
 require 'vagabond/vagabond'
 require 'mixlib/cli'
 require 'digest/md5'

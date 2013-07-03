@@ -1,3 +1,4 @@
+#encoding: utf-8
 require 'vagabond/constants'
 require 'tmpdir'
 require 'uuidtools'

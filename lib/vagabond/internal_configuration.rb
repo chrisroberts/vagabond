@@ -1,3 +1,4 @@
+#encoding: utf-8
 require 'digest/sha2'
 require 'json'
 require 'vagabond/helpers'

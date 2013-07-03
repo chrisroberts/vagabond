@@ -1,3 +1,4 @@
+#encoding: utf-8
 module Vagabond
   class Version < Gem::Version
     attr_reader :codename
