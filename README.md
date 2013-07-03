@@ -81,6 +81,7 @@ Pretty simple, right?
 
 Currently builtin templates:
 
+* ubuntu_1004
 * ubuntu_1204
 * ubuntu_1210
 * debian_6

@@ -73,6 +73,23 @@ to then use that template:
 }
 ```
 
+## Assigning static IP addresses to nodes
+
+Nodes can be assigned static IP addresses using the `:ipaddress` key in
+the node's Hash:
+
+```ruby
+{
+  :nodes => {
+    :my_precise_node => {
+      :template => 'ubuntu_1204',
+      :run_list => ['role[base]'],
+      :ipaddress => '10.0.0.10'
+    }
+  }
+  ...
+```
+
 ## vagabond
 
 The `vagabond` command is used for interaction with nodes. Simply running:
@@ -120,11 +137,13 @@ Vagabond. The server commands are explicitly for the server container.
 The commands are similar to the basic `vagabond` commands, with a few
 extra commands as well.
 
-The `:local_chef_server` hash also has two helper keys for setting up
+The `:local_chef_server` hash has a few helper keys for setting up
 the server:
 
 * `:auto_upload` - Uploads all cookbooks, roles, data bags and environments after build
 * `:berkshelf` - Uses berkshelf for cookbook upload instead of knife
+* `:librarian` - Uses librarian for cookbook upload instead of knife
+* `:zero` - Uses Chef Zero instead of Chef 11 (erchef)
 
 ## vagabond knife
 
