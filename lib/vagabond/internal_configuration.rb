@@ -40,6 +40,7 @@ module Vagabond
         store_checksums
         write_dna_json
         write_solo_rb
+        install_cookbooks
         run_solo if solo_needed?
       end
     end
@@ -178,11 +179,34 @@ module Vagabond
     end
 
     def cookbook_path
-      File.expand_path(
-        File.join(
-          File.dirname(__FILE__), 'cookbooks'
+      unless(@cookbook_path)
+        FileUtils.mkdir_p(@cookbook_path = File.join(store_path, 'cookbooks'))
+      end
+      @cookbook_path
+    end
+
+    def install_cookbooks
+      begin
+        FileUtils.copy(
+          File.expand_path(File.join(File.dirname(__FILE__), 'Cheffile')),
+          File.join(File.dirname(cookbook_path), 'Cheffile')
         )
-      )
+        com = 'librarian-chef update'
+        debug(com)
+        ui.info ui.color('Fetching required cookbooks...', :yellow)
+        cmd = Mixlib::ShellOut.new(com,
+          :timeout => 300,
+          :live_stream => options[:debug],
+          :cwd => File.dirname(cookbook_path)
+        )
+        cmd.run_command
+        cmd.error!
+        ui.info ui.color('  -> COMPLETE!', :yellow)
+      rescue => e
+        ui.info e.to_s
+        ui.info ui.color('  -> FAILED!', :red, :bold)
+        raise VagabondError::LibrarianHostInstallFailed.new(e)
+      end
     end
     
     def run_solo
