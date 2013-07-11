@@ -178,7 +178,7 @@ module Vagabond
 
     def vagabondfile
       unless(@vagabondfile)
-        @vagabondfile = Vagabondfile.new(options[:vagabond_file])
+        @vagabondfile = Vagabondfile.new(options[:vagabond_file], :allow_missing)
       end
       @vagabondfile
     end
@@ -216,22 +216,28 @@ module Vagabond
       test_nodes.each do |node|
         name, lxc_name, config = node
         lxc = Lxc.new(lxc_name)
-        test_node!(name, lxc.container_ip, config[:run_list])
+        test_node!(name, lxc.container_ip, config)
       end
     end
     
-    def test_node!(name, ip_address, run_list)
-      run_list.each do |item|
+    def test_node!(name, ip_address, node_config)
+      test_files = []
+      Array(node_config[:run_list]).each do |item|
         r_item = item.is_a?(Chef::RunList::RunListItem) ? item : Chef::RunList::RunListItem.new(item)
         dir = File.join(File.dirname(vagabondfile.path), "spec/#{r_item.type}/#{r_item.name.sub('::', '/')}")
         dir << '/default' if r_item.type.to_sym == :recipe && !r_item.name.include?('::')
-        Dir.glob(File.join(dir, '*.rb')).each do |path|
-          com = "#{sudo}VAGABOND_TEST_HOST='#{ip_address}' rspec #{path}"
-          debug(com)
-          cmd = Mixlib::ShellOut.new(com, :live_stream => STDOUT, :env => {'VAGABOND_TEST_HOST' => ip_address})
-          cmd.run_command
-          cmd.error!
-        end
+        test_files += Dir.glob(File.join(dir, '*.rb')).map(&:to_s)
+      end
+      Array(node_config[:custom_specs]).each do |custom|
+        dir = File.join(vagabondfile.directory, 'spec', File.join(*custom.split('::')))
+        test_files += Dir.glob(dir, '*.rb')
+      end
+      test_files.flatten.compact.each do |path|
+        com = "#{sudo}VAGABOND_TEST_HOST='#{ip_address}' rspec #{path}"
+        debug(com)
+        cmd = Mixlib::ShellOut.new(com, :live_stream => STDOUT, :env => {'VAGABOND_TEST_HOST' => ip_address})
+        cmd.run_command
+        cmd.error!
       end
     end
 
