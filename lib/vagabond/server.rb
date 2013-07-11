@@ -88,6 +88,7 @@ module Vagabond
       am_uploading('environments') do
         if(File.directory?(File.join(base_dir, 'environments')))
           %w(rb json js).each do |ext|
+            next if Dir.glob(File.join(base_dir, "environments", "*.#{ext}")).size == 0
             com = "knife environment from file #{File.join(base_dir, "environments/*.#{ext}")} #{options[:knife_opts]}"
             debug(com)
             cmd = Mixlib::ShellOut.new(com, :live_stream => options[:debug])
