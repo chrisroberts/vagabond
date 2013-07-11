@@ -112,6 +112,16 @@ module Vagabond
 
     protected
 
+    def attributes
+      if(config[:attributes])
+        if(config[:attributes].is_a?(Hash))
+          JSON.dump(config[:attributes])
+        else
+          config[:attributes].to_s
+        end
+      end
+    end
+    
     def version
       setup_ui
       ui.info "#{ui.color('Vagabond:', :yellow, :bold)} - Advocating idleness and work-shyness"
@@ -219,15 +229,16 @@ module Vagabond
     end
 
     def wait_for_completion(type=nil)
+      @threads ||= []
       if(type)
-        Array(@threads[:type]).map(&:join)
+        Array(@threads[type]).collect{|hsh| hsh[:thread]}.map(&:join)
       else
-        @threads.values.map do |threads|
-          threads.each do |thread_set|
-            Array(thread_set).map(&:join)
-          end
-        end
+        @threads.values.flatten.collect{|hsh| hsh[:thread]}.map(&:join)
       end
+    end
+
+    def tasks(type=nil)
+      type ? @threads[type] : @threads
     end
   end
 end

@@ -27,10 +27,20 @@ module Vagabond
         end
         if(options[:parallel])
           @threads[:up] ||= []
-          @threads[:up] << Thread.new do
-            _create
-            do_provision if options[:auto_provision]
-          end
+          t_holder = Mash.new
+          @threads[:up] << t_holder.update(
+            :thread => Thread.new{
+              sleep(0.01)
+              _create
+              begin
+                do_provision if options[:auto_provision]
+                t_holder[:result] = true
+              rescue => e
+                puts "WTF: #{e}"
+                t_holder[:result] = false
+              end
+            }
+          )
         else
           _create
           do_provision if options[:auto_provision]

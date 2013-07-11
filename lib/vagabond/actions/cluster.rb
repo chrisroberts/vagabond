@@ -60,7 +60,18 @@ module Vagabond
               inst.wait_for_completion
             end
           end
-          ui.info "  -> #{ui.color("Built cluster #{name}", :green)}"
+          failed = cluster_instances.map{|i|i.send(:tasks)}.map(&:values).flatten.detect do |hash|
+            hash[:result] == false
+          end
+          result = failed ? ['FAILED', :red, :bold] : ['SUCCESS', :green, :bold]
+          ui.info "\nCluster build #{name}: #{ui.color(*result)}"
+          cluster_instances.each do |inst|
+            failed = inst.send(:tasks).values.flatten.detect do |hash|
+              hash[:result] == false
+            end
+            result = failed ? ['FAILED', :red, :bold] : ['SUCCESS', :green, :bold]
+            ui.info "  -> #{inst.name}: #{ui.color(*result)}"
+          end
         else
           ui.error "Cluster name provided does not exist: #{name}"
         end
