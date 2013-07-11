@@ -52,6 +52,7 @@ module Vagabond
       am_uploading('roles') do
         if(File.directory?(File.join(base_dir, 'roles')))
           %w(rb json js).each do |ext|
+            next if Dir.glob(File.join(base_dir, "roles", "*.#{ext}")).size == 0
             com = "knife role from file #{File.join(base_dir, "roles/*.#{ext}")} #{options[:knife_opts]}"
             debug(com)
             cmd = Mixlib::ShellOut.new(com, :live_stream => options[:debug])
