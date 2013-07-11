@@ -19,14 +19,18 @@ module Vagabond
 
       def do_provision
         ui.info "#{ui.color('Vagabond:', :bold)} Provisioning node: #{ui.color(name, :magenta)}"
-        com = "#{sudo} knife bootstrap #{lxc.container_ip(10, true)} -d chef-full -N #{name} -i /opt/hw-lxc-config/id_rsa "
-        com << "--no-host-key-verify --run-list \"#{config[:run_list].join(',')}\" "
+        com = ["#{sudo} knife bootstrap #{lxc.container_ip(10, true)} -d chef-full -N #{name} -i /opt/hw-lxc-config/id_rsa"]
+        com << "--no-host-key-verify --run-list \"#{config[:run_list].join(',')}\""
         if(config[:environment])
           com << "-E #{config[:environment]}"
         end
         if(options[:knife_opts])
           com << options[:knife_opts]
         end
+        if(attributes)
+          com << "-j '#{attributes}'"
+        end
+        com = com.join(' ')
         debug(com)
         # Send the live stream out since people will generally want to
         # know what's happening
@@ -40,7 +44,7 @@ module Vagabond
           true
         else
           ui.info ui.color('  -> PROVISION FAILED', :red)
-          false
+          raise VagabondError::NodeProvisionFailed.new("Failed to provision: #{name}")
         end
       end
 
