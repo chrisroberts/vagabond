@@ -18,7 +18,7 @@ module Vagabond
         name_required!
         if(lxc.exists?)
           if(lxc.running?)
-            ui.error "Node already exists and is running: #{name}"
+            ui.warn "Node already exists and is running: #{name}"
           else
             ui.info "#{ui.color('Vagabond:', :bold)} Starting node: #{ui.color(name, :green)}"
             lxc.start
@@ -36,7 +36,6 @@ module Vagabond
                 do_provision if options[:auto_provision]
                 t_holder[:result] = true
               rescue => e
-                puts "WTF: #{e}"
                 t_holder[:result] = false
               end
             }
