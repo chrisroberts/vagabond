@@ -229,7 +229,7 @@ module Vagabond
         test_files += Dir.glob(File.join(dir, '*.rb')).map(&:to_s)
       end
       Array(node_config[:custom_specs]).each do |custom|
-        dir = File.join(vagabondfile.directory, 'spec', File.join(*custom.split('::')))
+        dir = File.join(vagabondfile.directory, 'spec/custom', File.join(*custom.split('::')))
         test_files += Dir.glob(dir, '*.rb')
       end
       test_files.flatten.compact.each do |path|
