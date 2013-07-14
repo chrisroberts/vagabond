@@ -22,7 +22,7 @@ module Vagabond
         tmpl = config[:template]
         if(internal_config[:template_mappings].keys.include?(tmpl))
           tmpl = internal_config[:template_mappings][tmpl]
-        elsif(!BASE_TEMPLATES.include?(tmpl))
+        elsif(!Vagabond::BASE_TEMPLATES.include?(tmpl))
           ui.fatal "Template requested for node does not exist: #{tmpl}"
           raise VagabondError::InvalidTemplate.new(tmpl)
         end
