@@ -38,16 +38,18 @@ module Vagabond
       check_bases_and_customs!
       if(solo_needed?)
         store_checksums
-        write_dna_json
-        write_solo_rb
         install_cookbooks
         set_templates
+        write_dna_json
+        write_solo_rb
         run_solo if solo_needed?
+      else
+        set_templates
       end
     end
 
     def set_templates
-      unless(defined?(BASE_TEMPLATES))
+      unless(Vagabond.const_defined?(:BASE_TEMPLATES))
         Vagabond.const_set(
           :BASE_TEMPLATES, File.readlines(
             File.join(cookbook_path, 'vagabond/attributes/default.rb')
