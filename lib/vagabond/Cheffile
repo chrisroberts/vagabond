@@ -1,3 +1,4 @@
 site 'http://community.opscode.com/api/v1'
 
-cookbook 'vagabond'
+cookbook 'vagabond', git: 'git://github.com/chrisroberts/cookbook-vagabond.git', ref: 'develop'
+cookbook 'lxc', git: 'git://github.com/hw-cookbooks/lxc.git', ref: 'develop'
