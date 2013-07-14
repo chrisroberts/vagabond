@@ -41,7 +41,20 @@ module Vagabond
         write_dna_json
         write_solo_rb
         install_cookbooks
+        set_templates
         run_solo if solo_needed?
+      end
+    end
+
+    def set_templates
+      unless(defined?(BASE_TEMPLATES))
+        Vagabond.const_set(
+          :BASE_TEMPLATES, File.readlines(
+            File.join(cookbook_path, 'vagabond/attributes/default.rb')
+          ).map{ |l|
+            l.scan(%r{bases\]\[:([^\]]+)\]}).flatten.first
+          }.compact.uniq
+        )
       end
     end
 

@@ -2,7 +2,7 @@
 require 'thor'
 require 'chef/knife/core/ui'
 require 'vagabond/uploader'
-require File.join(File.dirname(__FILE__), 'cookbooks/lxc/libraries/lxc.rb')
+require 'elecksee/lxc'
 
 %w(constants errors vagabondfile internal_configuration helpers).each do |dep|
   require "vagabond/#{dep}"
