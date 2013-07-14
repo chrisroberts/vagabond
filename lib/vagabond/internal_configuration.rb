@@ -125,10 +125,10 @@ module Vagabond
     def write_dna_json
       conf = Mash.new(:bases => Mash.new, :customs => Mash.new)
       (Array(@vagabondfile[:nodes]).map(&:last).map{|i| i[:template]}.compact + Array(force_bases)).uniq.each do |t|
-        conf[:bases][t] = Mash.new(:enabled => true) if BASE_TEMPLATES.include?(t.to_s)
+        conf[:bases][t] = Mash.new(:enabled => true) if Vagabond::BASE_TEMPLATES.include?(t.to_s)
       end
       Array(@vagabondfile[:templates]).each do |t_name, opts|
-        if(BASE_TEMPLATES.include?(opts[:base].to_s))
+        if(Vagabond::BASE_TEMPLATES.include?(opts[:base].to_s))
           conf[:bases][opts[:base]] = Mash.new(:enabled => true)
           if(opts.has_key?(:memory) && !opts[:memory].is_a?(Hash))
             opts[:memory][:ram] = opts[:memory].to_s
@@ -200,23 +200,52 @@ module Vagabond
       @cookbook_path
     end
 
+    def cheffile_path
+      File.expand_path(
+        File.join(File.dirname(__FILE__), 'Cheffile')
+      )
+    end
+
+    def vendor_cheffile_path
+      File.expand_path(
+        File.join(File.dirname(cookbook_path), 'Cheffile')
+      )
+    end
+    
+    def cookbook_vendor_required?
+      need_vendor = !File.exists?(vendor_cheffile_path)
+      unless(need_vendor)
+        need_vendor = get_checksum(vendor_cheffile_path) != get_checksum(cheffile_path)
+      end
+      ENV['VAGABOND_FORCE_VENDOR'] || need_vendor
+    end
+    
     def install_cookbooks
       begin
-        FileUtils.copy(
-          File.expand_path(File.join(File.dirname(__FILE__), 'Cheffile')),
-          File.join(File.dirname(cookbook_path), 'Cheffile')
-        )
-        com = 'librarian-chef update'
-        debug(com)
-        ui.info ui.color('Fetching required cookbooks...', :yellow)
-        cmd = Mixlib::ShellOut.new(com,
-          :timeout => 300,
-          :live_stream => options[:debug],
-          :cwd => File.dirname(cookbook_path)
-        )
-        cmd.run_command
-        cmd.error!
-        ui.info ui.color('  -> COMPLETE!', :yellow)
+        if(cookbook_vendor_required?)
+          FileUtils.copy(cheffile_path, vendor_cheffile_path)
+          com = 'librarian-chef update'
+          debug(com)
+          ui.info ui.color('Fetching required cookbooks...', :yellow)
+          cmd = Mixlib::ShellOut.new(com,
+            :timeout => 300,
+            :live_stream => options[:debug],
+            :cwd => File.dirname(cookbook_path)
+          )
+          cmd.run_command
+          cmd.error!
+          ui.info ui.color('  -> COMPLETE!', :yellow)
+        else
+          com = 'librarian-chef install'
+          debug(com)
+          cmd = Mixlib::ShellOut.new(com,
+            :timeout => 300,
+            :live_stream => options[:debug],
+            :cwd => File.dirname(cookbook_path)
+          )
+          cmd.run_command
+          cmd.error!
+        end
       rescue => e
         ui.info e.to_s
         ui.info ui.color('  -> FAILED!', :red, :bold)
