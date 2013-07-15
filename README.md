@@ -216,7 +216,7 @@ keys can be repeated `n` times to provide multiple nodes of a specific type.
 ### Usage
 
 ```
-$ vagabond spec my_cluster
+$ vagabond spec start my_cluster
 ```
 
 ### Applying specs
@@ -243,7 +243,7 @@ against actual live infrastructure to see if it is currently in a valid
 state based on existing specs. Awesome!
 
 ```
-$ vagabond spec my_cluster --environment production
+$ vagabond spec start my_cluster --irl --environment production
 ```
 
 ## Important note
