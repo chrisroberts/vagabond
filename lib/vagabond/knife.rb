@@ -1,6 +1,9 @@
 #encoding: utf-8
 require 'thor'
-require File.join(File.dirname(__FILE__), 'cookbooks/lxc/libraries/lxc.rb')
+require 'elecksee/lxc'
+
+#TODO: Remove this when elecksee gets updated
+require 'chef/log'
 
 %w(helpers vagabondfile internal_configuration).each do |dep|
   require "vagabond/#{dep}"
