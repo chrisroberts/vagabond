@@ -36,15 +36,13 @@ module Vagabond
 
     def ensure_state
       check_bases_and_customs!
+      install_cookbooks
+      set_templates
       if(solo_needed?)
         store_checksums
-        install_cookbooks
-        set_templates
         write_dna_json
         write_solo_rb
         run_solo if solo_needed?
-      else
-        set_templates
       end
     end
 
