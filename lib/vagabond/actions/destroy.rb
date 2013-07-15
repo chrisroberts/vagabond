@@ -27,6 +27,7 @@ module Vagabond
       def _destroy
         name_required!
         if(options[:cluster])
+          cluster_name = name
           nodes = vagabondfile[:clusters][name] if vagabondfile[:clusters]
           if(nodes)
             ui.info "#{ui.color('Vagabond:', :bold)} Destroying cluster - #{ui.color(name, :red)}"
@@ -49,6 +50,7 @@ module Vagabond
             ui.error "Node not created: #{name}"
           end
         end
+        @name = cluster_name if cluster_name
       end
 
       private
