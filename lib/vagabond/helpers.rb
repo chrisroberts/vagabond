@@ -97,6 +97,26 @@ module Vagabond
       end
     end
 
+    def callbacks(key, *args)
+      if(vagabondfile[:callbacks][key])
+        ui.info "  Running #{ui.color(key, :bold)} callbacks..."
+        vagabondfile[:callbacks][key].each do |command|
+          args.each_with_index do |arg, i|
+            command = command.gsub("${#{i+1}}", arg)
+          end
+          debug(command)
+          opts = {:timeout => 30}
+          opts.merge(vagabondfile[:callbacks][:options] || {})
+          cmd = Mixlib::ShellOut.new(command,
+            opts.merge(:live_stream => options[:debug])
+          )
+          cmd.run_command
+          cmd.error!
+        end
+        ui.info ui.color('    -> COMPLETE', :green)
+      end
+    end
+
     class << self
       def included(klass)
         klass.class_eval do
