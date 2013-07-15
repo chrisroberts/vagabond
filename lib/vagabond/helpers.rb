@@ -97,23 +97,37 @@ module Vagabond
       end
     end
 
-    def callbacks(key, *args)
+    def callbacks(key)
       if(vagabondfile[:callbacks][key])
         ui.info "  Running #{ui.color(key, :bold)} callbacks..."
-        vagabondfile[:callbacks][key].each do |command|
-          args.each_with_index do |arg, i|
-            command = command.gsub("${#{i+1}}", arg)
-          end
-          debug(command)
-          opts = {:timeout => 30}
-          opts.merge(vagabondfile[:callbacks][:options] || {})
-          cmd = Mixlib::ShellOut.new(command,
-            opts.merge(:live_stream => options[:debug])
-          )
-          cmd.run_command
-          cmd.error!
+        if(options[:cluster])
+          cluster_name = name
+          names = vagabondfile[:clusters][name] if vagabondfile[:clusters]
+        else
+          names = [name]
         end
-        ui.info ui.color('    -> COMPLETE', :green)
+        names.each do |n|
+          @name = n
+          vagabondfile[:callbacks][key].each do |command|
+            Array(command.scan(/\$\{(\w+)\}/).first).each do |repl|
+              command = command.gsub("${#{repl}}", self.send(repl.downcase))
+            end
+            ui.info "    Running: #{command}"
+            opts = {:timeout => 30}
+            opts.merge(vagabondfile[:callbacks][:options] || {})
+            cmd = Mixlib::ShellOut.new(command,
+              opts.merge(:live_stream => options[:debug])
+            )
+            cmd.run_command
+            if(cmd.status.success?)
+              ui.info ui.color('      -> SUCCESS', :green)
+            else
+              ui.info ui.color("      -> FAILED - (#{cmd.stderr.strip.gsub("\n", ' ')})", :red)
+            end
+          end
+        end
+        @name = cluster_name if cluster_name
+        ui.info ui.color('  -> COMPLETE', :green)
       end
     end
 

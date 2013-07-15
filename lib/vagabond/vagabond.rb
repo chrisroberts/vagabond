@@ -104,6 +104,7 @@ module Vagabond
         define_method meth do |*args|
           setup(meth, *args)
           execute
+          callbacks(meth)
         end
       end
     end
