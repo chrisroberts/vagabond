@@ -1,6 +1,6 @@
 #encoding: utf-8
 require 'thor'
-require File.join(File.dirname(__FILE__), 'cookbooks/lxc/libraries/lxc.rb')
+require 'elecksee/lxc'
 
 %w(layout vagabond server helpers vagabondfile internal_configuration actions/status).each do |dep|
   require "vagabond/#{dep}"
@@ -188,15 +188,17 @@ module Vagabond
       options[:sudo] = sudo
       Lxc.use_sudo = vagabondfile[:sudo].nil? ? true : vagabondfile[:sudo]
       @internal_config = InternalConfiguration.new(vagabondfile, nil, options)
+      
+      load_layout
+      
       # First, setup server
-      if(vagabondfile[:local_chef_server][:enabled])
+      if(layout[:server] && layout[:server][:enabled])
         require 'vagabond/server'
         srv = ::Vagabond::Server.new
         srv.send(:setup, 'up')
         srv.send(:execute)
       end
 
-      load_layout
       default_config = Chef::Mixin::DeepMerge.merge(
         Mash.new(:platform => 'ubuntu_1204'), layout[:defaults]
       )
