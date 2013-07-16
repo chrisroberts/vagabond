@@ -2,3 +2,6 @@ site 'http://community.opscode.com/api/v1'
 
 cookbook 'vagabond', git: 'git://github.com/chrisroberts/chef-vagabond.git', ref: 'develop'
 cookbook 'lxc', git: 'git://github.com/hw-cookbooks/lxc.git', ref: 'develop'
+
+cookbook 'chef-server', '2.0.0'
+cookbook 'chef-server-populator', '0.2.0'
