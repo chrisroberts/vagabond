@@ -1,9 +1,22 @@
 #encoding: utf-8
 require 'chef/mash'
+require 'attribute_struct'
 
 module Vagabond
   class Vagabondfile
 
+    class << self
+      def describe(&block)
+        inst = AttributeStruct.new
+        if(block.arity != 1)
+          inst.instance_exec(&block)
+        else
+          inst.instance_exec(inst, &block)
+        end
+        inst
+      end
+    end
+    
     attr_reader :path
     attr_reader :config
 
@@ -49,7 +62,12 @@ module Vagabond
         no_raise ||= force_store
       end
       if(@path && File.exists?(@path))
-        @config = Mash.new(self.instance_eval(IO.read(@path), @path, 1))
+        thing = self.instance_eval(IO.read(@path), @path, 1)
+        if(thing.is_a?(AttributeStruct))
+          @config = Mash.new(thing._dump)
+        else
+          @config = Mash.new(thing)
+        end
       end
       if(!@config || force_store)
         raise 'No Vagabondfile file found!' unless no_raise
