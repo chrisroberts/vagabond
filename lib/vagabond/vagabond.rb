@@ -179,7 +179,7 @@ module Vagabond
       Lxc.use_sudo = @vagabondfile[:sudo].nil? ? true : @vagabondfile[:sudo]
       @internal_config = InternalConfiguration.new(@vagabondfile, ui, options)
       options[:disable_solo] = false if @action.to_s == 'init'
-      @config = @vagabondfile[:boxes][name]
+      @config = @vagabondfile[:nodes][name]
       @lxc = Lxc.new(@internal_config[mappings_key][name] || '____nonreal____')
       if(options[:local_server] && lxc_installed?)
         if(@vagabondfile[:local_chef_server] && @vagabondfile[:local_chef_server][:enabled])
