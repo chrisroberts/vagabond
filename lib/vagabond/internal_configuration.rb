@@ -8,6 +8,14 @@ require 'chef/mixin/deep_merge'
 module Vagabond
   class InternalConfiguration
 
+    class << self
+      attr_accessor :host_provisioned
+
+      def host_provisioned?
+        !!@host_provisioned
+      end
+    end
+
     include Helpers
     
     attr_reader :config
@@ -36,13 +44,15 @@ module Vagabond
 
     def ensure_state
       check_bases_and_customs!
-      install_cookbooks
+      install_cookbooks unless self.class.host_provisioned?
       set_templates
+      store_checksums
+      write_dna_json
+      write_solo_rb
       if(solo_needed?)
-        store_checksums
-        write_dna_json
-        write_solo_rb
-        run_solo if solo_needed?
+        run_solo
+      else
+        self.class.host_provisioned = true
       end
     end
 
@@ -68,6 +78,14 @@ module Vagabond
             end
           end
         end
+        if(dna[:vagabond][:server])
+          # TODO: Proper attribute load of vagabond default.rb
+          # TODO: Use prefix from attributes
+          srv_name = "vb-server-#{dna[:vagabond][:server][:erchefs].first.to_s.gsub('.', '_')}"
+          options[:force_solo] = true unless Lxc.new(srv_name).exists?
+        end
+        # TODO: REALLY NEED ATTRIBUTE READ
+        options[:force_solo] = true unless Lxc.new('vb-zero-server').exists?
       end
     end
 
@@ -77,6 +95,7 @@ module Vagabond
 
     def []=(k,v)
       @config[k] = v
+      save
     end
     
     def create_store
@@ -139,6 +158,13 @@ module Vagabond
           raise VagabondError::InvalidBaseTemplate.new(t_name)
         end
       end
+      if(@vagabondfile.local_chef_server? && !@vagabondfile[:local_chef_server][:zero])
+        # TODO: GET THE ATTRIBUTES
+        version = @vagabondfile[:local_chef_server][:version] || '11.0.8'
+        conf[:server] = Mash.new
+        conf[:server][:erchefs] = [version]
+      end
+      conf[:host_cookbook_store] = cookbook_path
       File.open(dna_path, 'w') do |file|
         file.write(
           JSON.dump(
@@ -252,20 +278,23 @@ module Vagabond
     end
     
     def run_solo
-      begin
-        ui.info ui.color('Ensuring expected system state (creating required base containers)', :yellow)
-        ui.info ui.color('   - This can take a while on first run or new templates...', :yellow)
-        com = "#{options[:sudo]}chef-solo -j #{File.join(store_path, 'dna.json')} -c #{File.join(store_path, 'solo.rb')}"
-        debug(com)
-        cmd = Mixlib::ShellOut.new(com, :timeout => 12000, :live_stream => options[:debug])
-        cmd.run_command
-        cmd.error!
-        ui.info ui.color('  -> COMPLETE!', :yellow)
-      rescue => e
-        ui.info e.to_s
-        FileUtils.rm(solo_path)
-        ui.info ui.color('  -> FAILED!', :red, :bold)
-        raise VagabondError::HostProvisionFailed.new(e)
+      unless(self.class.host_provisioned?)
+        begin
+          ui.info ui.color('Ensuring expected system state (creating required base containers)', :yellow)
+          ui.info ui.color('   - This can take a while on first run or new templates...', :yellow)
+          com = "#{options[:sudo]}chef-solo -j #{File.join(store_path, 'dna.json')} -c #{File.join(store_path, 'solo.rb')}"
+          debug(com)
+          cmd = Mixlib::ShellOut.new(com, :timeout => 12000, :live_stream => options[:debug])
+          cmd.run_command
+          cmd.error!
+          ui.info ui.color('  -> COMPLETE!', :yellow)
+          self.class.host_provisioned = true
+        rescue => e
+          ui.info e.to_s
+          FileUtils.rm(solo_path)
+          ui.info ui.color('  -> FAILED!', :red, :bold)
+          raise VagabondError::HostProvisionFailed.new(e)
+        end
       end
     end
 
