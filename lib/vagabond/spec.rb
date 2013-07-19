@@ -50,10 +50,13 @@ module Vagabond
           irl_spec(cluster)
         else
           cluster_spec(cluster)
+          cluster_destroy(cluster) if options[:auto_destroy]
         end
       rescue => error
+        ui.error "Unexpected error encountered: #{error}"
+        debug("#{error.class}: #{error}\n#{error.backtrace.join("\n")}")
+        raise
       ensure
-        cluster_destroy(cluster) if options[:auto_destroy] && !options[:irl]
         result = error ? ui.color('FAILED', :red, :bold) : ui.color('PASSED', :green, :bold)
         ui.info "--> Specs for cluster #{cluster}: #{result}"
         raise VagabondError::SpecFailed.new(error) if error
@@ -187,16 +190,21 @@ module Vagabond
       @options[:auto_provision] = true
       options[:sudo] = sudo
       Lxc.use_sudo = vagabondfile[:sudo].nil? ? true : vagabondfile[:sudo]
-      @internal_config = InternalConfiguration.new(vagabondfile, nil, options)
+      @internal_config = InternalConfiguration.new(vagabondfile, ui, options)
       
       load_layout
-      
+
       # First, setup server
-      if(layout[:server] && layout[:server][:enabled])
+      unless(vagabondfile.local_chef_server?)
+        @internal_config.make_knife_config_if_required(true)
         require 'vagabond/server'
         srv = ::Vagabond::Server.new
+        srv.options = options.dup
+        srv.options[:auto_provision] = true
+        srv.options[:force_zero] = true
         srv.send(:setup, 'up')
         srv.send(:execute)
+        srv.send(:librarian_upload)
       end
 
       default_config = Chef::Mixin::DeepMerge.merge(
@@ -220,6 +228,11 @@ module Vagabond
         lxc = Lxc.new(lxc_name)
         test_node!(name, lxc.container_ip, config)
       end
+
+      if(srv)
+        srv.send(:setup, 'destroy')
+        srv.send(:execute)
+      end
     end
     
     def test_node!(name, ip_address, node_config)
@@ -232,11 +245,12 @@ module Vagabond
       end
       Array(node_config[:custom_specs]).each do |custom|
         dir = File.join(vagabondfile.directory, 'spec/custom', File.join(*custom.split('::')))
-        test_files += Dir.glob(dir, '*.rb')
+        test_files += Dir.glob(File.join(dir, '*.rb')).map(&:to_s)
       end
       test_files.flatten.compact.each do |path|
         com = "#{sudo}VAGABOND_TEST_HOST='#{ip_address}' rspec #{path}"
         debug(com)
+        ui.info "\n#{ui.color('**', :green, :bold)}  Running spec: #{path.sub("#{vagabondfile.directory}/", '')}"
         cmd = Mixlib::ShellOut.new(com, :live_stream => STDOUT, :env => {'VAGABOND_TEST_HOST' => ip_address})
         cmd.run_command
         cmd.error!
