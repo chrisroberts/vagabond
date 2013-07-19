@@ -20,7 +20,7 @@ Gem::Specification.new do |s|
   s.add_dependency 'test-kitchen', '>= 1.0.0.alpha'
   s.add_dependency 'thor'
   s.add_dependency 'uuidtools'
-  s.add_dependency 'elecksee', '>= 1.0.6'
+  s.add_dependency 'elecksee', '>= 1.0.8'
   s.add_dependency 'serverspec', '>= 0.6.3'
   s.add_dependency 'attribute_struct'
 end
