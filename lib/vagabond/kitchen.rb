@@ -80,6 +80,11 @@ module Vagabond
       :type => :string,
       :desc => 'Specify suites to test [suite1,suite2,...]'
     )
+    method_option(:force_berkshelf,
+      :type => :boolean,
+      :default => false,
+      :desc => 'Force use of Berkshelf if Cheffile is also provided'
+    )
     def test(*args)
       cookbook = args.first
       setup(cookbook, :test)
@@ -93,14 +98,19 @@ module Vagabond
           ui.fatal "Requested cluster is not defined: #{options[:cluster]}"
           raise VagabondError::ClusterInvalid.new(cluster_name)
         end
-        serv = Server.new
-        if(@solo && serv.vagabondfile[:local_chef_server].empty?)
-          serv.vagabondfile[:local_chef_server].update(:enabled => true, :zero => true)
+        # First, setup server
+        if(@solo && !vagabondfile.local_chef_server?)
+          @internal_config.make_knife_config_if_required(true)
+          require 'vagabond/server'
+          srv = ::Vagabond::Server.new
+          srv.vagabondfile = vagabondfile
+          srv.options = options.dup
+          srv.options[:auto_provision] = true
+          srv.options[:force_zero] = true
+          srv.send(:setup, 'up')
+          srv.send(:execute)
+          options[:force_berkshelf] ? srv.send(:berks_upload) : srv.send(:upload_cookbooks)
         end
-        internal_config.make_knife_config_if_required(:force)
-        serv.options = options.update(:auto_upload => false)
-        serv.send(:do_create)
-        load_cookbooks(:upload)
         suites = kitchen.clusters[cluster_name]
         platforms.each do |platform|
           begin
@@ -128,7 +138,10 @@ module Vagabond
             end
           end
         end
-        serv.destroy
+        if(srv)
+          srv.send(:setup, 'destroy')
+          srv.send(:execute)
+        end
       else
         load_cookbooks
         suites = options[:suites] ? options[:suites].split(',') : kitchen.suites.map(&:name)
@@ -303,10 +316,10 @@ module Vagabond
     end
 
     def load_cookbooks(*args)
-      if(File.exists?(File.join(vagabondfile.directory, 'Berksfile')))
-        uploader = berks_vendor(args.include?(:upload))
-      else
+      if(File.exists?(File.join(vagabondfile.directory, 'Cheffile')) && !options[:force_berkshelf])
         uploader = librarian_vendor(args.include?(:upload))
+      else
+        uploader = berks_vendor(args.include?(:upload))
       end
       uploader
     end
@@ -332,6 +345,7 @@ module Vagabond
     def librarian_vendor(upload=false)
       ui.info 'Cookbooks being vendored with librarian'
       unless(File.exists?(cheffile = File.join(vagabondfile.directory, 'Cheffile')))
+        ui.warn 'Writing custom Cheffile to provide any required dependency resolution'
         File.open(cheffile = File.join(vagabondfile.generate_store_path, 'Cheffile'), 'w') do |file|
           file.write custom_cheffile
         end
