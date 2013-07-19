@@ -90,7 +90,7 @@ module Vagabond
         )
         cmd.run_command
         cmd.error!
-        true
+        cmd
       rescue
         raise if args[:raise_on_failure]
         false
