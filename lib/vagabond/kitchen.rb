@@ -46,13 +46,16 @@ module Vagabond
       :type => :string,
       :desc => 'Specify suite to destroy'
     )
-    def teardown(cookbook)
+    def teardown(cookbook=nil)
+      setup(cookbook, :teardown)
       ui.info "#{ui.color('Vagabond:', :bold)} - Kitchen teardown for cookbook #{ui.color(name, :red)}"
-      plats = [platform || options[:platform] || platform_map.keys].flatten
+      plats = [options[:platform] || platform_map.keys].flatten
       plats.each do |plat|
         validate_platform!(plat)
         ui.info ui.color("  -> Tearing down platform: #{plat}", :red)
-        vagabond_instance(:destroy, plat).send(:execute)
+        kitchen.suites.map(&:name).each do |suite|
+          vagabond_instance(:destroy, plat, :suite_name => suite).send(:execute)
+        end
         ui.info ui.color("  -> Teardown of platform: #{plat} - COMPLETE!", :red)
       end
     end
