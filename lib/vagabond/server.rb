@@ -107,7 +107,13 @@ module Vagabond
         elsif(vagabondfile[:local_chef_server][:berkshelf])
           berks_upload
         else
-          raw_upload
+          if(File.exists?(File.join(vagabondfile.directory, 'Cheffile')))
+            librarian_upload
+          elsif(File.exists?(File.join(vagabondfile.directory, 'Berksfile')))
+            berks_upload
+          else
+            raw_upload
+          end
         end
       end
     end
@@ -126,29 +132,43 @@ module Vagabond
       yield
       ui.info ui.color("  -> UPLOADED #{thing.upcase}", :green)
     end
+
+    def server_base
+      if(vagabondfile[:local_chef_server][:zero] || options[:force_zero])
+        base = 'vb-zero-server'
+      else
+        version = vagabondfile[:local_chef_server][:version]
+        unless(version)
+          # TODO: Bad magic. Make configurable!
+          matches = Dir.new('/var/lib/lxc').find_all{|i| i.match(/^vb-server-\d+_\d+_\d+$/)}
+          matches.map!{|i| i.sub('vb-server-', '').gsub('_', '.')}
+          version = matches.sort{|x,y| Gem::Version.new(x) <=> Gem::Version.new(y)}.last
+        end
+        base = "vb-server-#{version.gsub('.', '_')}"
+        unless(Lxc.new(base).exists?)
+          raise VagabondError::ErchefBaseMissing.new("Required base container is missing: #{base}")
+        end
+      end
+      base
+    end
     
     def do_create
-      @lxc = Lxc.new(generated_name)
-      unless(@lxc.exists?)
-        com = "#{options[:sudo]}lxc-clone -n #{generated_name} -o #{@base_template}"
-        debug(com)
-        cmd = Mixlib::ShellOut.new(com, :live_stream => options[:debug])
-        cmd.run_command
-        cmd.error!
-      else
-        ui.warn 'Found server instance not if configuration. Adding and moving on.'
-      end
-      @internal_config[:mappings][name] = generated_name
+      config = Mash.new
+
+      # TODO: Pull custom IP option if provided
+      
+      config[:daemon] = true
+      config[:original] = server_base
+      ephemeral = Lxc::Ephemeral.new(config)
+      e_name = ephemeral.name
+      @internal_config[mappings_key][name] = e_name
       @internal_config.save
-      ui.info ui.color('  -> Chef Server container created!', :cyan)
-      lxc.start
-      ui.info ui.color('  -> Chef Server CREATED!', :green)
-      do_provision
-      auto_upload if vagabondfile[:local_chef_server][:auto_upload]
+      ephemeral.start!(:fork)
+      @lxc = Lxc.new(e_name)
     end
 
     def do_provision
-      if(vagabondfile[:local_chef_server][:zero])
+      if(vagabondfile[:local_chef_server][:zero] || options[:force_zero])
         ui.info ui.color('  -> Bootstrapping chef-zero...', :cyan)
         tem_file = File.expand_path(File.join(File.dirname(__FILE__), 'bootstraps/server-zero.erb'))
         options[:knife_opts] = " --server-url http://#{lxc.container_ip(20, true)}"
@@ -157,11 +177,12 @@ module Vagabond
         tem_file = File.expand_path(File.join(File.dirname(__FILE__), 'bootstraps/server.erb'))
         options[:knife_opts] = " --server-url https://#{lxc.container_ip(20, true)}"
       end
-      com = "#{options[:sudo]}knife bootstrap #{lxc.container_ip(10, true)} --template-file #{tem_file} -i /opt/hw-lxc-config/id_rsa --sync-directory '#{@internal_config.cookbook_path}:/var/chef/cookbooks'"
+      com = "#{options[:sudo]}knife bootstrap #{lxc.container_ip(10, true)} --template-file #{tem_file} -i /opt/hw-lxc-config/id_rsa"
       cmd = Mixlib::ShellOut.new(com, :live_stream => options[:debug], :timeout => 1200)
       debug(com)
       cmd.run_command
       cmd.error!
+      auto_upload if vagabondfile[:local_chef_server][:auto_upload]
     end
     
     def berks_upload
@@ -171,7 +192,7 @@ module Vagabond
         berks_path = vagabondfile[:local_chef_server][:berkshelf][:path]
       end
       berk_uploader = Uploader::Berkshelf.new(
-        vagabondfile.directory, options.merge(
+        vagabondfile.store_directory, options.merge(
           :ui => ui,
           :berksfile => File.join(vagabondfile.directory, berks_path || 'Berksfile'),
           :chef_server_url => options[:knife_opts].to_s.split(' ').last,
