@@ -162,10 +162,11 @@ module Vagabond
     def provision_solo(dir)
       ui.info "#{ui.color('Vagabond:', :bold)} Provisioning node: #{ui.color(name, :magenta)}"
       lxc.container_ip(20) # force wait for container to appear and do so quietly
-      direct_container_command(
+      cmd = direct_container_command(
         "chef-solo -c #{File.join(dir, 'solo.rb')} -j #{File.join(dir, 'dna.json')}",
         :live_stream => STDOUT
       )
+      raise VagabondError::NodeProvisionFailed.new("Failed to provision: #{name}") unless cmd
     end
     
     def load_configurations
@@ -193,6 +194,11 @@ module Vagabond
               ui.warn 'Local chef server is not currently running!' unless @action.to_sym == :status
             end
           end
+        else
+          if(@internal_config[:mappings][:server] && (srv = Lxc.new(@internal_config[:mappings][:server])).running?)
+            options[:knife_opts] = " --server-url http://#{srv.container_ip(10, true)}"
+          end
+
         end
       end
     end
