@@ -44,7 +44,9 @@ module Vagabond
 
     def ensure_state
       check_bases_and_customs!
-      install_cookbooks unless self.class.host_provisioned?
+      unless(self.class.host_provisioned?)
+        install_cookbooks
+      end
       set_templates
       store_checksums
       write_dna_json
@@ -59,11 +61,7 @@ module Vagabond
     def set_templates
       unless(Vagabond.const_defined?(:BASE_TEMPLATES))
         Vagabond.const_set(
-          :BASE_TEMPLATES, File.readlines(
-            File.join(cookbook_path, 'vagabond/attributes/default.rb')
-          ).map{ |l|
-            l.scan(%r{bases\]\[:([^\]]+)\]}).flatten.first
-          }.compact.uniq
+          :BASE_TEMPLATES, cookbook_attributes(:vagabond).bases.keys
         )
       end
     end
@@ -79,13 +77,13 @@ module Vagabond
           end
         end
         if(dna[:vagabond][:server])
-          # TODO: Proper attribute load of vagabond default.rb
-          # TODO: Use prefix from attributes
-          srv_name = "vb-server-#{dna[:vagabond][:server][:erchefs].first.to_s.gsub('.', '_')}"
+          srv_name = [
+            cookbook_attributes(:vagabond).server.prefix,
+            dna[:vagabond][:server][:erchefs].first.to_s.gsub('.', '_')
+          ].join('-')
           options[:force_solo] = true unless Lxc.new(srv_name).exists?
         end
-        # TODO: REALLY NEED ATTRIBUTE READ
-        options[:force_solo] = true unless Lxc.new('vb-zero-server').exists?
+        options[:force_solo] = true unless Lxc.new(cookbook_attributes(:vagabond).server.zero_lxc_name).exists?
       end
     end
 
@@ -159,10 +157,10 @@ module Vagabond
         end
       end
       if(@vagabondfile.local_chef_server? && !@vagabondfile[:local_chef_server][:zero])
-        # TODO: GET THE ATTRIBUTES
-        version = @vagabondfile[:local_chef_server][:version] || '11.0.8'
+        version = cookbook_attributes(:vagabond).lo
+        version = @vagabondfile[:local_chef_server][:version] || cookbook_attributes(:vagabond).server.erchefs
         conf[:server] = Mash.new
-        conf[:server][:erchefs] = [version]
+        conf[:server][:erchefs] = [version].flatten.uniq
       end
       conf[:host_cookbook_store] = cookbook_path
       File.open(dna_path, 'w') do |file|
@@ -334,7 +332,21 @@ module Vagabond
     def file_changed?(path)
       checksum = get_checksum(path)
       checksum unless @checksums[path] == checksum
-     end
+    end
+
+    def cookbook_attributes(cookbook)
+      @_attr_cache ||= Mash.new
+      unless(@_attr_cache[cookbook])
+        node = Chef::Node.new
+        %w(rb json js).each do |ext|
+          Dir.glob(File.join(cookbook_path, cookbook, 'attributes', "*.#{ext}")).each do |attr_file|
+            node.from_file(attr_file)
+          end
+        end
+        @_attr_cache[cookbook] = node.attributes
+      end
+      @_attr_cache[cookbook]
+    end
     
     def make_knife_config_if_required(force=false)
       if((@vagabondfile[:local_chef_server] && @vagabondfile[:local_chef_server][:enabled]) || force)

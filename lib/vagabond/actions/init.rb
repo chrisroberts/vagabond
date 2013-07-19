@@ -21,14 +21,7 @@ module Vagabond
       private
 
       def empty_vagabondfile_hash
-        require 'chef/node'
-        node = Chef::Node.new
-        node.from_file(
-          File.join(
-            File.dirname(__FILE__),
-            '../cookbooks/vagabond/attributes/default.rb'
-          )
-        )
+        node = internal_configuration.cookbook_attributes(:vagabond)
         nodes = {}
         node[:vagabond][:bases].keys.each do |template|
           answer = nil
