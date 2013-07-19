@@ -7,7 +7,7 @@ module Vagabond
       def _create
         name_required!
         if(lxc.exists?)
-          ui.warn "Node already exists: #{name}" unless name == 'server'
+          ui.warn "Node already exists: #{name}"
           _start
         else
           ui.info "#{ui.color('Vagabond:', :bold)} Creating #{ui.color(name, :green)}"
@@ -33,10 +33,10 @@ module Vagabond
         config[:original] = tmpl
         config[:bind] = File.expand_path(vagabondfile.store_directory)
         ephemeral = Lxc::Ephemeral.new(config)
-        ephemeral.start!(:fork)
         e_name = ephemeral.name
         @internal_config[mappings_key][name] = e_name
         @internal_config.save
+        ephemeral.start!(:fork)
         @lxc = Lxc.new(e_name)
       end
 
