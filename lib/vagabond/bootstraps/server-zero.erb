@@ -8,6 +8,6 @@ echo "
 "
 ) > /tmp/chef-server.json
 
-chef-solo -j /tmp/chef-server.json
+chef-solo -j /tmp/chef-server.json -c /etc/chef-solo-host.rb
 
 '

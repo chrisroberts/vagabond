@@ -40,7 +40,7 @@ echo "
       \"<%= Chef::Config[:node_name] %>\": \"client_key_pub.pem\",
       \"<%= Chef::Config[:validation_client_name] %>\": \"validation_pub.pem\"
     },
-    \"servername_override\": \"${IPADDR}\",
+    \"endpoint\": \"${IPADDR}\",
     \"base_path\": \"/tmp/chef-server-setup\"
   },
   \"run_list\": [ \"recipe[chef-server-populator::solo]\", \"recipe[chef-server]\" ]
@@ -48,7 +48,7 @@ echo "
 "
 ) > /tmp/chef-server.json
 
-chef-solo -j /tmp/chef-server.json
+chef-solo -j /tmp/chef-server.json -c /etc/chef-solo-host.rb
 
 rm -rf /tmp/chef-server-setup
 
