@@ -247,10 +247,14 @@ module Vagabond
     
     def cookbook_vendor_required?
       need_vendor = !File.exists?(vendor_cheffile_path)
-      unless(need_vendor)
-        need_vendor = get_checksum(vendor_cheffile_path) != get_checksum(cheffile_path)
+      need_vendor ||= get_checksum(vendor_cheffile_path) != get_checksum(cheffile_path)
+      spec = Gem::Specification.find_by_name('vagabond', Vagabond::VERSION.version)
+      if(spec.respond_to?(:git_version))
+        need_vendor ||= spec.git_version && spec.segments.last.odd?
       end
-      ENV['VAGABOND_FORCE_VENDOR'] || need_vendor
+      unless(ENV['VAGABOND_FORCE_VENDOR'].to_s == false)
+        ENV['VAGABOND_FORCE_VENDOR'] || need_vendor
+      end
     end
     
     def install_cookbooks
