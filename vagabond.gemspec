@@ -23,4 +23,5 @@ Gem::Specification.new do |s|
   s.add_dependency 'elecksee', '>= 1.0.8'
   s.add_dependency 'serverspec', '>= 0.6.3'
   s.add_dependency 'attribute_struct'
+  s.add_dependency 'knife-bootstrapsync'
 end
