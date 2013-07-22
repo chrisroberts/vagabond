@@ -3,6 +3,7 @@ require 'digest/sha2'
 require 'json'
 require 'vagabond/helpers'
 require 'vagabond/constants'
+require 'chef'
 require 'chef/mixin/deep_merge'
 
 module Vagabond
@@ -26,7 +27,15 @@ module Vagabond
     def initialize(vagabondfile, ui, options, args={})
       @vagabondfile = vagabondfile
       @checksums = Mash.new
-      @ui = ui
+      if(ui)
+        @ui = ui
+      else
+        @ui = Logger.new('/dev/null')
+        @ui.instance_eval do
+          def color(*args)
+          end
+        end
+      end
       @options = options
       create_store
       load_existing
@@ -43,10 +52,10 @@ module Vagabond
     end
 
     def ensure_state
-      check_bases_and_customs!
       unless(self.class.host_provisioned?)
         install_cookbooks
       end
+      check_bases_and_customs!
       set_templates
       store_checksums
       write_dna_json
@@ -80,10 +89,13 @@ module Vagabond
           srv_name = [
             cookbook_attributes(:vagabond).server.prefix,
             dna[:vagabond][:server][:erchefs].first.to_s.gsub('.', '_')
-          ].join('-')
+          ].join
           options[:force_solo] = true unless Lxc.new(srv_name).exists?
         end
-        options[:force_solo] = true unless Lxc.new(cookbook_attributes(:vagabond).server.zero_lxc_name).exists?
+        unless(Lxc.new(cookbook_attributes(:vagabond).server.zero_lxc_name).exists?)
+          puts "WTF YO"
+          options[:force_solo] = true
+        end
       end
     end
 
@@ -157,7 +169,6 @@ module Vagabond
         end
       end
       if(@vagabondfile.local_chef_server? && !@vagabondfile[:local_chef_server][:zero])
-        version = cookbook_attributes(:vagabond).lo
         version = @vagabondfile[:local_chef_server][:version] || cookbook_attributes(:vagabond).server.erchefs
         conf[:server] = Mash.new
         conf[:server][:erchefs] = [version].flatten.uniq
@@ -334,16 +345,21 @@ module Vagabond
       checksum unless @checksums[path] == checksum
     end
 
-    def cookbook_attributes(cookbook)
+    def cookbook_attributes(cookbook, namespace=true)
       @_attr_cache ||= Mash.new
       unless(@_attr_cache[cookbook])
         node = Chef::Node.new
         %w(rb json js).each do |ext|
-          Dir.glob(File.join(cookbook_path, cookbook, 'attributes', "*.#{ext}")).each do |attr_file|
+          Dir.glob(File.join(cookbook_path, cookbook.to_s, 'attributes', "*.#{ext}")).each do |attr_file|
             node.from_file(attr_file)
           end
         end
-        @_attr_cache[cookbook] = node.attributes
+        if(namespace)
+          key = namespace.is_a?(String) || namespace.is_a?(Symbol) ? namespace : cookbook
+          @_attr_cache[cookbook] = node.attributes.send(key)
+        else
+          @_attr_cache[cookbook] = node.attributes
+        end
       end
       @_attr_cache[cookbook]
     end
