@@ -37,6 +37,8 @@ module Vagabond
           if(vagabondfile[:local_chef_server] && vagabondfile[:local_chef_server][:enabled])
             require 'vagabond/server'
             srv = ::Vagabond::Server.new
+            srv.options = options.dup
+            srv.options[:auto_provision] = true
             srv.send(:setup, 'up')
             srv.execute
             # Reload so we get proper values
