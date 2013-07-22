@@ -154,9 +154,7 @@ module Vagabond
     
     def do_create
       config = Mash.new
-
       # TODO: Pull custom IP option if provided
-      
       config[:daemon] = true
       config[:original] = server_base
       ephemeral = Lxc::Ephemeral.new(config)
@@ -177,7 +175,9 @@ module Vagabond
         tem_file = File.expand_path(File.join(File.dirname(__FILE__), 'bootstraps/server.erb'))
         options[:knife_opts] = " --server-url https://#{lxc.container_ip(20, true)}"
       end
-      com = "#{options[:sudo]}knife bootstrap #{lxc.container_ip(10, true)} --template-file #{tem_file} -i /opt/hw-lxc-config/id_rsa"
+      # Scrub before bootstrap
+      direct_container_command('rm -rf /var/chef-host/cookbooks')
+      com = "#{options[:sudo]}knife bootstrap #{lxc.container_ip(10, true)} --sync-directory \"#{internal_config.cookbook_path}:/var/chef-host/cookbooks\" --template-file #{tem_file} -i /opt/hw-lxc-config/id_rsa"
       cmd = Mixlib::ShellOut.new(com, :live_stream => options[:debug], :timeout => 1200)
       debug(com)
       cmd.run_command
