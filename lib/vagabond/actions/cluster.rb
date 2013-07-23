@@ -34,7 +34,7 @@ module Vagabond
         clr = vagabondfile[:clusters][name] if vagabondfile[:clusters]
         if(clr)
           ui.info "#{ui.color('Vagabond:', :bold)} Building cluster - #{ui.color(name, :green)}"
-          if(vagabondfile[:local_chef_server] && vagabondfile[:local_chef_server][:enabled])
+          if(vagabondfile.local_chef_server?)
             require 'vagabond/server'
             srv = ::Vagabond::Server.new
             srv.options = options.dup
