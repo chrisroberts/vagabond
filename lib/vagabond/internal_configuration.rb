@@ -1,10 +1,13 @@
 #encoding: utf-8
-require 'digest/sha2'
 require 'json'
-require 'vagabond/helpers'
-require 'vagabond/constants'
+require 'digest/sha2'
+
 require 'chef'
 require 'chef/mixin/deep_merge'
+
+require 'vagabond/helpers'
+require 'vagabond/constants'
+require 'vagabond/version'
 
 module Vagabond
   class InternalConfiguration
@@ -248,11 +251,11 @@ module Vagabond
     def cookbook_vendor_required?
       need_vendor = !File.exists?(vendor_cheffile_path)
       need_vendor ||= get_checksum(vendor_cheffile_path) != get_checksum(cheffile_path)
-      spec = Gem::Specification.find_by_name('vagabond', Vagabond::VERSION.version)
+      spec = Gem::Specification.find_by_name('vagabond', ::Vagabond::VERSION.version)
       if(spec.respond_to?(:git_version))
-        need_vendor ||= spec.git_version && spec.segments.last.odd?
+        need_vendor ||= spec.git_version && ::Vagabond::VERSION.segments.last.odd?
       end
-      unless(ENV['VAGABOND_FORCE_VENDOR'].to_s == false)
+      unless(ENV['VAGABOND_FORCE_VENDOR'].to_s == 'false')
         ENV['VAGABOND_FORCE_VENDOR'] || need_vendor
       end
     end
