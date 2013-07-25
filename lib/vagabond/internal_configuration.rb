@@ -252,8 +252,13 @@ module Vagabond
       need_vendor = !File.exists?(vendor_cheffile_path)
       need_vendor ||= get_checksum(vendor_cheffile_path) != get_checksum(cheffile_path)
       spec = Gem::Specification.find_by_name('vagabond', ::Vagabond::VERSION.version)
-      if(spec.respond_to?(:git_version))
-        need_vendor ||= spec.git_version && ::Vagabond::VERSION.segments.last.odd?
+      if(spec.respond_to?(:git_version) && ::Vagabond::VERSION.segments.last.odd?)
+        if(self[:dev_mode] && self[:dev_mode][:vendor_cookbook_check])
+          elapsed_time = Time.now.to_i - self[:dev_mode][:vendor_cookbook_check].to_i
+          need_vendor = elapsed_time > (ENV['VAGABOND_DEV_VENDOR_EVERY'] || 3600).to_i
+        end
+        self[:dev_mode] ||= Mash.new
+        self[:dev_mode][:vendor_cookbook_check] = Time.now.to_i if need_vendor
       end
       unless(ENV['VAGABOND_FORCE_VENDOR'].to_s == 'false')
         ENV['VAGABOND_FORCE_VENDOR'] || need_vendor
