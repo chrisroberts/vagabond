@@ -2,6 +2,7 @@
 require 'vagabond/constants'
 require 'tmpdir'
 require 'uuidtools'
+require 'etc'
 
 module Vagabond
   module Helpers
@@ -21,7 +22,17 @@ module Vagabond
     end
     
     def sudo
-      case vagabondfile[:sudo]
+      sudo_val = vagabondfile[:sudo]
+      if(sudo_val == 'smart')
+        if(ENV['rvm_bin_path'] && RbConfig::CONFIG['bindir'].include?(File.dirname(ENV['rvm_bin_path'])))
+          sudo_val = 'rvmsudo'
+        elsif(Etc.getpwuid.uid == 0)
+          sudo_val = false
+        else
+          sudo_val = true
+        end
+      end
+      case sudo_val
       when FalseClass
         ''
       when String
