@@ -108,6 +108,26 @@ module Vagabond
       end
     end
 
+    def via_bundle
+      if(defined?(Bundler) && Bundler.bundle_path)
+        'bundle exec '
+      end
+    end
+
+    def build_command(command, args={})
+      command = "#{via_bundle}#{command}" unless args[:no_bundle]
+      command = "#{sudo}#{command}" if args[:sudo]
+      pre_args = args[:shellout] || {}
+      debug(command)
+      cmd = Mixlib::ShellOut.new(
+        command, {
+          :live_stream => options[:debug],
+          :timeout => 3600
+        }
+      )
+      cmd
+    end
+
     def callbacks(key)
       if(vagabondfile[:callbacks][key])
         ui.info "  Running #{ui.color(key, :bold)} callbacks..."
