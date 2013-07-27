@@ -53,9 +53,9 @@ module Vagabond
         if(File.directory?(File.join(base_dir, 'roles')))
           %w(rb json js).each do |ext|
             next if Dir.glob(File.join(base_dir, "roles", "*.#{ext}")).size == 0
-            com = "knife role from file #{File.join(base_dir, "roles/*.#{ext}")} #{options[:knife_opts]}"
-            debug(com)
-            cmd = Mixlib::ShellOut.new(com, :live_stream => options[:debug])
+            cmd = build_command(
+              "knife role from file #{File.join(base_dir, "roles/*.#{ext}")} #{options[:knife_opts]}"
+            )
             cmd.run_command
             cmd.error!
           end
@@ -73,8 +73,7 @@ module Vagabond
               "knife data bag create #{File.basename(b)} #{options[:knife_opts]}",
               "knife data bag from file #{File.basename(b)} #{options[:knife_opts]} --all"
             ].each do |com|
-              debug(com)
-              cmd = Mixlib::ShellOut.new(com, :live_stream => options[:debug])
+              cmd = build_command(com)
               cmd.run_command
               cmd.error!
             end
@@ -89,9 +88,9 @@ module Vagabond
         if(File.directory?(File.join(base_dir, 'environments')))
           %w(rb json js).each do |ext|
             next if Dir.glob(File.join(base_dir, "environments", "*.#{ext}")).size == 0
-            com = "knife environment from file #{File.join(base_dir, "environments/*.#{ext}")} #{options[:knife_opts]}"
-            debug(com)
-            cmd = Mixlib::ShellOut.new(com, :live_stream => options[:debug])
+            cmd = build_command(
+              "knife environment from file #{File.join(base_dir, "environments/*.#{ext}")} #{options[:knife_opts]}"
+            )
             cmd.run_command
             cmd.error!
           end
@@ -177,9 +176,11 @@ module Vagabond
       end
       # Scrub before bootstrap
       direct_container_command('rm -rf /var/chef-host/cookbooks')
-      com = "#{options[:sudo]}knife bootstrap #{lxc.container_ip(10, true)} --sync-directory \"#{internal_config.cookbook_path}:/var/chef-host/cookbooks\" --template-file #{tem_file} -i /opt/hw-lxc-config/id_rsa"
-      cmd = Mixlib::ShellOut.new(com, :live_stream => options[:debug], :timeout => 1200)
-      debug(com)
+      cmd = build_command(
+        "knife bootstrap #{lxc.container_ip(10, true)} --sync-directory " <<
+        "\"#{internal_config.cookbook_path}:/var/chef-host/cookbooks\" --template-file " <<
+        "#{tem_file} -i /opt/hw-lxc-config/id_rsa"
+      )
       cmd.run_command
       cmd.error!
       auto_upload if vagabondfile[:local_chef_server][:auto_upload]
