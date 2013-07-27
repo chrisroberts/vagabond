@@ -40,9 +40,11 @@ module Vagabond
             srv.options = options.dup
             srv.options[:auto_provision] = true
             srv.send(:setup, 'up')
-            srv.execute
-            # Reload so we get proper values
-            load_configurations
+            unless(srv.lxc.running?)
+              srv.execute
+              # Reload so we get proper values
+              load_configurations
+            end
           end
           cluster_instances = clr.map do |n|
             ui.info "Building #{n} for cluster!"
