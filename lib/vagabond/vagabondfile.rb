@@ -76,12 +76,22 @@ module Vagabond
       end
     end
 
+    def build_private_store
+      unless(@_private_store_path)
+        @_private_store_path = File.join('/tmp/vagabond-solos', directory.gsub(%r{[^0-9a-zA-Z]}, '-'), 'Vagabondfile')
+        @_private_store_path = File.expand_path(@_private_store_path.gsub('-', '/'))
+        FileUtils.mkdir_p(File.dirname(@_private_store_path))
+        File.dirname(@_private_store_path)
+      end
+      @_private_store_path
+    end
+    
     def generate_store_path
       @path ||= File.expand_path(File.join(Dir.pwd, 'Vagabondfile'))
-      @store_path = File.join('/tmp/vagabond-solos', directory.gsub(%r{[^0-9a-zA-Z]}, '-'), 'Vagabondfile')
-      @store_path = File.expand_path(@store_path.gsub('-', '/'))
-      FileUtils.mkdir_p(File.dirname(@store_path))
-      File.dirname(@store_path)
+      unless(@store_path)
+        @store_path = build_private_store
+      end
+      @store_path
     end
 
     def store_path
