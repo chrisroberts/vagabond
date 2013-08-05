@@ -43,7 +43,7 @@ module Vagabond
             unless(srv.lxc.running?)
               srv.execute
               # Reload so we get proper values
-              load_configurations
+              configure
             end
           end
           cluster_instances = clr.map do |n|

@@ -41,7 +41,7 @@ module Vagabond
         nodes.each do |n|
           next unless n.is_a?(String)
           @name = n
-          load_configurations
+          configure
           if(lxc.exists?)
             ui.info "#{ui.color('Vagabond:', :bold)} Destroying node: #{ui.color(name, :red)}"
             do_destroy
