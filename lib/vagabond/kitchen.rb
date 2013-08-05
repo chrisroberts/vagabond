@@ -101,19 +101,9 @@ module Vagabond
           ui.fatal "Requested cluster is not defined: #{options[:cluster]}"
           raise VagabondError::ClusterInvalid.new(cluster_name)
         end
-        # First, setup server
-        if(@solo && !vagabondfile.local_chef_server?)
-          @internal_config.make_knife_config_if_required(true)
-          require 'vagabond/server'
-          srv = ::Vagabond::Server.new
-          srv.vagabondfile = vagabondfile
-          srv.options = options.dup
-          srv.options[:auto_provision] = true
-          srv.options[:force_zero] = true
-          srv.send(:setup, 'up')
-          srv.send(:execute)
-          options[:force_berkshelf] ? srv.send(:berks_upload) : srv.send(:upload_cookbooks)
-        end
+
+        setup_server_if_needed
+
         suites = kitchen.clusters[cluster_name]
         platforms.each do |platform|
           begin
@@ -141,10 +131,8 @@ module Vagabond
             end
           end
         end
-        if(srv)
-          srv.send(:setup, 'destroy')
-          srv.send(:execute)
-        end
+
+        destroy_server_if_needed
       else
         load_cookbooks
         suites = options[:suites] ? options[:suites].split(',') : kitchen.suites.map(&:name)
@@ -334,7 +322,7 @@ module Vagabond
         berks_path = vagabondfile[:local_chef_server][:berkshelf][:path]
       end
       berk_uploader = Uploader::Berkshelf.new(
-        vagabondfile.generate_store_path, options.merge(
+        vagabondfile.build_private_store, options.merge(
           :ui => ui,
           :berksfile => File.join(vagabondfile.directory, berks_path || 'Berksfile'),
           :chef_server_url => options[:knife_opts].to_s.split(' ').last,
@@ -349,12 +337,12 @@ module Vagabond
       ui.info 'Cookbooks being vendored with librarian'
       unless(File.exists?(cheffile = File.join(vagabondfile.directory, 'Cheffile')))
         ui.warn 'Writing custom Cheffile to provide any required dependency resolution'
-        File.open(cheffile = File.join(vagabondfile.generate_store_path, 'Cheffile'), 'w') do |file|
+        File.open(cheffile = File.join(vagabondfile.build_private_store, 'Cheffile'), 'w') do |file|
           file.write custom_cheffile
         end
       end
       librarian_uploader = Uploader::Librarian.new(
-        vagabondfile.generate_store_path,
+        vagabondfile.build_private_store,
         options.merge(
           :ui => ui,
           :cheffile => cheffile
@@ -391,7 +379,6 @@ module Vagabond
         :ui => ui
       )
       v.vagabondfile = vagabondfile
-      v.vagabondfile.generate_store_path
       v.internal_config.force_bases = platform_map[platform][:template]
       v.internal_config.ensure_state
       v.mappings_key = :test_mappings

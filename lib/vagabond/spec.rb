@@ -194,18 +194,7 @@ module Vagabond
       
       load_layout
 
-      # First, setup server
-      unless(vagabondfile.local_chef_server?)
-        @internal_config.make_knife_config_if_required(true)
-        require 'vagabond/server'
-        srv = ::Vagabond::Server.new
-        srv.options = options.dup
-        srv.options[:auto_provision] = true
-        srv.options[:force_zero] = true
-        srv.send(:setup, 'up')
-        srv.send(:execute)
-        srv.send(:librarian_upload)
-      end
+      setup_server_if_needed
 
       default_config = Chef::Mixin::DeepMerge.merge(
         Mash.new(:platform => 'ubuntu_1204'), layout[:defaults]
@@ -229,10 +218,7 @@ module Vagabond
         test_node!(name, lxc.container_ip, config)
       end
 
-      if(srv)
-        srv.send(:setup, 'destroy')
-        srv.send(:execute)
-      end
+      destroy_server_if_needed
     end
     
     def test_node!(name, ip_address, node_config)
@@ -248,10 +234,8 @@ module Vagabond
         test_files += Dir.glob(File.join(dir, '*.rb')).map(&:to_s)
       end
       test_files.flatten.compact.each do |path|
-        com = "#{sudo}VAGABOND_TEST_HOST='#{ip_address}' rspec #{path}"
-        debug(com)
         ui.info "\n#{ui.color('**', :green, :bold)}  Running spec: #{path.sub("#{vagabondfile.directory}/", '')}"
-        cmd = Mixlib::ShellOut.new(com, :live_stream => STDOUT, :env => {'VAGABOND_TEST_HOST' => ip_address})
+        cmd = build_command("VAGABOND_TEST_HOST='#{ip_address}' rspec #{path}", :live_stream => STDOUT, :env => {'VAGABOND_TEST_HOST' => ip_address})
         cmd.run_command
         cmd.error!
       end
