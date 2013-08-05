@@ -18,6 +18,8 @@ end
 
 module Vagabond
   class Vagabond < Thor
+
+    DISABLE_HOST_SOLO_ON = %w(status init)
     
     include Thor::Actions
     include Helpers
@@ -27,12 +29,6 @@ module Vagabond
       include klass if klass.is_a?(Module)
     end
     
-    attr_reader :name
-    attr_reader :vagabondfile
-    attr_reader :internal_config
-    attr_reader :ui
-    attr_reader :options
-
     attr_accessor :mappings_key
     attr_accessor :lxc
     attr_accessor :config
@@ -72,7 +68,6 @@ module Vagabond
 
     CLI_OPTIONS.call
 
-    
     # action:: Action to perform
     # name:: Name of vagabond
     # config:: Hash configuration
@@ -131,25 +126,20 @@ module Vagabond
     end
     
     def execute
-      self.send("_#{@action}")
+      self.send("_#{action}")
     end
     
     def setup(action, name=nil, *args)
       @action = action
       @name = name
-      @options = options.dup
       if(args.last.is_a?(Hash))
         _ui = args.last.delete(:ui)
-        @options.merge!(args.last)
-      end
-      @leftover_args = args
-      setup_ui(_ui)
-      load_configurations
-      if(respond_to?(check = "#{action}_validate?".to_sym))
-        validate! if send(check)
+        base_setup(_ui)
+        options.merge!(args.last)
       else
-        validate!
+        base_setup
       end
+      leftover_args = args
     end
 
     def name_required!
@@ -169,44 +159,10 @@ module Vagabond
       raise VagabondError::NodeProvisionFailed.new("Failed to provision: #{name}") unless cmd
     end
     
-    def load_configurations
-      @vagabondfile = Vagabondfile.new(options[:vagabond_file], :allow_missing)
-      options[:sudo] = sudo
-      # TODO: provide action call back for full or partial solo disable
-      if((@action.to_s == 'status' && lxc_installed?) || @action.to_s == 'init')
-        options[:disable_solo] = true
-      end
-      Chef::Log.init('/dev/null') unless options[:debug]
-      Lxc.use_sudo = @vagabondfile[:sudo].nil? ? true : @vagabondfile[:sudo]
-      @internal_config = InternalConfiguration.new(@vagabondfile, ui, options)
-      options[:disable_solo] = false if @action.to_s == 'init'
-      @config = @vagabondfile[:nodes][name]
-      @lxc = Lxc.new(@internal_config[mappings_key][name] || '____nonreal____')
-      if(options[:local_server] && lxc_installed?)
-        if(@vagabondfile[:local_chef_server] && @vagabondfile[:local_chef_server][:enabled])
-          srv_name = @internal_config[:mappings][:server]
-          srv = Lxc.new(srv_name) if srv_name
-          if(srv_name && srv.running?)
-            proto = @vagabondfile[:local_chef_server][:zero] ? 'http' : 'https'
-            options[:knife_opts] = " --server-url #{proto}://#{srv.container_ip(10, true)}"
-          else
-            unless(@action.to_sym == :status || name.to_s =='server')
-              ui.warn 'Local chef server is not currently running!' unless @action.to_sym == :status
-            end
-          end
-        else
-          if(@internal_config[:mappings][:server] && (srv = Lxc.new(@internal_config[:mappings][:server])).running?)
-            options[:knife_opts] = " --server-url http://#{srv.container_ip(10, true)}"
-          end
-
-        end
-      end
-    end
-
     def validate!
       if(name.to_s == 'server')
         ui.fatal "RESERVED node name supplied: #{ui.color(name, :red)}"
-        ui.info ui.color("  -> Try: vagabond server #{@action}", :cyan)
+        ui.info ui.color("  -> Try: vagabond server #{action}", :cyan)
         raise VagabondError::ReservedName.new(name)
       end
       if(name && config.nil? && !options[:disable_name_validate])
@@ -217,7 +173,7 @@ module Vagabond
     end
     
     def check_existing!
-      if(@lxc.exists?)
+      if(lxc.exists?)
         ui.error "LXC: #{name} already exists!"
         true
       end
