@@ -96,7 +96,6 @@ module Vagabond
           options[:force_solo] = true unless Lxc.new(srv_name).exists?
         end
         unless(Lxc.new(cookbook_attributes(:vagabond).server.zero_lxc_name).exists?)
-          puts "WTF YO"
           options[:force_solo] = true
         end
       end
@@ -269,25 +268,13 @@ module Vagabond
       begin
         if(cookbook_vendor_required?)
           FileUtils.copy(cheffile_path, vendor_cheffile_path)
-          com = 'librarian-chef update'
-          debug(com)
           ui.info ui.color('Fetching required cookbooks...', :yellow)
-          cmd = Mixlib::ShellOut.new(com,
-            :timeout => 300,
-            :live_stream => options[:debug],
-            :cwd => File.dirname(cookbook_path)
-          )
+          cmd = build_command('librarian-chef update', :cwd => File.dirname(cookbook_path))
           cmd.run_command
           cmd.error!
           ui.info ui.color('  -> COMPLETE!', :yellow)
         else
-          com = 'librarian-chef install'
-          debug(com)
-          cmd = Mixlib::ShellOut.new(com,
-            :timeout => 300,
-            :live_stream => options[:debug],
-            :cwd => File.dirname(cookbook_path)
-          )
+          cmd = build_command('librarian-chef install', :cwd => File.dirname(cookbook_path))
           cmd.run_command
           cmd.error!
         end
@@ -303,9 +290,7 @@ module Vagabond
         begin
           ui.info ui.color('Ensuring expected system state (creating required base containers)', :yellow)
           ui.info ui.color('   - This can take a while on first run or new templates...', :yellow)
-          com = "#{options[:sudo]}chef-solo -j #{File.join(store_path, 'dna.json')} -c #{File.join(store_path, 'solo.rb')}"
-          debug(com)
-          cmd = Mixlib::ShellOut.new(com, :timeout => 12000, :live_stream => options[:debug])
+          cmd = build_command("#{options[:sudo]}chef-solo -j #{File.join(store_path, 'dna.json')} -c #{File.join(store_path, 'solo.rb')}")
           cmd.run_command
           cmd.error!
           ui.info ui.color('  -> COMPLETE!', :yellow)
@@ -377,7 +362,7 @@ module Vagabond
     end
     
     def make_knife_config_if_required(force=false)
-      if((@vagabondfile[:local_chef_server] && @vagabondfile[:local_chef_server][:enabled]) || force)
+      if(@vagabondfile.local_chef_server? || force)
         unless(knife_config_available?)
           store_dir = File.dirname(store_path)
           k_dir = File.join(store_dir, '.chef')
