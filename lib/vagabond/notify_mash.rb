@@ -15,7 +15,6 @@ class NotifyMash < BasicObject
     start_state = @mash.hash
     result = @mash.send(sym, *args)
     if(start_state != @mash.hash)
-      puts "Calling notifications: #{sym} - #{args.inspect}"
       @notifications.each do |notify|
         notify.call(self)
       end
