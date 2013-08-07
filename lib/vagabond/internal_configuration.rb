@@ -8,10 +8,11 @@ require 'chef/mixin/deep_merge'
 require 'vagabond/helpers'
 require 'vagabond/constants'
 require 'vagabond/version'
+require 'vagabond/notify_mash'
 
 module Vagabond
   class InternalConfiguration
-
+    
     class << self
       attr_accessor :host_provisioned
 
@@ -42,13 +43,15 @@ module Vagabond
       @options = options
       create_store
       load_existing
-      @config = Mash.new(
-        :mappings => Mash.new,
-        :template_mappings => Mash.new,
-        :test_mappings => Mash.new,
-        :spec_mappings => Mash.new,
-        :spec_clusters => Mash.new
-      ).merge(config)
+      @config = storage_hash(
+        Mash.new(
+          :mappings => {},
+          :template_mappings => {},
+          :test_mappings => {},
+          :spec_mappings => {},
+          :spec_clusters => {}
+        ).merge(config)
+      )
       @force_bases = args[:force_bases] || []
       ensure_state
       make_knife_config_if_required
@@ -106,6 +109,9 @@ module Vagabond
     end
 
     def []=(k,v)
+      if(v.is_a?(Hash) && !v.is_a?(NotifyHash))
+        v = storage_hash(v)
+      end
       @config[k] = v
       save
     end
@@ -129,9 +135,9 @@ module Vagabond
             JSON.load(content)
           )
         end
-        @config = Chef::Mixin::DeepMerge.merge(config, @config)
+        @config = storage_hash(Chef::Mixin::DeepMerge.merge(config, @config))
       else
-        @config = Mash.new
+        @config = storage_hash
       end
     end
 
@@ -266,15 +272,15 @@ module Vagabond
     
     def install_cookbooks
       begin
-        if(cookbook_vendor_required?)
+        if(true || cookbook_vendor_required?)
           FileUtils.copy(cheffile_path, vendor_cheffile_path)
           ui.info ui.color('Fetching required cookbooks...', :yellow)
-          cmd = build_command('librarian-chef update', :cwd => File.dirname(cookbook_path))
+          cmd = build_command('librarian-chef update', :shellout => {:cwd => File.dirname(cookbook_path)})
           cmd.run_command
           cmd.error!
           ui.info ui.color('  -> COMPLETE!', :yellow)
         else
-          cmd = build_command('librarian-chef install', :cwd => File.dirname(cookbook_path))
+          cmd = build_command('librarian-chef install', :shellout => {:cwd => File.dirname(cookbook_path)})
           cmd.run_command
           cmd.error!
         end
@@ -342,6 +348,22 @@ module Vagabond
       checksum unless @checksums[path] == checksum
     end
 
+    def storage_hash(hsh={})
+      new_hash = {}
+      hsh.each_pair do |k,v|
+        if(v.is_a?(Hash))
+          new_hash[k] = storage_hash(v)
+        else
+          new_hash[k] = v
+        end
+      end
+      n = NotifyMash.new(new_hash)
+      n.add_notification do
+        save
+      end
+      n
+    end
+    
     def cookbook_attributes(cookbook, namespace=true)
       @_attr_cache ||= Mash.new
       unless(@_attr_cache[cookbook])
