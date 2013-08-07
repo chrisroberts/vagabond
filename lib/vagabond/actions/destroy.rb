@@ -27,7 +27,7 @@ module Vagabond
       def _destroy
         name_required!
         if(options[:cluster])
-          cluster_name = name
+          @cluster_name = name
           nodes = vagabondfile[:clusters][name] if vagabondfile[:clusters]
           if(nodes)
             ui.info "#{ui.color('Vagabond:', :bold)} Destroying cluster - #{ui.color(name, :red)}"
@@ -38,19 +38,26 @@ module Vagabond
         else
           nodes = [name, @leftover_args].flatten.compact
         end
-        nodes.each do |n|
-          next unless n.is_a?(String)
-          @name = n
-          configure
-          if(lxc.exists?)
-            ui.info "#{ui.color('Vagabond:', :bold)} Destroying node: #{ui.color(name, :red)}"
-            do_destroy
-            ui.info ui.color('  -> DESTROYED', :red)
-          else
-            ui.error "Node not created: #{name}"
-          end
+        @name = nodes.shift
+        @leftover_args = nodes
+        configure
+        if(lxc.exists?)
+          ui.info "#{ui.color('Vagabond:', :bold)} Destroying node: #{ui.color(name, :red)}"
+          do_destroy
+          ui.info ui.color('  -> DESTROYED', :red)
+        else
+          ui.error "Node not created: #{name}"
         end
-        @name = cluster_name if cluster_name
+        if(nodes.empty?)
+          if(@cluster_name)
+            @name = @cluster_name
+            configure
+          end
+        else
+          @name = @leftover_args.shift
+          configure
+          add_link(:destroy)
+        end
       end
 
       private
