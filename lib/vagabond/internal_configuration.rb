@@ -109,7 +109,7 @@ module Vagabond
     end
 
     def []=(k,v)
-      if(v.is_a?(Hash) && !v.is_a?(NotifyHash))
+      if(v.is_a?(Hash))
         v = storage_hash(v)
       end
       @config[k] = v
@@ -272,7 +272,7 @@ module Vagabond
     
     def install_cookbooks
       begin
-        if(true || cookbook_vendor_required?)
+        if(cookbook_vendor_required?)
           FileUtils.copy(cheffile_path, vendor_cheffile_path)
           ui.info ui.color('Fetching required cookbooks...', :yellow)
           cmd = build_command('librarian-chef update', :shellout => {:cwd => File.dirname(cookbook_path)})
