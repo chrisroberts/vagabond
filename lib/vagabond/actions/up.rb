@@ -26,6 +26,7 @@ module Vagabond
           end
         end
         if(options[:parallel])
+          # TODO: Need strategy for chains
           @threads[:up] ||= []
           t_holder = Mash.new
           @threads[:up] << t_holder.update(
@@ -41,8 +42,13 @@ module Vagabond
             }
           )
         else
-          _create
-          do_provision if options[:auto_provision]
+          if(!lxc.exists?)
+            add_link(:create)
+          elsif(!lxc.running?)
+            add_link(:start)
+          elsif(options[:auto_provision])
+            add_link(:provision)
+          end
         end
       end
 

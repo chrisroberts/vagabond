@@ -8,7 +8,7 @@ module Vagabond
         name_required!
         if(lxc.exists?)
           ui.warn "Node already exists: #{name}"
-          _start
+          add_link(:start)
         else
           ui.info "#{ui.color('Vagabond:', :bold)} Creating #{ui.color(name, :green)}"
           do_create
