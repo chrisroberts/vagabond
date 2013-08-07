@@ -11,7 +11,7 @@ module Vagabond
         if(options[:cookbook_paths])
           com << " --cookbook-path #{Array(options[:cookbook_paths]).join(':')}"
         end
-        cmd = knife_command(com, :cwd => store)
+        cmd = knife_command(com, :shellout => {:cwd => store})
         cmd.run_command
         cmd.error!
       end

@@ -21,11 +21,7 @@ module Vagabond
         else
           com = "librarian-chef install --path=#{File.join(store, 'cookbooks')}"
         end
-        debug(com)
-        cmd = Mixlib::ShellOut.new(com,
-          :live_stream => options[:debug],
-          :cwd => File.dirname(options[:cheffile])
-        )
+        cmd = build_command(com, :shellout => {:cwd => File.dirname(options[:cheffile])})
         cmd.run_command
         cmd.error!
         options[:cookbook_paths] = [File.join(store, 'cookbooks')]
