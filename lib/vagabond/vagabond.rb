@@ -97,9 +97,11 @@ module Vagabond
           end
         end
         define_method meth do |*args|
+          @original_args = args.dup
           setup(meth, *args)
           execute
           callbacks(meth)
+          chain!
         end
       end
     end
@@ -139,7 +141,7 @@ module Vagabond
       else
         base_setup
       end
-      leftover_args = args
+      @leftover_args = args
     end
 
     def name_required!
