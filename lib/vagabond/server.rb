@@ -168,7 +168,7 @@ module Vagabond
       else
         ui.info ui.color('  -> Bootstrapping erchef...', :cyan)
         tem_file = File.expand_path(File.join(File.dirname(__FILE__), 'bootstraps/server.erb'))
-        knife_config :server_url => "http://#{lxc.container_ip(20, true)}"
+        knife_config :server_url => "https://#{lxc.container_ip(20, true)}"
       end
       # Scrub before bootstrap
       direct_container_command('rm -rf /var/chef-host/cookbooks')
