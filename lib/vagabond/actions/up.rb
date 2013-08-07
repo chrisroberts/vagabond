@@ -46,9 +46,8 @@ module Vagabond
             add_link(:create)
           elsif(!lxc.running?)
             add_link(:start)
-          elsif(options[:auto_provision])
-            add_link(:provision)
           end
+          add_link(:provision) if options[:auto_provision]
         end
       end
 
