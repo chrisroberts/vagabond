@@ -21,6 +21,8 @@ mkdir -p /etc/chef
 cp /tmp/chef-server-setup/validation.pem /etc/chef/validation.pem
 chmod 600 /etc/chef/validation.pem
 
+chef-server-ctl stop
+
 IPADDR=`ip addr show eth0 | grep "inet " | awk -F" " '\''{print $2}'\'' | sed -e "s/\/24//"`
 (
 echo "
