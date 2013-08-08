@@ -140,12 +140,15 @@ module Vagabond
         platforms.each do |platform|
           suites.each do |suite_name|
             runner = lambda do
-              provision_node(platform, suite_name)
-              @results[platform] << {
-                :suite_name => suite_name,
-                :result => test_node(platform, suite_name)
-              }
-              destroy_node(platform, suite_name)
+              begin
+                provision_node(platform, suite_name)
+                @results[platform] << {
+                  :suite_name => suite_name,
+                  :result => test_node(platform, suite_name)
+                }
+              ensure
+                destroy_node(platform, suite_name)
+              end
             end
             if(options[:parallel])
               runners << Thread.new{ runner.call }
