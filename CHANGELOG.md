@@ -1,3 +1,19 @@
+## v0.3.0
+* Fix `:berkshelf` key to be optionally Hash type
+* Allow all types for roles/environments/data bags
+* Add guards for uploads of file types (thanks @jaypipes)
+* Raise exception on failed provisions
+* Force utf-8 on all files
+* Better output on parallel cluster builds
+* Use Librarian to vendor internal cookbooks at runtime
+* Provide `spec` support within isolated cookbooks (outside of chef-repo)
+* Make `server` nodes ephemeral
+* Build base erchef server containers with versions
+* Customize host provisioning cookbook versions based on dev/release version
+* Added callbacks
+* Allow passing commands to nodes via `ssh` action
+* Lots of cleanup and other stuff that's not jumping out of the git history
+
 ## v0.2.8
 * Disable `chef-server` clone on provision (#14)
 * Temporarily disable provision on init action
