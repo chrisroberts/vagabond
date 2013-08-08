@@ -6,7 +6,7 @@ require 'kitchen/busser'
 require 'kitchen/loader/yaml'
 require 'vagabond/monkey/kitchen_config'
 
-%w(constants errors helpers vagabondfile vagabond server helpers/cheffile_loader actions/status).each do |dep|
+%w(constants errors helpers vagabondfile vagabond server actions/status).each do |dep|
   require "vagabond/#{dep}"
 end
 
@@ -181,6 +181,9 @@ module Vagabond
 
     protected
 
+    def validate!
+    end
+    
     def mappings_key
       :test_mappings
     end
@@ -262,7 +265,7 @@ module Vagabond
 
     def write_solo_config(dir)
       File.open(File.join(dir, 'solo.rb'), 'w') do |file|
-        file.write("cookbook_path '#{File.join(vagabondfile.store_directory, 'cookbooks')}'\n")
+        file.write("cookbook_path '#{File.join(vagabondfile.build_private_store, 'cookbooks')}'\n")
       end
       dir
     end
