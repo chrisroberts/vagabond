@@ -243,7 +243,10 @@ module Vagabond
 
     def cheffile_path
       File.expand_path(
-        File.join(File.dirname(__FILE__), 'Cheffile')
+        File.join(
+          File.dirname(__FILE__),
+          running_development_vagabond? ? 'Cheffile.dev' : 'Cheffile'
+        )
       )
     end
 
@@ -257,7 +260,7 @@ module Vagabond
       need_vendor = !File.exists?(vendor_cheffile_path)
       need_vendor ||= get_checksum(vendor_cheffile_path) != get_checksum(cheffile_path)
       spec = Gem::Specification.find_by_name('vagabond', ::Vagabond::VERSION.version)
-      if(spec.respond_to?(:git_version) && ::Vagabond::VERSION.segments.last.odd?)
+      if(running_development_vagabond?)
         if(self[:dev_mode] && self[:dev_mode][:vendor_cookbook_check])
           elapsed_time = Time.now.to_i - self[:dev_mode][:vendor_cookbook_check].to_i
           need_vendor = elapsed_time > (ENV['VAGABOND_DEV_VENDOR_EVERY'] || 3600).to_i
@@ -269,7 +272,12 @@ module Vagabond
         ENV['VAGABOND_FORCE_VENDOR'] || need_vendor
       end
     end
-    
+
+    def running_development_vagabond?
+      spec = Gem::Specification.find_by_name('vagabond', ::Vagabond::VERSION.version)
+      spec.respond_to?(:git_version) && ::Vagabond::VERSION.segments.last.odd?
+    end
+      
     def install_cookbooks
       begin
         if(cookbook_vendor_required?)
