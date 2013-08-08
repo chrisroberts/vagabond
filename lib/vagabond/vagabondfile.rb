@@ -83,7 +83,7 @@ module Vagabond
         FileUtils.mkdir_p(File.dirname(@_private_store_path))
         File.dirname(@_private_store_path)
       end
-      @_private_store_path
+      File.dirname(@_private_store_path)
     end
     
     def generate_store_path
@@ -91,7 +91,7 @@ module Vagabond
       unless(@store_path)
         @store_path = build_private_store
       end
-      @store_path
+      File.dirname(@store_path)
     end
 
     def store_path
