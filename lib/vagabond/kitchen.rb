@@ -25,7 +25,6 @@ module Vagabond
 
     self.class_exec(&Vagabond::CLI_OPTIONS)
 
-    attr_reader :kitchen
     attr_reader :platform_map
     attr_reader :vagabondfile
     attr_reader :ui
@@ -230,11 +229,13 @@ module Vagabond
       @solo = name.to_s.strip.empty?
       @options = options.dup
       @vagabondfile = Vagabondfile.new(options[:vagabond_file], :allow_missing)
-      base_setup
-      setup_ui
-      @internal_config = InternalConfiguration.new(@vagabondfile, ui, options)
       @name = name || action == :status ? name : discover_name
-      load_kitchen_yml(@name) unless action == :status
+      if(options[:platform])
+        bases = [platform_map[options[:platform]][:template]]
+      else
+        bases = platform_map.values.collect{|plat| plat[:template]}
+      end
+      base_setup(:config => {:force_bases => bases})
       @action = action
     end
 
@@ -398,6 +399,13 @@ module Vagabond
       v
     end
 
+    def kitchen
+      unless(@kitchen)
+        load_kitchen_yml(name)
+      end
+      @kitchen
+    end
+    
     def load_kitchen_yml(name)
       @kitchen = ::Kitchen::Config.new(
         :kitchen_root => cookbook_path,
@@ -412,6 +420,9 @@ module Vagabond
       @platform_map ||= Mash[
         *(
           kitchen.platforms.map do |plat|
+            if(defined?(::Kitchen::Platform::Cheflike))
+              plat.extend(::Kitchen::Platform::Cheflike)
+            end
             [
               plat.name, Mash.new(
                 :template => plat.name.gsub('.', '').gsub('-', '_'),
@@ -431,6 +442,9 @@ module Vagabond
       r = platform_map[platform][:run_list]
       kitchen_suite = kitchen.suites.detect do |k_s|
         k_s.name == suite
+      end
+      if(defined?(::Kitchen::Suite::Cheflike))
+        kitchen_suite.extend(::Kitchen::Suite::Cheflike)
       end
       if(kitchen_suite && kitchen_suite.run_list)
         r |= kitchen_suite.run_list
