@@ -26,7 +26,7 @@ module Vagabond
 
       def via_bundle
         if(defined?(Bundler) && Bundler.bundle_path)
-          'bundle exec '
+          "#{File.join(RbConfig::CONFIG['bindir'], 'bundle')} exec "
         end
       end
 
