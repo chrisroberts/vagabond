@@ -35,35 +35,41 @@ module Vagabond
     attr_accessor :action
 
     CLI_OPTIONS = lambda do
-    class_option(:debug,
-      :type => :boolean,
-      :default => false
-    )
+      class_option(:debug,
+        :type => :boolean,
+        :default => false
+      )
 
-    class_option(:force_solo,
-      :aliases => '--force-configure',
-      :type => :boolean,
-      :default => false,
-      :desc => 'Force configuration of system'
-    )
+      class_option(:force_solo,
+        :aliases => '--force-configure',
+        :type => :boolean,
+        :default => false,
+        :desc => 'Force configuration of system'
+      )
 
-    class_option(:color,
-      :type => :boolean,
-      :default => true,
-      :desc => 'Enable/disable colorized output'
-    )
+      class_option(:color,
+        :type => :boolean,
+        :default => true,
+        :desc => 'Enable/disable colorized output'
+      )
 
-    class_option(:vagabond_file,
-      :aliases => '-f',
-      :type => :string,
-      :desc => 'Provide path to Vagabondfile'
-    )
-    
-    class_option(:local_server,
-      :type => :boolean,
-      :default => true,
-      :desc => 'Enable/disable local Chef server usage if available'
-    )
+      class_option(:vagabond_file,
+        :aliases => '-f',
+        :type => :string,
+        :desc => 'Provide path to Vagabondfile'
+      )
+      
+      class_option(:local_server,
+        :type => :boolean,
+        :default => true,
+        :desc => 'Enable/disable local Chef server usage if available'
+      )
+
+      class_option(:callbacks,
+        :type => :boolean,
+        :default => true,
+        :desc => 'Enable/disable action callbacks'
+      )
     end
 
     CLI_OPTIONS.call
