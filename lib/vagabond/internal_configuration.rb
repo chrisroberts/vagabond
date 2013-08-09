@@ -179,7 +179,8 @@ module Vagabond
         end
       end
       if(@vagabondfile.local_chef_server? && !@vagabondfile[:local_chef_server][:zero])
-        version = @vagabondfile[:local_chef_server][:version] || cookbook_attributes(:vagabond).server.erchefs || DEFAULT_ERCHEF_VERSION
+        version = cookbook_attributes(:vagabond).server.erchefs.dup || []
+        version.push @vagabondfile[:local_chef_server][:version] || DEFAULT_ERCHEF_VERSION
         conf[:server] = Mash.new
         conf[:server][:erchefs] = [version].flatten.uniq
       end
