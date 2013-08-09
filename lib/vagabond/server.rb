@@ -158,6 +158,7 @@ module Vagabond
       internal_config[mappings_key][name] = e_name
       ephemeral.start!(:fork)
       @lxc = Lxc.new(e_name)
+      @lxc.wait_for_state(:running)
     end
 
     def do_provision
@@ -180,6 +181,7 @@ module Vagabond
       )
       cmd.run_command
       cmd.error!
+      ui.info ui.color('  -> COMPLETE', :green)
       auto_upload if vagabondfile[:local_chef_server][:auto_upload]
     end
     
