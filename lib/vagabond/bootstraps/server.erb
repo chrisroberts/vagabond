@@ -22,6 +22,11 @@ cp /tmp/chef-server-setup/validation.pem /etc/chef/validation.pem
 chmod 600 /etc/chef/validation.pem
 
 chef-server-ctl stop
+chef-server-ctl uninstall
+rm -rf ~/*
+rm -rf /opt/chef-server
+rm -rf /var/opt/chef-server
+dpkg -i /var/chef-host/chef-server*
 
 IPADDR=`ip addr show eth0 | grep "inet " | awk -F" " '\''{print $2}'\'' | sed -e "s/\/24//"`
 (
