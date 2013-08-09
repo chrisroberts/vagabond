@@ -12,6 +12,8 @@ require 'vagabond/notify_mash'
 
 module Vagabond
   class InternalConfiguration
+
+    DEFAULT_ERCHEF_VERSION = '11.0.8'
     
     class << self
       attr_accessor :host_provisioned
@@ -177,7 +179,7 @@ module Vagabond
         end
       end
       if(@vagabondfile.local_chef_server? && !@vagabondfile[:local_chef_server][:zero])
-        version = @vagabondfile[:local_chef_server][:version] || cookbook_attributes(:vagabond).server.erchefs
+        version = @vagabondfile[:local_chef_server][:version] || cookbook_attributes(:vagabond).server.erchefs || DEFAULT_ERCHEF_VERSION
         conf[:server] = Mash.new
         conf[:server][:erchefs] = [version].flatten.uniq
       end
