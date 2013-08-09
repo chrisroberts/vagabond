@@ -26,7 +26,7 @@ module Vagabond
 
       def via_bundle
         if(defined?(Bundler) && Bundler.bundle_path)
-          "#{File.join(Bundler.bundle_path, 'bin', 'bundle')} exec "
+          'bundle exec '
         end
       end
 
