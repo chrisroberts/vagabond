@@ -306,7 +306,7 @@ module Vagabond
         begin
           ui.info ui.color('Ensuring expected system state (creating required base containers)', :yellow)
           ui.info ui.color('   - This can take a while on first run or new templates...', :yellow)
-          cmd = build_command("#{options[:sudo]}chef-solo -j #{File.join(store_path, 'dna.json')} -c #{File.join(store_path, 'solo.rb')}")
+          cmd = build_command("chef-solo -j #{File.join(store_path, 'dna.json')} -c #{File.join(store_path, 'solo.rb')}", :sudo => true)
           cmd.run_command
           cmd.error!
           ui.info ui.color('  -> COMPLETE!', :yellow)
