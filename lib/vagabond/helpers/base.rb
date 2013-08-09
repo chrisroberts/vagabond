@@ -14,7 +14,8 @@ module Vagabond
         Lxc.use_sudo = sudo
         options[:sudo] = sudo
         setup_ui(*args)
-        @internal_config = InternalConfiguration.new(@vagabondfile, ui, options)
+        config_args = args.detect{|i| i.is_a?(Hash) && i[:config]} || {}
+        @internal_config = InternalConfiguration.new(@vagabondfile, ui, options, config_args[:config] || {})
         configure
         validate_if_required
         Chef::Log.init('/dev/null') unless options[:debug]
