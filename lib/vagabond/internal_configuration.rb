@@ -278,7 +278,7 @@ module Vagabond
 
     def running_development_vagabond?
       spec = Gem::Specification.find_by_name('vagabond', ::Vagabond::VERSION.version)
-      spec.respond_to?(:git_version) && ::Vagabond::VERSION.segments.last.odd?
+      ::Vagabond::VERSION.segments.last.odd?
     end
       
     def install_cookbooks
