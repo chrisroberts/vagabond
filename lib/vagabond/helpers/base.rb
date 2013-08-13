@@ -48,7 +48,7 @@ module Vagabond
       
       def sudo
         sudo_val = vagabondfile[:sudo]
-        if(sudo_val == 'smart')
+        if(sudo_val.nil? || sudo_val.to_s == 'smart')
           if(ENV['rvm_bin_path'] && RbConfig::CONFIG['bindir'].include?(File.dirname(ENV['rvm_bin_path'])))
             sudo_val = 'rvmsudo'
           elsif(Etc.getpwuid.uid == 0)
@@ -61,7 +61,7 @@ module Vagabond
         when FalseClass
           ''
         when String
-          "#{vagabondfile[:sudo]} "
+          "#{sudo_val} "
         else
           'sudo '
         end
