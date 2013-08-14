@@ -22,7 +22,8 @@ module Vagabond
       end
 
       def configure
-        @config = vagabondfile[:nodes][name]
+        @config ||= Mash.new
+        @config.merge!(vagabondfile[:nodes][name] || Mash.new)
         @lxc = Lxc.new(internal_config[mappings_key][name] || '____nonreal____')
         if(options[:local_server] && vagabondfile.local_chef_server? && lxc_installed?)
           proto = vagabondfile[:local_chef_server][:zero] ? 'http' : 'https'
