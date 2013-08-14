@@ -11,9 +11,6 @@ module Vagabond
             if(@leftover_args)
               command << "\"#{@leftover_args.join(' ')}\""
             end
-            File.open('./a.out', 'w') do |file|
-              file.puts "COM: #{command.join(' ')}"
-            end
             exec command.join(' ')
           else
             ui.error "Node not running: #{name}"
