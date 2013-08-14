@@ -2,7 +2,7 @@
 # vi: set ft=ruby :
 
 Vagrant.configure("2") do |config|
-  config.vm.hostname = "sensu-lxc-host"
+  config.vm.hostname = "vagabond-lxc-host"
   config.vm.box = 'precise-64-lxc-preseed'
   config.vm.box_url = 'http://vagrant.hw-ops.com/precise-64-lxc-preseed.box'
 
