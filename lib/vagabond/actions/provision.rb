@@ -19,10 +19,14 @@ module Vagabond
 
       def do_provision
         ui.info "#{ui.color('Vagabond:', :bold)} Provisioning node: #{ui.color(name, :magenta)}"
-        com = ["bootstrap #{lxc.container_ip(10, true)} -d chef-full -N #{name} -i /opt/hw-lxc-config/id_rsa"]
+        com = ["bootstrap #{lxc.container_ip(10, true)} -N #{name} -i /opt/hw-lxc-config/id_rsa"]
         com << "--no-host-key-verify --run-list \"#{config[:run_list].join(',')}\""
         if(config[:environment])
           com << "-E #{config[:environment]}"
+        end
+        if(config[:no_lazy_load])
+          no_lazy_load_bootstrap = File.join(File.dirname(__FILE__), '..', 'bootstraps/no_lazy_load.erb')
+          com << "--template-file #{no_lazy_load_bootstrap}"
         end
         if(attributes)
           com << "-j '#{attributes}'"
