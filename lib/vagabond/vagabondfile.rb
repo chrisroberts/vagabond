@@ -21,7 +21,12 @@ module Vagabond
     attr_reader :config
 
     DEFAULT_KEYS = %w(nodes mappings test_mappings spec_mappings local_chef_server callbacks)
-    ALIASES = Mash.new(:boxes => :nodes, :nodes => :boxes)
+    ALIASES = Mash.new(
+      :boxes => :nodes,
+      :nodes => :boxes,
+      :local_chef_server => :sever,
+      :server => :local_chef_server
+    )
     
     def initialize(path=nil, *args)
       path = discover_path(Dir.pwd) unless path
