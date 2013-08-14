@@ -39,9 +39,8 @@ module Vagabond
             srv = ::Vagabond::Server.new
             srv.options = options.dup
             srv.options[:auto_provision] = true
-            srv.send(:setup, 'up')
             unless(srv.lxc.running?)
-              srv.execute
+              srv.up
               # Reload so we get proper values
               configure
             end
@@ -51,7 +50,7 @@ module Vagabond
             v_inst = Vagabond.new
             v_inst.options = options.dup
             v_inst.send(:setup, 'up', n, :ui => ui)
-            v_inst.execute
+            v_inst.up
             if(options[:delay].to_i > 0 && n != clr.last)
               ui.warn "Delay requested between node processing. Sleeping for #{options[:delay].to_i} seconds."
               sleep(options[:delay].to_i)
