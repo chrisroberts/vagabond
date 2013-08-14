@@ -53,7 +53,8 @@ module Vagabond
         validate_platform!(plat)
         ui.info ui.color("  -> Tearing down platform: #{plat}", :red)
         kitchen.suites.map(&:name).each do |suite|
-          vagabond_instance(:destroy, plat, :suite_name => suite).send(:execute)
+          inst = vagabond_instance(:destroy, plat, :suite_name => suite)
+          inst.destroy
         end
         ui.info ui.color("  -> Teardown of platform: #{plat} - COMPLETE!", :red)
       end
@@ -169,7 +170,9 @@ module Vagabond
       @results.each do |platform, infos|
         ui.info "  Platform: #{ui.color(platform, :blue, :bold)}"
         infos.each do |res|
-          ui.info "    Suite: #{res[:suite_name]} -> #{res[:result] ? ui.color('SUCCESS!', :green) : ui.color('FAILED!', :red)}"
+          res_out = res[:result] ? ui.color('SUCCESS!', :green) : ui.color('FAILED!', :red)
+          res_out = ui.color('No tests', :blue) if res[:result] == :no_tests
+          ui.info "    Suite: #{res[:suite_name]} -> #{res_out}"
         end
       end
       raise VagabondError::KitchenTestFailed.new(@results.values.flatten.map{|res| res[:suite_name] unless res[:result]}.compact)
@@ -194,8 +197,9 @@ module Vagabond
       run_list = generate_runlist(platform, suite_name)
       v_inst = vagabond_instance(:up, platform, :suite_name => suite_name, :run_list => run_list)
       v_inst.options[:auto_provision] = true
-      raise "ERROR! No local chef!" unless v_inst.options[:knife_opts]
-      v_inst.send(:execute)
+      v_inst.config[:no_lazy_load] = true
+      v_inst._create
+      v_inst._provision
     end
 
     # TODO: Handle failed provision!
@@ -203,7 +207,7 @@ module Vagabond
       run_list = generate_runlist(platform, suite_name)
       ui.info ui.color("  -> Provisioning suite #{suite_name} on platform: #{platform}", :cyan)
       v_inst = vagabond_instance(:create, platform, :suite_name => suite_name)
-      v_inst.send(:execute)
+      v_inst.create(v_inst.name)
       directory = configure_for(v_inst.name, platform, suite_name, run_list, :dna, :cookbooks)
       v_inst.send(:provision_solo, directory)
     end
@@ -211,17 +215,22 @@ module Vagabond
     def test_node(platform, suite_name)
       v_inst = vagabond_instance(:create, platform, :suite_name => suite_name)
       busser = bus_node(v_inst, suite_name)
-      ui.info "#{ui.color('Kitchen:', :bold)} Running tests..."
-      cmd = busser.run_cmd
-      res = cmd.to_s.empty? ? true : v_inst.send(:direct_container_command, cmd, :live_stream => STDOUT)
-      ui.info "\n  -> #{ui.color('Testing', :bold, :cyan)} #{name} suite #{suite_name} on platform #{platform}: #{res ? ui.color('SUCCESS!', :green, :bold) : ui.color('FAILED', :red)}"
-      res
+      if(busser)
+        ui.info "#{ui.color('Kitchen:', :bold)} Running tests..."
+        cmd = busser.run_cmd
+        res = cmd.to_s.empty? ? true : v_inst.send(:direct_container_command, cmd, :live_stream => STDOUT)
+        ui.info "\n  -> #{ui.color('Testing', :bold, :cyan)} #{name} suite #{suite_name} on platform #{platform}: #{res ? ui.color('SUCCESS!', :green, :bold) : ui.color('FAILED', :red)}"
+        res
+      else
+        ui.info "#{ui.color('Kitchen:', :bold)} No tests found."
+        :no_tests
+      end
     end
 
     def destroy_node(platform, suite_name)
       if(options[:teardown])
         v_inst = vagabond_instance(:destroy, platform, :suite_name => suite_name)
-        v_inst.send(:execute)
+        v_inst.destroy(:no_setup)
       end
     end
 
@@ -329,7 +338,7 @@ module Vagabond
         berks_path = vagabondfile[:local_chef_server][:berkshelf][:path]
       end
       berk_uploader = Uploader::Berkshelf.new(
-        vagabondfile.build_private_store, options.merge(
+        vagabondfile, vagabondfile.build_private_store, options.merge(
           :ui => ui,
           :berksfile => File.join(vagabondfile.directory, berks_path || 'Berksfile'),
           :chef_server_url => options[:knife_opts].to_s.split(' ').last,
@@ -349,7 +358,7 @@ module Vagabond
         end
       end
       librarian_uploader = Uploader::Librarian.new(
-        vagabondfile.build_private_store,
+        vagabondfile, vagabondfile.build_private_store,
         options.merge(
           :ui => ui,
           :cheffile => cheffile
@@ -361,18 +370,20 @@ module Vagabond
 
     def bus_node(v_inst, suite_name)
       test_path = options[:cluster] ? 'test/cluster' : 'test/integration'
-      unless(::Kitchen::Busser::DEFAULT_TEST_ROOT == c_path = File.join(cookbook_path, test_path))
-        ::Kitchen::Busser.send(:remove_const, :DEFAULT_TEST_ROOT)
-        ::Kitchen::Busser.const_set(:DEFAULT_TEST_ROOT, c_path)
+      if(File.directory?(c_path = File.join(cookbook_path, test_path)))
+        unless(::Kitchen::Busser::DEFAULT_TEST_ROOT == c_path)
+          ::Kitchen::Busser.send(:remove_const, :DEFAULT_TEST_ROOT)
+          ::Kitchen::Busser.const_set(:DEFAULT_TEST_ROOT, c_path)
+        end
+        busser = ::Kitchen::Busser.new(suite_name)
+        ui.info "#{ui.color('Kitchen:', :bold)} Setting up..."
+        %w(setup_cmd sync_cmd).each do |cmd|
+          com = busser.send(cmd)
+          next if com.to_s.empty?
+          v_inst.send(:direct_container_command, com)
+        end
+        busser
       end
-      busser = ::Kitchen::Busser.new(suite_name)
-      ui.info "#{ui.color('Kitchen:', :bold)} Setting up..."
-      %w(setup_cmd sync_cmd).each do |cmd|
-        com = busser.send(cmd)
-        next if com.to_s.empty?
-        v_inst.send(:direct_container_command, com)
-      end
-      busser
     end
 
     def vagabond_instance(action, platform, args={})
