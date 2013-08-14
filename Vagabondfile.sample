@@ -1,0 +1,47 @@
+Vagabond::Vagabondfile.describe do
+  defaults do
+    template 'ubuntu_1204'
+    environment 'testing'
+    run_list ['recipe[apt]']
+  end
+  definitions do
+    database do
+      template 'ubuntu_1204'
+      run_list ['recipe[internal::db]']
+    end
+    web_site do
+      run_list ['recipe[internal::website]']
+      attributes do
+        apache do
+          ports %w(80 443)
+        end
+      end
+    end
+  end
+  nodes do
+    db do
+      definition 'database'
+      environment 'production'
+      custom_specs %w(blah blah blah)
+    end
+    db_slave.definition 'database'
+    db_slave.attributes.internal.database.role 'slave'
+  end
+  clusters do
+    db ['db', 'db_slave']
+  end
+  specs.clusters do
+    db do
+      overrides.environment 'staging'
+      provision do
+        times 4
+        spec :after_2, :after_4
+        after(2) do
+          run.on.db '/usr/bin/fail_database'
+          pause 3
+        end
+        after.every.run '/usr/bin/log_database_state'
+      end
+    end
+  end
+end
