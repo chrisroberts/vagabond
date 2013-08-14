@@ -192,7 +192,7 @@ module Vagabond
         berks_path = vagabondfile[:local_chef_server][:berkshelf][:path]
       end
       berk_uploader = Uploader::Berkshelf.new(
-        vagabondfile.build_private_store, options.merge(
+        vagabondfile, vagabondfile.build_private_store, options.merge(
           :ui => ui,
           :berksfile => File.join(vagabondfile.directory, berks_path || 'Berksfile'),
           :chef_server_url => options[:knife_opts].to_s.split(' ').last,
@@ -205,7 +205,7 @@ module Vagabond
     def librarian_upload
       ui.info 'Cookbooks being uploaded with librarian'
       librarian_uploader = Uploader::Librarian.new(
-        vagabondfile.build_private_store, options.merge(
+        vagabondfile, vagabondfile.build_private_store, options.merge(
           :ui => ui,
           :cheffile => File.join(vagabondfile.directory, 'Cheffile')
         )
@@ -215,7 +215,7 @@ module Vagabond
     
     def raw_upload
       ui.info 'Cookbooks being uploaded via knife'
-      knife_uploader = Uploader::Knife.new(vagabondfile.directory, options.merge(:ui => ui))
+      knife_uploader = Uploader::Knife.new(vagabondfile, vagabondfile.directory, options.merge(:ui => ui))
       knife_uploader.upload
     end
 
