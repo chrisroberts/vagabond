@@ -109,6 +109,12 @@ provide the name and it will drop you into a root session:
 $ vagabond ssh my_precise_node
 ```
 
+or run a command remotely on the given node:
+
+```
+$ vagabond ssh my_precise_node ps -AH ux
+```
+
 ## vagabond server
 
 Vagabond will optionally allow the installation of a chef server that is
@@ -124,7 +130,7 @@ look like this:
       :run_list => ['role[base]']
     }
   },
-  :local_chef_server => {
+  :server => {
     :enabled => true
   }
 }
@@ -137,7 +143,7 @@ Vagabond. The server commands are explicitly for the server container.
 The commands are similar to the basic `vagabond` commands, with a few
 extra commands as well.
 
-The `:local_chef_server` hash has a few helper keys for setting up
+The `:server` hash has a few helper keys for setting up
 the server:
 
 * `:auto_upload` - Uploads all cookbooks, roles, data bags and environments after build

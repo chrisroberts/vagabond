@@ -38,33 +38,47 @@ Hash you return. Heres a simple example:
   :nodes => {
     :precise => {
       :template => 'ubuntu_1204',
-      :run_list => %w(role[base])
-    },
-    :db => {
-      :template => 'ubuntu_1204',
-      :run_list => %w(role[db])
+      :run_list => ['role[base]']
     }
   },
-  :local_chef_server => {
+  :server => {
     :enabled => true,
-    :auto_upload => true
+    :auto_upload => true,
+    :librarian => true,
+    :berkshelf => false
   }
 }
 ```
+We can also use the `describe` DSL instead of building hashes directly:
 
+```ruby
+Vagabond::Vagabondfile.describe do
+  nodes do
+    precise do
+      template 'ubuntu_1204'
+      run_list ['role[base]']
+    end
+  end
+  server do
+    enabled true
+    auto_upload true
+    librarian true
+    berkshelf false
+  end
+end
+```
 Now, to create a node, simply run:
 
 ```
-$ vagabond up db
+$ vagabond up precise
 ```
 
-This command will bootstrap the installation of LXC utilities and base
-containers prior to starting up a linux container. It does this by
-running the vagabond chef recipe embedded in this gem at
-`lib/vagabond/cookbooks/vagabond/recipes/default.rb`. 
+## System preparation
 
-To only prepare your system for LXC fun and generate a simple vagabond
-file, do the following:
+Vagabond will provision the host system automatically as required to create
+required base lxc templates and ensure proper configuration. However, we can
+also initialize the system directly and create required base images using the
+`init` action:
 
 ```
 $ vagabond init
@@ -72,8 +86,9 @@ $ vagabond init
 
 This command runs the chef recipe and generates a basic Vagabondfile and
 creates the base containers specified in that file. Those base
-containers are Ubuntu 12.04 and CentOS 6.3. This creation process will
-take a while so now is a good time to get a fresh pot of coffee.
+containers are Ubuntu 12.04 and CentOS 6. This creation process can
+take a while depending on download speeds so now is a good time to get a 
+fresh pot of coffee.
 
 Pretty simple, right?
 
@@ -86,9 +101,8 @@ Currently builtin templates:
 * ubuntu_1210
 * debian_6
 * debian_7
-* centos_58
-* centos_63
-* centos_64
+* centos_5
+* centos_6
 
 ## Commands
 
@@ -106,6 +120,19 @@ erchef instance running in an isolated container for every project the
 local server option is enabled. It's just an important bit of information
 to remember so you can make a mental note to stop or freeze it when not
 in use. Or just let them run. What ever floats your boat.
+
+### Lightweight chef server
+
+Vagabond also supports chef-zero instead of running a full blown erchef
+instance. You can specify this by setting it within the `server` block:
+
+```ruby
+...
+  server do
+    zero true
+  end
+...
+```
 
 ### Vagabond knife
 
@@ -262,6 +289,10 @@ boring old `sudo`, you can do that to:
 ```
 :sudo => 'rvmsudo'
 ```
+
+Vagabond will attempt to be smart about determining how to sudo. So if the
+`sudo` option is not set (`nil`) it will discover its environment and use
+`sudo` or `rvmsudo` accordingly.
 
 ## Extra note
 
