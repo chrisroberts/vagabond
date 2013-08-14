@@ -14,6 +14,7 @@ module Vagabond
           do_create
           ui.info ui.color('  -> CREATED!', :green)
         end
+        true
       end
 
       private
@@ -38,6 +39,7 @@ module Vagabond
         @internal_config.save
         ephemeral.start!(:fork)
         @lxc = Lxc.new(e_name)
+        @lxc.wait_for_state(:running)
       end
 
     end
