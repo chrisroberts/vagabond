@@ -20,7 +20,7 @@ module Vagabond
     attr_reader :path
     attr_reader :config
 
-    DEFAULT_KEYS = %w(nodes mappings test_mappings spec_mappings local_chef_server callbacks)
+    DEFAULT_KEYS = %w(defaults definitions nodes clusters specs server)
     ALIASES = Mash.new(
       :boxes => :nodes,
       :nodes => :boxes,
@@ -34,6 +34,29 @@ module Vagabond
       load_configuration!(args.include?(:allow_missing))
     end
 
+    def for_node(name, *args)
+      unless(self[:nodes][name])
+        return nil if args.include?(:allow_missing)
+        raise VagabondError::InvalidName.new("Requested name is not a valid node name: #{name}")
+      end
+      if(self[:nodes][name][:definition])
+        base = for_definition(self[:nodes][name][:definition])
+      else
+        base = self[:defaults]
+      end
+      base = Chef::Mixin::DeepMerge.merge(base, self[:nodes][name])
+      base
+    end
+
+    def for_definition(name)
+      base = self[:defaults]
+      unless(self[:definitions][name])
+        raise VagabondError::InvalidName.new("Requested name is not a valid definition name: #{name}")
+      end
+      base = Chef::Mixin::DeepMerge.merge(base, self[:definitions][definition])
+      base
+    end
+    
     def [](k)
       if(DEFAULT_KEYS.include?(k.to_s))
         @config[k] ||= Mash.new
