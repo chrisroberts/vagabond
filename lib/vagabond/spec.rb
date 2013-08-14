@@ -2,7 +2,7 @@
 require 'thor'
 require 'elecksee/lxc'
 
-%w(layout vagabond server helpers vagabondfile internal_configuration actions/status).each do |dep|
+%w(vagabond server helpers vagabondfile internal_configuration actions/status).each do |dep|
   require "vagabond/#{dep}"
 end
 
@@ -13,8 +13,6 @@ module Vagabond
     include Helpers
     include Actions::Status
 
-    attr_accessor :layout
-
     self.class_exec(&Vagabond::CLI_OPTIONS)
 
     def self.basename
@@ -24,12 +22,18 @@ module Vagabond
     def initialize(*args)
       @name = nil
       super
+      base_setup(:no_configure, :no_validate)
     end
 
     method_option(:irl,
       :type => :boolean,
       :default => false,
       :desc => 'Test In Real Life'
+    )
+    method_option(:irl_connect,
+      :type => :string,
+      :default => 'ipaddress',
+      :desc => 'Attribute to use for ssh connection'
     )
     method_option(:environment,
       :type => :string,
@@ -42,8 +46,6 @@ module Vagabond
     )
     desc 'start [CLUSTER]', 'Run specs for cluster'
     def start(cluster=nil)
-      @options = options.dup
-      setup_ui(nil, :no_class_set)
       error = nil
       begin
         if(options[:irl])
@@ -69,23 +71,19 @@ module Vagabond
     )
     desc 'destroy NAME', 'Destroy the given cluster/node'
     def destroy(cluster)
-      base_setup
       options[:node] ? node_destroy(cluster, options[:node]) : cluster_destroy(cluster)
     end
 
     desc 'status [NAME]', 'Show status of existing nodes'
     def status(name=nil)
-      base_setup
       _status
     end
 
     desc 'init', 'Initalize spec configuration'
     def init
-      setup_ui(nil, :no_class_set)
       ui.info "Initializing spec configuration..."
       make_spec_directory
       populate_spec_directory
-      # - dump empty layout
       ui.info "  -> #{ui.color('COMPLETE!', :green)}"
     end
     
@@ -116,7 +114,6 @@ module Vagabond
     end
 
     def populate_spec_directory
-      write_default_file('Layout')
       write_default_file('spec_helper.rb')
     end
 
@@ -144,26 +141,25 @@ module Vagabond
     end
     
     def irl_spec(cluster)
-      if(cluster && load_layout[cluster])
-        valid_runlists = layout[:clusters][cluster][:nodes]
-        # Runlists composed of role AND/OR recipe
-        valid_runlists.each do |r_l|
-          runlist = r_l.map{|r| Chef::RunList::RunListItem.new(r)}
-          roles = runlist.find_all do |i|
-            i.role?
+      # TODO: Clean up this inject and spit error when nil returned
+      address = options[:irl_connect].split('.').inject(node){|k,m| m[k] || {}}
+      if(cluster && vagabondfile[:clusters][cluster])
+        nodes = vagabondfile[:clusters][cluster].map do |item_name|
+          vagabondfile.for_node(item_name, :allow_missing_node)
+        end
+        valid_runlists = nodes.map do |node|
+          node[:run_list].map do |runlist_item|
+            i = Chef::RunList::RunListItem.new(runlist_item)
+            [i, "#{i.role? ? 'roles' ? 'recipes'}:#{i.name}"]
           end
-          recipes = runlist.find_all do |i|
-            i.recipe?
-          end
-          terms = roles.map{|r| "role:#{r.name}"} + recipes.map{|r| "recipes:#{r.name}"}
-          query = terms.join(' AND ')
-          if(options[:environment])
-            query = "chef_environment:#{options[:environment]} AND (#{query})"
-          end
-          search(:node, query).each do |node|
-            n_r = node.run_list.map(&:to_s)
-            next unless n_r.size == r_l.size && (n_r - r_l).empty?
-            test_node!(node.name, node.ipaddress, node.run_list)
+        end
+        valid_runlists.each do |rl|
+          query = rl.map(&:last)
+          query.push("chef_environment:#{options[:environment]}") if options[:environment]
+          search(:node, query.join(' AND ')).each do |node|
+            node_runlist = node.run_list.map(&:to_s)
+            next unless node_runlist.size == rl.size && (node_runlist - rl.map(&:first)).empty?
+            test_node!(node.name, address, node.run_list)
           end
         end
       else
@@ -173,52 +169,96 @@ module Vagabond
         end
         Chef::Search::Query.new(:node, query.join(' AND ')) do |nodes|
           nodes.each do |node|
-            test_node!(node.name, node.ipaddress, node.run_list)
+            test_node!(node.name, address, node.run_list)
           end
         end
       end
     end
 
-    def vagabondfile
-      unless(@vagabondfile)
-        @vagabondfile = Vagabondfile.new(options[:vagabond_file], :allow_missing)
-      end
-      @vagabondfile
+    def get_cluster(name)
+      clusters = vagabond[:specs][:clusters] || Mash.new
+      cluster = clusters[name] || Mash.new
+      cluster[:nodes] = (vagabond[:clusters][name] || []) + cluster[:nodes]
     end
     
     def cluster_spec(cluster)
-      @options[:auto_provision] = true
-      options[:sudo] = sudo
-      Lxc.use_sudo = vagabondfile[:sudo].nil? ? true : vagabondfile[:sudo]
-      @internal_config = InternalConfiguration.new(vagabondfile, ui, options)
+      cluster = get_cluster(cluster)
       
-      load_layout
-
       setup_server_if_needed
 
-      default_config = Chef::Mixin::DeepMerge.merge(
-        Mash.new(:platform => 'ubuntu_1204'), layout[:defaults]
-      )
-      test_nodes = []
-      layout[:clusters][cluster][:nodes].each_with_index do |node, index|
-        config = Chef::Mixin::DeepMerge.merge(default_config, layout[:definitions][node])
-        config = Chef::Mixin::DeepMerge.merge(config, layout[:clusters][cluster][:overrides] || {})
-        v_n = vagabond_instance(:up,
+      i = 0
+      test_nodes = cluster[:nodes].map do |node_name|
+        config = vagabondfile.for_node(node_name, :allow_missing)
+        config = vagabondfile.for_definition(node_name) unless config
+        if(cluster[:overrides])
+          config = Chef::Mixin::DeepMerge.merge(config, cluster[:overrides])
+        end
+        v_n = vagabond_instance(:create,
           :platform => config[:platform],
           :cluster => cluster,
-          :base_name => "s-#{node}-#{index}"
+          :base_name => "s-#{node_name}-#{index}"
         )
         v_n.config = Chef::Mixin::DeepMerge.merge(v_n.config, config)
         v_n.send(:execute)
-        test_nodes << [v_n.name, v_n.lxc.name, config]
+        test_nodes << [v_n, v_n.lxc.name, config]
       end
-      test_nodes.each do |node|
-        name, lxc_name, config = node
-        lxc = Lxc.new(lxc_name)
-        test_node!(name, lxc.container_ip, config)
+      run_specs = [cluster[:provision] || :always].flatten.compact.map(&:to_sym)
+      after = cluster[:after] || Mash.new
+      (cluster[:provision] || 1).to_i.times do |i|
+        count = i + 1
+        test_nodes.each do |node|
+          node_inst, lxc_name, config = node
+          node_inst._provision
+          ## specs
+          if(run_specs.include?(:every) || run_specs.include?("after_#{count}".to_sym))
+            test_node!(node_inst.name, node_inst.lxc.container_ip, config)
+          end
+        end
+        if(after[:every])
+          process_after(after[:every], test_nodes.map(&:first), cluster)
+        end
+        if(after[count.to_s])
+          process_after(after[count.to_s], test_nodes.map(&:first), cluster)
+        end
       end
 
       destroy_server_if_needed
+    end
+
+    def process_after(after, nodes, cluster_config)
+      if(after[:pause])
+        ui.info ui.color("  Pause run... (#{after[:pause]} seconds)")
+        sleep(after[:pause].to_f)
+      end
+      if(after[:run])
+        run_coms = []
+        if(after[:run].is_a?(String))
+          run_coms << [after[:run], nodes]
+        else
+          if(after[:run][:on])
+            after[:run][:on].each do |dest, com|
+              on_nodes = dest.map do |n|
+                nodes[cluster_config[:nodes].index(n)]
+              end.compact
+              run_coms << [com, on_nodes]
+            end
+            after[:run].delete(:on)
+          end
+          # NOTE: This is just for where `:on` key is missed or people
+          # just want to be lazy
+          after[:run].each_pair do |dest, com|
+            on_nodes = dest.map do |n|
+              nodes[cluster_config[:nodes].index(n)]
+            end.compact
+            run_coms << [com, on_nodes]
+          end
+        end
+        run_coms.each do |com_pair|
+          com_pair.last.each do |node_inst|
+            node_inst.direct_container_command(com_pair.first, :live_stream => STDOUT)
+          end
+        end
+      end
     end
     
     def test_node!(name, ip_address, node_config)
@@ -239,11 +279,6 @@ module Vagabond
         cmd.run_command
         cmd.error!
       end
-    end
-
-    def load_layout
-      # Load up layouts and set defaults
-      @layout = Layout.new(File.dirname(vagabondfile.path))
     end
     
     def vagabond_instance(action, args={})
@@ -277,8 +312,10 @@ module Vagabond
       if(name)
         clusters = [name]
       else
-        load_layout
-        clusters = layout[:clusters].keys.sort
+        clusters = Mash.new
+        clusters.merge!(vagabond[:clusters])
+        clusters.merge!(vagabond[:specs][:clusters])
+        clusters = clusters.keys.sort
       end
       clusters.each do |cluster|
         ui.info "#{ui.color('Status of spec cluster:', :bold)} #{ui.color(cluster, :yellow)}"
@@ -308,24 +345,6 @@ module Vagabond
       internal_config.save
     end
     
-    CONTENT_DEFAULT_LAYOUT = <<-EOF
-{
-  :defaults => {
-    :platform => 'ubuntu_1204',
-    :environment => nil
-  },
-  :definitions => {
-    :example_node => {
-      :run_list => %w(role[example])
-    }
-  },
-  :clusters => {
-    :example_cluster => {
-      :nodes => ['example_node']
-    }
-  }
-}
-EOF
     CONTENT_DEFAULT_SPEC_HELPER = <<-EOF
 require 'serverspec'
 require 'pathname'
@@ -348,5 +367,3 @@ EOF
     
   end
 end
-
-  
