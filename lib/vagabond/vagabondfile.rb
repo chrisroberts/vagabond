@@ -89,7 +89,8 @@ module Vagabond
     def generate_store_path
       @path ||= File.expand_path(File.join(Dir.pwd, 'Vagabondfile'))
       unless(@store_path)
-        @store_path = build_private_store
+        build_private_store
+        @store_path = @_private_store_path
       end
       File.dirname(@store_path)
     end
