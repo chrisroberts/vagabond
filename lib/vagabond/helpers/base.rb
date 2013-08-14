@@ -16,14 +16,14 @@ module Vagabond
         setup_ui(*args)
         config_args = args.detect{|i| i.is_a?(Hash) && i[:config]} || {}
         @internal_config = InternalConfiguration.new(@vagabondfile, ui, options, config_args[:config] || {})
-        configure
-        validate_if_required
+        configure unless args.include?(:no_configure)
+        validate_if_required unless args.include?(:no_validate)
         Chef::Log.init('/dev/null') unless options[:debug]
       end
 
       def configure
         @config ||= Mash.new
-        @config.merge!(vagabondfile[:nodes][name] || Mash.new)
+        @config.merge!(vagabondfile.for_node(name))
         @lxc = Lxc.new(internal_config[mappings_key][name] || '____nonreal____')
         if(options[:local_server] && vagabondfile.local_chef_server? && lxc_installed?)
           proto = vagabondfile[:local_chef_server][:zero] ? 'http' : 'https'
