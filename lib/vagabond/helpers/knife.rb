@@ -1,5 +1,6 @@
 #encoding: utf-8
 
+require 'vagabond/settings'
 require 'vagabond/constants'
 require 'vagabond/helpers/commands'
 
@@ -21,16 +22,16 @@ module Vagabond
 
       def knife_config_build
         base = Mash.new
-        if(File.exists?(kconf = File.join(vagabondfile.store_path, '.chef/knife.rb')))
+        if(File.exists?(kconf = File.join(vagabondfile.store_directory, '.chef/knife.rb')))
           base[:config] = File.expand_path(kconf)
         end
         base.merge(knife_config)
       end
       
       def knife_config(args = {})
-        @knife_config ||= Mash.new
-        @knife_config.merge!(args)
-        @knife_config
+        Settings[:knife] ||= Mash.new
+        Settings[:knife].merge!(args)
+        Settings[:knife]
       end
 
       class << self
