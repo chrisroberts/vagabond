@@ -104,10 +104,13 @@ module Vagabond
         end
         define_method meth do |*args|
           @original_args = args.dup
-          setup(meth, *args)
-          execute
+          unless(args.include?(:no_setup))
+            setup(meth, *args)
+          end
+          result = execute
           callbacks(meth)
           chain!
+          result
         end
       end
     end
@@ -140,10 +143,12 @@ module Vagabond
     def setup(action, name=nil, *args)
       @action = action
       @name = name
-      if(args.last.is_a?(Hash))
-        _ui = args.last.delete(:ui)
+      hash_args = args.detect{|x|x.is_a?(Hash)}
+      if(hash_args)
+        args.delete(hash_args)
+        _ui = hash_args.delete(:ui)
         base_setup(_ui)
-        options.merge!(args.last)
+        config.merge!(hash_args)
       else
         base_setup
       end
