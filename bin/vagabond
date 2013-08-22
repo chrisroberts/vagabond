@@ -45,6 +45,10 @@ else
       Vagabond::Vagabond
     end.start
   rescue Vagabond::VagabondError => e
+    $stderr.puts "Vagabond error encountered. Exiting: #{e}"
+    if(ENV['VAGABOND_EXIT_DEBUG'])
+      puts "#{e.class}: #{e}\n#{e.backtrace.join("\n")}"
+    end
     exit e.exit_code
   rescue Exception => e
     $stderr.puts "Vagabond exiting. Reason: #{e}"
