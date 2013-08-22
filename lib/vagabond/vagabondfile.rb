@@ -36,7 +36,7 @@ module Vagabond
 
     def for_node(name, *args)
       unless(self[:nodes][name])
-        return nil if args.include?(:allow_missing)
+        return Mash.new if args.include?(:allow_missing)
         raise VagabondError::InvalidName.new("Requested name is not a valid node name: #{name}")
       end
       if(self[:nodes][name][:definition])
