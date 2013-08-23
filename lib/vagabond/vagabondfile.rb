@@ -24,7 +24,7 @@ module Vagabond
     ALIASES = Mash.new(
       :boxes => :nodes,
       :nodes => :boxes,
-      :local_chef_server => :sever,
+      :local_chef_server => :server,
       :server => :local_chef_server
     )
     
@@ -34,6 +34,12 @@ module Vagabond
       load_configuration!(args.include?(:allow_missing))
     end
 
+    def callbacks_for(name)
+      callbacks = self[:callbacks] || Mash.new
+      callbacks = Chef::Mixin::DeepMerge.merge(callbacks, for_node(name, :allow_missing)[:callbacks])
+      callbacks
+    end
+    
     def for_node(name, *args)
       unless(self[:nodes][name])
         return Mash.new if args.include?(:allow_missing)
