@@ -150,7 +150,7 @@ module Vagabond
         valid_runlists = nodes.map do |node|
           node[:run_list].map do |runlist_item|
             i = Chef::RunList::RunListItem.new(runlist_item)
-            [i, "#{i.role? ? 'roles' ? 'recipes'}:#{i.name}"]
+            [i, "#{i.role? ? 'roles' : 'recipes'}:#{i.name}"]
           end
         end
         valid_runlists.each do |rl|
@@ -176,9 +176,10 @@ module Vagabond
     end
 
     def get_cluster(name)
-      clusters = vagabond[:specs][:clusters] || Mash.new
+      clusters = vagabondfile[:specs][:clusters] || Mash.new
       cluster = clusters[name] || Mash.new
-      cluster[:nodes] = (vagabond[:clusters][name] || []) + cluster[:nodes]
+      cluster[:nodes] = (vagabondfile[:clusters][name] || []) + (cluster[:nodes] || [])
+      cluster
     end
     
     def cluster_spec(cluster)
@@ -186,7 +187,7 @@ module Vagabond
       
       setup_server_if_needed
 
-      i = 0
+      index = 0
       test_nodes = cluster[:nodes].map do |node_name|
         config = vagabondfile.for_node(node_name, :allow_missing)
         config = vagabondfile.for_definition(node_name) unless config
@@ -200,9 +201,10 @@ module Vagabond
         )
         v_n.config = Chef::Mixin::DeepMerge.merge(v_n.config, config)
         v_n.send(:execute)
-        test_nodes << [v_n, v_n.lxc.name, config]
+        index += 1
+        [v_n, v_n.lxc.name, config]
       end
-      run_specs = [cluster[:provision] || :always].flatten.compact.map(&:to_sym)
+      run_specs = [cluster[:provision] || :every].flatten.compact.map(&:to_sym)
       after = cluster[:after] || Mash.new
       (cluster[:provision] || 1).to_i.times do |i|
         count = i + 1
@@ -275,7 +277,7 @@ module Vagabond
       end
       test_files.flatten.compact.each do |path|
         ui.info "\n#{ui.color('**', :green, :bold)}  Running spec: #{path.sub("#{vagabondfile.directory}/", '')}"
-        cmd = build_command("VAGABOND_TEST_HOST='#{ip_address}' rspec #{path}", :live_stream => STDOUT, :env => {'VAGABOND_TEST_HOST' => ip_address})
+        cmd = build_command("rspec #{path}", :live_stream => STDOUT, :shellout => {:env => {'VAGABOND_TEST_HOST' => ip_address}})
         cmd.run_command
         cmd.error!
       end
@@ -313,8 +315,8 @@ module Vagabond
         clusters = [name]
       else
         clusters = Mash.new
-        clusters.merge!(vagabond[:clusters])
-        clusters.merge!(vagabond[:specs][:clusters])
+        clusters.merge!(vagabondfile[:clusters] || Mash.new)
+        clusters.merge!(vagabondfile[:specs][:clusters] || Mash.new)
         clusters = clusters.keys.sort
       end
       clusters.each do |cluster|
