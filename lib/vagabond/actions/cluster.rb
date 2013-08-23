@@ -49,8 +49,7 @@ module Vagabond
             ui.info "Building #{n} for cluster!"
             v_inst = Vagabond.new
             v_inst.options = options.dup
-            v_inst.send(:setup, 'up', n, :ui => ui)
-            v_inst.up
+            v_inst.up(n, :ui => ui)
             if(options[:delay].to_i > 0 && n != clr.last)
               ui.warn "Delay requested between node processing. Sleeping for #{options[:delay].to_i} seconds."
               sleep(options[:delay].to_i)
