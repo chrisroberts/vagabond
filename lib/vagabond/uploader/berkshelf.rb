@@ -35,7 +35,7 @@ module Vagabond
 
       def vendor(*args)
         FileUtils.mkdir_p(ckbk_store = File.join(store, 'cookbooks'))
-        com = "berks install -b #{options[:berksfile]} -p #{ckbk_store}"
+        com = "berks install -b #{options[:berksfile]} -p #{ckbk_store} #{Array(options[:berks_opts]).compact.flatten.join(' ')}"
         debug(com)
         cmd = Mixlib::ShellOut.new(com, :live_stream => options[:debug])
         cmd.run_command
