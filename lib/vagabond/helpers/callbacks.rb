@@ -17,7 +17,8 @@ module Vagabond
             end
             names.each do |n|
               @name = n
-              vagabondfile[:callbacks][key].each do |command|
+              callbacks = Array(vagabondfile.callbacks_for(name)[key]).compact.flatten
+              callbacks.each do |command|
                 Array(command.scan(/\$\{(\w+)\}/).first).each do |repl|
                   command = command.gsub("${#{repl}}", self.send(repl.downcase))
                 end
