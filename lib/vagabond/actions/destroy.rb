@@ -41,7 +41,7 @@ module Vagabond
         end
         remain = @to_destroy - @destroyed
         @name = remain.shift
-        configure
+        configure(:allow_missing)
         if(lxc.exists?)
           ui.info "#{ui.color('Vagabond:', :bold)} Destroying node: #{ui.color(name, :red)}"
           do_destroy
