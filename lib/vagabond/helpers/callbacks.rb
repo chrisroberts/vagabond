@@ -15,7 +15,7 @@ module Vagabond
             else
               names = [name]
             end
-            names.each do |n|
+            names.compact.each do |n|
               @name = n
               callbacks = Array(vagabondfile.callbacks_for(name)[key]).compact.flatten
               callbacks.each do |command|
