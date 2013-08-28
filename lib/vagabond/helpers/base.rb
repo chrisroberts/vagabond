@@ -9,7 +9,7 @@ module Vagabond
     module Base
       
       def base_setup(*args)
-        @options = @options.dup
+        @options = Mash.new(@options.dup)
         @vagabondfile = Vagabondfile.new(options[:vagabond_file], :allow_missing)
         Lxc.use_sudo = sudo
         options[:sudo] = sudo
@@ -95,6 +95,10 @@ module Vagabond
         end
       end
 
+      def lxc_installed?
+        system('which lxc-info > /dev/null')
+      end
+      
       class << self
         def included(klass)
           klass.class_eval do
