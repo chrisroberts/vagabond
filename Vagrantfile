@@ -20,9 +20,11 @@ Vagrant.configure("2") do |config|
       proxy + [
         "lxc-destroy -n ubuntu_1204",
         "apt-get update",
-        "apt-get install -y -q ruby1.9.1-full git",
-        "gem install --no-ri --no-rdoc bundler",
-        "gem install --no-ri --no-rdoc vagabond"
+        "apt-get install -y -q python-software-properties git build-essential",
+        "add-apt-repository ppa:brightbox/ruby-ng",
+        "apt-get update",
+        "apt-get install -y -q ruby1.9.1 ruby1.9.1-dev",
+        "gem install --no-ri --no-rdoc bundler"
       ]
     ).join("\n")
   end
