@@ -318,4 +318,6 @@ get help making things better!
 
 ## Infos
 
+* Issues: https://github.com/chrisroberts/vagabond/issues
 * Repository: https://github.com/chrisroberts/vagabond
+* IRC: #vagabond @ Freenode
