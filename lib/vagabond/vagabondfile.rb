@@ -20,7 +20,7 @@ module Vagabond
     attr_reader :path
     attr_reader :config
 
-    DEFAULT_KEYS = %w(defaults definitions nodes clusters specs server)
+    DEFAULT_KEYS = %w(defaults definitions nodes clusters specs server callbacks)
     ALIASES = Mash.new(
       :boxes => :nodes,
       :nodes => :boxes,
