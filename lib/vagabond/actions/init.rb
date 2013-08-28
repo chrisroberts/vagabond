@@ -23,7 +23,7 @@ module Vagabond
       def empty_vagabondfile_hash
         node = internal_config.cookbook_attributes(:vagabond)
         nodes = {}
-        node[:vagabond][:bases].keys.each do |template|
+        node[:bases].keys.each do |template|
           answer = nil
           until(%w(n y).include?(answer))
             answer = ui.ask_question("Include template: #{template} ", :default => 'y').downcase
