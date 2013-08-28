@@ -21,7 +21,7 @@ module Vagabond
       private
 
       def empty_vagabondfile_hash
-        node = internal_configuration.cookbook_attributes(:vagabond)
+        node = internal_config.cookbook_attributes(:vagabond)
         nodes = {}
         node[:vagabond][:bases].keys.each do |template|
           answer = nil
