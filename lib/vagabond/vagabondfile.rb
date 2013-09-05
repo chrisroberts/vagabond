@@ -16,7 +16,7 @@ module Vagabond
         inst
       end
     end
-    
+
     attr_reader :path
     attr_reader :config
 
@@ -27,7 +27,7 @@ module Vagabond
       :local_chef_server => :server,
       :server => :local_chef_server
     )
-    
+
     def initialize(path=nil, *args)
       path = discover_path(Dir.pwd) unless path
       @path = path
@@ -39,7 +39,7 @@ module Vagabond
       callbacks = Chef::Mixin::DeepMerge.merge(callbacks, for_node(name, :allow_missing)[:callbacks])
       callbacks
     end
-    
+
     def for_node(name, *args)
       unless(self[:nodes][name])
         return Mash.new if args.include?(:allow_missing)
@@ -59,10 +59,10 @@ module Vagabond
       unless(self[:definitions][name])
         raise VagabondError::InvalidName.new("Requested name is not a valid definition name: #{name}")
       end
-      base = Chef::Mixin::DeepMerge.merge(base, self[:definitions][definition])
+      base = Chef::Mixin::DeepMerge.merge(base, self[:definitions][name])
       base
     end
-    
+
     def [](k)
       if(DEFAULT_KEYS.include?(k.to_s))
         @config[k] ||= Mash.new
@@ -88,7 +88,7 @@ module Vagabond
         end
       end
     end
-    
+
     def load_configuration!(*args)
       unless(args.empty?)
         no_raise = args.first == true
@@ -119,7 +119,7 @@ module Vagabond
       end
       File.dirname(@_private_store_path)
     end
-    
+
     def generate_store_path
       @path ||= File.expand_path(File.join(Dir.pwd, 'Vagabondfile'))
       unless(@store_path)
@@ -140,7 +140,7 @@ module Vagabond
     def store_directory
       File.dirname(@store_path || @path)
     end
-    
+
     def discover_path(path)
       d_path = Dir.glob(File.join(path, 'Vagabondfile')).first
       unless(d_path)
