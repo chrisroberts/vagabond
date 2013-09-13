@@ -6,7 +6,7 @@ require 'kitchen/busser'
 require 'kitchen/loader/yaml'
 require 'vagabond/monkey/kitchen_config'
 
-%w(constants errors helpers vagabondfile vagabond server actions/status).each do |dep|
+%w(constants errors helpers vagabondfile vagabond server actions/status actions/ssh).each do |dep|
   require "vagabond/#{dep}"
 end
 
@@ -16,6 +16,7 @@ module Vagabond
     include Thor::Actions
     include Helpers
     include Actions::Status
+    include Actions::SSH
 
     class << self
       def basename
@@ -25,6 +26,11 @@ module Vagabond
 
     self.class_exec(&Vagabond::CLI_OPTIONS)
 
+    class_option(:isolate,
+      :type => :boolean,
+      :desc => 'Isolate cookbook from parent repository'
+    )
+    
     attr_reader :platform_map
     attr_reader :vagabondfile
     attr_reader :ui
@@ -234,13 +240,16 @@ module Vagabond
       end
     end
 
-    def setup(name, action)
-      @solo = name.to_s.strip.empty?
-      @options = options.dup
-      @vagabondfile = Vagabondfile.new(options[:vagabond_file], :allow_missing)
+    def setup(name, action, *args)
+      @solo = name.to_s.strip.empty? || options[:isolate]
+      @options = Mash.new(@options.dup)
+      vfile = options[:isolate] ? File.join(Dir.pwd, 'Vagabondfile') : options[:vagabond_file]
+      @vagabondfile = Vagabondfile.new(vfile, :allow_missing)
       @name = name || action == :status ? name : discover_name
       if(options[:platform])
         bases = [platform_map[options[:platform]][:template]]
+      elsif(args.include?(:no_host_provision))
+        bases = []
       else
         bases = platform_map.values.collect{|plat| plat[:template]}
       end
