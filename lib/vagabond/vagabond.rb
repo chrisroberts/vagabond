@@ -200,10 +200,6 @@ module Vagabond
       File.join(base_dir, '.vagabond')
     end
 
-    def lxc_installed?
-      system('which lxc-info > /dev/null')
-    end
-
     def wait_for_completion(type=nil)
       @threads ||= []
       if(type)
