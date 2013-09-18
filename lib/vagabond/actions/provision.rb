@@ -14,7 +14,7 @@ module Vagabond
           ui.error "Node not created: #{name}"
         end
       end
-      
+
       private
 
       def do_provision
@@ -27,6 +27,10 @@ module Vagabond
         if(config[:no_lazy_load])
           no_lazy_load_bootstrap = File.join(File.dirname(__FILE__), '..', 'bootstraps/no_lazy_load.erb')
           com << "--template-file #{no_lazy_load_bootstrap}"
+        end
+        if(config[:chef_10])
+          chef_10_bootstrap = File.join(File.dirname(__FILE__), '..', 'bootstraps/chef_10_compat_config.erb')
+          com << "--template-file #{chef_10_bootstrap}"
         end
         if(attributes)
           com << "-j '#{attributes}'"
