@@ -33,7 +33,8 @@ Vagrant.configure("2") do |config|
         "gem install --no-ri --no-rdoc bundler",
         "cd /home/vagrant",
         %(echo "source 'https://rubygems.org'\ngem 'vagabond', path: '/vagrant'\n" > Gemfile),
-        "bundle install --binstubs"
+        "bundle install --binstubs",
+        "chown -R vagrant:vagrant /home/vagrant"
       ]
     ).join("\n")
   end
