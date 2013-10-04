@@ -3,8 +3,14 @@
 
 Vagrant.configure("2") do |config|
   config.vm.hostname = "vagabond-lxc-host"
-  config.vm.box = 'precise-64-lxc-preseed'
-  config.vm.box_url = 'http://vagrant.hw-ops.com/precise-64-lxc-preseed.box'
+
+  unless(ENV['DISABLE_PRESEED'])
+    config.vm.box = 'precise-64-lxc-preseed'
+    config.vm.box_url = 'http://vagrant.hw-ops.com/precise-64-lxc-preseed.box'
+  else
+    config.vm.box = 'precise-64'
+    config.vm.box_url = 'https://github.com/downloads/chrisroberts/vagrant-boxes/precise-64.box'
+  end
 
   if(ENV['ENABLE_APT_PROXY'])
     proxy = [
@@ -24,7 +30,10 @@ Vagrant.configure("2") do |config|
         "add-apt-repository ppa:brightbox/ruby-ng",
         "apt-get update",
         "apt-get install -y -q ruby1.9.1 ruby1.9.1-dev",
-        "gem install --no-ri --no-rdoc bundler"
+        "gem install --no-ri --no-rdoc bundler",
+        "cd /home/vagrant",
+        %(echo "source 'https://rubygems.org'\ngem 'vagabond', path: '/vagrant'\n" > Gemfile),
+        "bundle install --binstubs"
       ]
     ).join("\n")
   end
