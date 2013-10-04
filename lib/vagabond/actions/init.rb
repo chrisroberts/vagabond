@@ -39,9 +39,12 @@ module Vagabond
           end
         end
         {
+          :defaults => {
+            :template => 'ubuntu_1204'
+          },
           :nodes => nodes,
           :clusters => {},
-          :local_chef_server => {
+          :server => {
             :zero => false,
             :berkshelf => false,
             :librarian => false,
@@ -51,7 +54,7 @@ module Vagabond
           :sudo => true
         }
       end
-        
+
       def do_init
         if(File.exists?(vagabondfile.path))
           ui.confirm('Overwrite existing Vagabondfile', true)
