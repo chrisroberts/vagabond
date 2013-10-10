@@ -27,8 +27,15 @@ module Vagabond
       def setup_key!
         path = "/tmp/.#{ENV['USER']}_id_rsa"
         unless(File.exists?(path))
-          FileUtils.cp(SSH_KEY_BASE, path)
-          FileUtils.chmod(0600, path)
+          [
+            "cp #{SSH_KEY_BASE} #{path}",
+            "chown #{ENV['USER']} #{path}",
+            "chmod 600 #{path}"
+          ].each do com
+            cmd = build_command(com, :sudo => true)
+            cmd.run_command
+            cmd.error!
+          end
         end
         path
       end
