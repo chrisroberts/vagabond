@@ -31,7 +31,7 @@ module Vagabond
             "cp #{SSH_KEY_BASE} #{path}",
             "chown #{ENV['USER']} #{path}",
             "chmod 600 #{path}"
-          ].each do com
+          ].each do |com|
             cmd = build_command(com, :sudo => true)
             cmd.run_command
             cmd.error!
