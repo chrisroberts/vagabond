@@ -4,7 +4,7 @@ require 'mixlib/cli'
 require 'digest/md5'
 
 module Vagabond
-  
+
   class Server < Vagabond
 
     class << self
@@ -14,7 +14,7 @@ module Vagabond
     end
 
     self.class_exec(false, &Vagabond::COMMANDS)
-    
+
     def initialize(*args)
       super
       @name = 'server'
@@ -121,7 +121,7 @@ module Vagabond
     def setup(action, name=nil, *args)
       super(action, 'server', *args)
     end
-    
+
     def am_uploading(thing)
       ui.info "#{ui.color('Local chef server:', :bold)} Uploading #{ui.color(thing, :green)}"
       yield
@@ -146,7 +146,7 @@ module Vagabond
       end
       base
     end
-    
+
     def do_create
       config = Mash.new
       # TODO: Pull custom IP option if provided
@@ -177,14 +177,14 @@ module Vagabond
       cmd = knife_command(
         "bootstrap #{lxc.container_ip(10, true)} --sync-directory " <<
         "\"#{internal_config.cookbook_path}:/var/chef-host/cookbooks\" --template-file " <<
-        "#{tem_file} -i /opt/hw-lxc-config/id_rsa"
+        "#{tem_file} -i #{Settings[:ssh_key]}"
       )
       cmd.run_command
       cmd.error!
       ui.info ui.color('  -> COMPLETE', :green)
       auto_upload if vagabondfile[:local_chef_server][:auto_upload]
     end
-    
+
     def berks_upload
       ui.info 'Cookbooks being uploaded via berks'
       if(vagabondfile[:local_chef_server][:berkshelf].is_a?(Hash))
@@ -212,7 +212,7 @@ module Vagabond
       )
       librarian_uploader.upload
     end
-    
+
     def raw_upload
       ui.info 'Cookbooks being uploaded via knife'
       knife_uploader = Uploader::Knife.new(vagabondfile, vagabondfile.directory, options.merge(:ui => ui))

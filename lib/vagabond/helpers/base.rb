@@ -7,7 +7,9 @@ module Vagabond
   module Helpers
 
     module Base
-      
+
+      SSH_KEY_BASE = '/opt/hw-lxc-config/id_rsa'
+
       def base_setup(*args)
         @options = Mash.new(@options.dup)
         @vagabondfile = Vagabondfile.new(options[:vagabond_file], :allow_missing)
@@ -19,6 +21,23 @@ module Vagabond
         configure(:allow_missing) unless args.include?(:no_configure)
         validate_if_required unless args.include?(:no_validate)
         Chef::Log.init('/dev/null') unless options[:debug]
+        Settings[:ssh_key] = setup_key!
+      end
+
+      def setup_key!
+        path = "/tmp/.#{ENV['USER']}_id_rsa"
+        unless(File.exists?(path))
+          [
+            "cp #{SSH_KEY_BASE} #{path}",
+            "chown #{ENV['USER']} #{path}",
+            "chmod 600 #{path}"
+          ].each do |com|
+            cmd = build_command(com, :sudo => true)
+            cmd.run_command
+            cmd.error!
+          end
+        end
+        path
       end
 
       def configure(*args)
@@ -46,7 +65,7 @@ module Vagabond
           validate!
         end
       end
-      
+
       def sudo
         sudo_val = vagabondfile[:sudo]
         if(sudo_val.nil? || sudo_val.to_s == 'smart')
@@ -98,7 +117,7 @@ module Vagabond
       def lxc_installed?
         system('which lxc-info > /dev/null')
       end
-      
+
       class << self
         def included(klass)
           klass.class_eval do

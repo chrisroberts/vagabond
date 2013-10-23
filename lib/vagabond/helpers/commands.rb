@@ -8,7 +8,7 @@ module Vagabond
 
       def direct_container_command(command, args={})
         _lxc = args[:lxc] || lxc
-        com = "#{sudo}ssh root@#{lxc.container_ip} -i /opt/hw-lxc-config/id_rsa -oStrictHostKeyChecking=no '#{command}'"
+        com = "#{sudo}ssh root@#{lxc.container_ip} -i #{Settings[:ssh_key]} -oStrictHostKeyChecking=no '#{command}'"
         debug(com)
         begin
           cmd = Mixlib::ShellOut.new(com,

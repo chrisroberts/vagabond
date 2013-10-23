@@ -19,7 +19,7 @@ module Vagabond
 
       def do_provision
         ui.info "#{ui.color('Vagabond:', :bold)} Provisioning node: #{ui.color(name, :magenta)}"
-        com = ["bootstrap #{lxc.container_ip(10, true)} -N #{name} -i /opt/hw-lxc-config/id_rsa"]
+        com = ["bootstrap #{lxc.container_ip(10, true)} -N #{name} -i #{Settings[:ssh_key]}"]
         com << "--no-host-key-verify --run-list \"#{config[:run_list].join(',')}\""
         if(config[:environment])
           com << "-E #{config[:environment]}"
