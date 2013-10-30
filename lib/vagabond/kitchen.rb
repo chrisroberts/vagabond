@@ -30,7 +30,7 @@ module Vagabond
       :type => :boolean,
       :desc => 'Isolate cookbook from parent repository'
     )
-    
+
     attr_reader :platform_map
     attr_reader :vagabondfile
     attr_reader :ui
@@ -119,7 +119,7 @@ module Vagabond
                 @results[platform] << {
                   :suite_name => suite_name,
                   :result => false
-                } 
+                }
                 raise VagabondError::HostProvisionFailed.new("#{platform}[#{suite_name}]")
               end
             end
@@ -194,7 +194,7 @@ module Vagabond
 
     def validate!
     end
-    
+
     def mappings_key
       :test_mappings
     end
@@ -425,7 +425,7 @@ module Vagabond
       end
       @kitchen
     end
-    
+
     def load_kitchen_yml(name)
       @kitchen = ::Kitchen::Config.new(
         :kitchen_root => cookbook_path,
