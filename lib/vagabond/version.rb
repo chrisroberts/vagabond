@@ -7,5 +7,5 @@ module Vagabond
       super(v)
     end
   end
-  VERSION = Version.new('0.2.9', 'Hey, want to hear the most annoying sound in the world?')
+  VERSION = Version.new('0.2.10', 'Hi friend')
 end

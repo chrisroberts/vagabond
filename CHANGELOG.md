@@ -1,4 +1,4 @@
-## v0.3.0
+## v0.2.10
 * Fix `:berkshelf` key to be optionally Hash type
 * Allow all types for roles/environments/data bags
 * Add guards for uploads of file types (thanks @jaypipes)
