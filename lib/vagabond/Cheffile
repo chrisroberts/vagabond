@@ -1,7 +1,7 @@
 site 'http://community.opscode.com/api/v1'
 
-cookbook 'vagabond', '1.0.2'
-cookbook 'lxc', '2.0.0'
-cookbook 'chef-server-populator', '0.4.0'
+cookbook 'vagabond', '1.0.4'
+cookbook 'lxc', '1.1.4'
+cookbook 'chef-server-populator', '0.3.0'
 
 cookbook 'chef-server', '2.0.0'
