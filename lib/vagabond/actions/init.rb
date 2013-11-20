@@ -1,72 +1,31 @@
 #encoding: utf-8
+
+require 'fileutils'
+require 'vagabond/actions'
+
 module Vagabond
   module Actions
     module Init
-      class << self
-        def included(klass)
-          klass.class_eval do
-            class << self
-              def _init_desc
-                ['init', 'initialize the Vagabondfile and setup LXC if needed.']
-              end
-            end
-          end
-        end
+
+      def init
+        ui.info "#{ui.color('Vagabond:', :bold)}: Installing base Vagabondfile"
+        install_vagabond_file
+        ui.info '  -> Provisioning machine'
+        local_provision
+        ui.info "  #{ui.color('-> SUCCESS')}"
       end
 
-      def _init
-        do_init
-      end
-
-      private
-
-      def empty_vagabondfile_hash
-        node = internal_config.cookbook_attributes(:vagabond)
-        nodes = {}
-        node[:bases].keys.each do |template|
-          answer = nil
-          until(%w(n y).include?(answer))
-            answer = ui.ask_question("Include template: #{template} ", :default => 'y').downcase
-          end
-          if(answer.downcase == 'y')
-            ui.info "Enabling template #{template} with node name #{template.gsub('_', '')}"
-            nodes[template.gsub('_', '').to_sym] = {
-              :template => template,
-              :run_list => []
-            }
-          else
-            ui.warn "Skipping instance for template #{template}"
-          end
-        end
-        {
-          :defaults => {
-            :template => 'ubuntu_1204'
-          },
-          :nodes => nodes,
-          :clusters => {},
-          :server => {
-            :zero => false,
-            :berkshelf => false,
-            :librarian => false,
-            :enabled => false,
-            :auto_upload => true
-          },
-          :sudo => true
-        }
-      end
-
-      def do_init
+      def install_vagabond_file
         if(File.exists?(vagabondfile.path))
           ui.confirm('Overwrite existing Vagabondfile', true)
           ui.info 'Overwriting existing Vagabondfile'
         end
-        require 'pp'
-        File.open(vagabondfile.path, 'w') do |file|
-          file.write(empty_vagabondfile_hash.pretty_inspect)
-        end
-        @vagabondfile.load_configuration!
-        @internal_config = InternalConfiguration.new(@vagabondfile, ui, options)
+        FileUtils.cp(
+          File.join(File.dirname(__FILE__), '..', '..', '..', 'examples', 'Vagabondfile'),
+          vagabondfile.path
+        )
       end
+
     end
   end
 end

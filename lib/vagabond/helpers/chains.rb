@@ -5,15 +5,15 @@ module Vagabond
   module Helpers
     module Chains
 
-      def add_link(action)
+      def add_link(action, name, opts={})
         @chain ||= []
-        @chain << action
+        @chain << {:action => action, :name => name, :options => opts}
       end
 
       def chain!
         if(@chain)
-          while(action = @chain.shift)
-            send(action, *@original_args)
+          while(to_run = @chain.shift)
+            run_action(to_run[:action], to_run[:name], to_run[:options])
           end
         end
       end

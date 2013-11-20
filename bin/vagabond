@@ -1,60 +1,210 @@
 #!/usr/bin/env ruby
-#encoding: utf-8
+require 'gli'
 
-Signal.trap('INT'){ exit 255 }
+include GLI::App
 
-require 'rubygems'
-require 'vagabond'
-require 'vagabond/errors'
+program_desc 'Vagabond'
 
-if(ARGV.include?('--version') || ARGV.include?('-v'))
-  require 'vagabond/vagabond'
-  Vagabond::Vagabond.new.send(:version)
-elsif(%w(help --help -h).include?(ARGV.first) && ARGV.size == 1)
-  puts "-- Vagabond --\n"
-  require 'vagabond/vagabond'
-  Object.send(:remove_const, :ARGV)
-  ARGV = %w(help)
-  Vagabond::Vagabond.start
-  %w(server knife kitchen spec).each do |key|
-    puts "-- #{key.capitalize} --\n"
-    require "vagabond/#{key}"
-    Object.send(:remove_const, :ARGV)
-    ARGV = %w(help)
-    Vagabond.const_get(key.capitalize).start
-  end
-else
-  begin
-    case arg = ARGV.shift
-    when 'server'
-      require 'vagabond/server'
-      Vagabond::Server
-    when 'knife'
-      require 'vagabond/knife'
-      ARGV.unshift(arg) unless ARGV.empty?
-      Vagabond::Knife
-    when 'test', 'kitchen'
-      require 'vagabond/kitchen'
-      Vagabond::Kitchen
-    when 'spec'
-      require 'vagabond/spec'
-      Vagabond::Spec
-    else
-      require 'vagabond/vagabond'
-      ARGV.unshift(arg)
-      Vagabond::Vagabond
-    end.start
-  rescue Vagabond::VagabondError => e
-    $stderr.puts "Vagabond error encountered. Exiting: #{e}"
-    if(ENV['VAGABOND_EXIT_DEBUG'])
-      puts "#{e.class}: #{e}\n#{e.backtrace.join("\n")}"
-    end
-    exit e.exit_code
-  rescue Exception => e
-    $stderr.puts "Vagabond exiting. Reason: #{e}"
-    if(ENV['VAGABOND_EXIT_DEBUG'])
-      puts "#{e.class}: #{e}\n#{e.backtrace.join("\n")}"
-    end
-    exit -1
-  end
+version Vagabond::VERSION.version
+
+desc 'Enable debug mode'
+switch [:d, :debug]
+
+desc 'Force host provision'
+switch 'force-solo'
+
+desc 'Turn on color output'
+switch [:c, :color]
+default_value true
+
+desc 'Path to vagabond file'
+flag [:f, :vagabondfile]
+
+desc 'Enable local chef server usage if available'
+switch [:l, 'local-server']
+default_value true
+
+desc 'Enable callbacks'
+switch :callbacks
+default_value true
+
+desc 'Automatically provision nodes'
+switch 'auto-provision'
+default_value true
+
+desc 'Add delay between provisions (helpful for indexing)'
+flag 'delay'
+default_value 0
+
+desc 'Build nodes in parallel'
+flag 'parallel'
+
+desc 'Build cluster of nodes'
+arg_name 'cluster_name'
+command :cluster do |c|
 end
+
+desc 'Create node'
+arg_name 'node_name'
+command :create do |c|
+end
+
+desc 'Destroy cluster of nodes referenced by provided name'
+flag 'cluster'
+
+desc 'Destroy node'
+arg_name 'node_name', :multiple
+command :destroy do |c|
+end
+
+desc 'Freeze node'
+arg_name 'node_name'
+command :freeze do |c|
+end
+
+desc 'Provision node'
+arg_name 'node_name'
+command :provision do |c|
+end
+
+desc 'Rebuild node'
+arg_name 'node_name'
+command :rebuild do |c|
+end
+
+desc 'SSH to node (or run provided command)'
+arg_name 'node_name'
+arg_name 'ssh_command', :optional
+command :ssh do |c|
+end
+
+desc 'Start node'
+arg_name 'node_name'
+command :start do |c|
+end
+
+desc 'Status of given node or all nodes'
+arg_name 'node_name', :optional
+command :status do |c|
+end
+
+desc 'Thaw node'
+arg_name 'node_name'
+command :thaw do |c|
+end
+
+desc 'Auto provision node'
+flag 'auto-provision'
+default_value true
+
+desc 'Create and provision node'
+arg_name 'node_name'
+command :up do |c|
+end
+
+command :server do |c|
+
+  c.desc 'Upload all discovered assets to server'
+  c.command :auto_upload do |c|
+  end
+
+  c.desc 'Upload all roles to server'
+  c.command :upload_roles do |c|
+  end
+
+  c.desc 'Upload all data bags to server'
+  c.command :upload_databags do |c|
+  end
+
+  c.desc 'Upload all environments to server'
+  c.command :upload_environments do |c|
+  end
+
+  c.desc 'Upload all cookbooks to server'
+  c.command :upload_cookbooks do |c|
+  end
+
+end
+
+command :spec do |c|
+
+  c.desc 'Run specs against real infrastructure'
+  c.switch 'in-real-life'
+  c.desc 'Attribute to use for SSH connection with --in-real-life'
+  c.flag 'real-life-connect'
+  c.desc 'Restrict to given environment'
+  c.flag 'environment'
+  c.desc 'Automatically destroy cluster after spec'
+  c.flag 'auto-destroy'
+  c.default_value true
+  c.desc 'Run specs against cluster'
+  c.arg_name 'cluster_name'
+  c.command :cluster do
+  end
+
+  c.desc 'Run specs against node'
+  c.arg_name 'node_name'
+  c.command :node do
+  end
+
+  c.desc 'Run specs against cookbook'
+  c.arg_name 'cookbook_name', :optional
+  c.command :test do
+  end
+
+  c.desc 'Initialize directory for spec'
+  c.command :init do
+  end
+
+end
+
+command :kitchen do |c|
+
+  c.desc 'Specify platform to test'
+  c.flag :platform
+  c.desc 'Suites to run'
+  c.flag :suites
+  c.desc 'Run tests in parallel'
+  c.flag :parallel
+  c.desc 'Cluster to run'
+  c.flag :cluster
+  c.desc 'Run kitchen tests on cookbook'
+  c.arg_name 'cookbook_name', :optional
+  c.command :test do |sub_c|
+  end
+
+  c.desc 'Destroy all nodes related to test'
+  c.arg_name 'cookbook_name', :optional
+  c.command :teardown do |sub_c|
+  end
+
+end
+
+command :knife do
+end
+
+command :init do
+end
+
+pre do |global,command,options,args|
+  # Pre logic here
+  # Return true to proceed; false to abort and not call the
+  # chosen command
+  # Use skips_pre before a command to skip this block
+  # on that command only
+  true
+end
+
+post do |global,command,options,args|
+  # Post logic here
+  # Use skips_post before a command to skip this
+  # block on that command only
+end
+
+on_error do |exception|
+  # Error logic here
+  # return false to skip default error handling
+  true
+end
+
+exit run(ARGV)

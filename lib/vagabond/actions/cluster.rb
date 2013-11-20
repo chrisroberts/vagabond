@@ -1,84 +1,57 @@
 #encoding: utf-8
+
+require 'vagabond/actions'
+
 module Vagabond
   module Actions
     module Cluster
-      class << self
-        def included(klass)
-          klass.class_eval do
-            class << self
-              def _cluster_options
-                [[
-                    :auto_provision, :type => :boolean,
-                    :desc => 'Automatically provision nodes', :default => true
-                  ],
-                  [
-                    :delay, :type => :numeric, :default => 0,
-                    :desc => 'Add delay between provisions (helpful for indexing)'
-                  ],
-                  [
-                    :parallel, :type => :boolean, :default => false,
-                    :desc => 'Build nodes in parallel'
-                  ]
-                ]
-              end
-            end
-          end
+
+      def cluster(name)
+        if(vagabondfile[:clusters][name])
+          cluster = vagabondfile[:clusters][name]
         end
-      end
-
-      def cluster_validate?
-        false
-      end
-
-      def _cluster
-        clr = vagabondfile[:clusters][name] if vagabondfile[:clusters]
-        if(clr)
+        unless(cluster)
+          raise VagabondErrors::InvalidName.new("Cluster name provided does not exist: #{name}")
+        else
           ui.info "#{ui.color('Vagabond:', :bold)} Building cluster - #{ui.color(name, :green)}"
-          if(vagabondfile.local_chef_server?)
-            require 'vagabond/server'
-            srv = ::Vagabond::Server.new
-            srv.options = options.dup
-            srv.options[:auto_provision] = true
-            unless(srv.lxc.running?)
-              srv.up
-              # Reload so we get proper values
-              configure
-            end
+          if(vagabondfile.server?)
+            # send commander request
           end
-          cluster_instances = clr.map do |n|
+          results = cluster.map do |node_name|
             ui.info "Building #{n} for cluster!"
-            v_inst = Vagabond.new
-            v_inst.options = options.dup
-            v_inst.up(n, :ui => ui)
-            if(options[:delay].to_i > 0 && n != clr.last)
+            result = run_action(:up, node_name)
+            if(options[:delay].to_i > 0 && node_name != cluster.last)
               ui.warn "Delay requested between node processing. Sleeping for #{options[:delay].to_i} seconds."
               sleep(options[:delay].to_i)
             end
-            v_inst
+            {:name => node_name, :result => result}
           end
           if(options[:parallel])
             ui.info "Waiting for parallel completes!"
-            cluster_instances.map do |inst|
-              inst.wait_for_completion
+            wait_for_completion
+            results = tasks.values.flatten.map do |task_result|
+              {:name => task_result[:name], task_result[:result]}
             end
           end
-          failed = cluster_instances.map{|i|i.send(:tasks)}.map(&:values).flatten.detect do |hash|
-            hash[:result] == false
+          failed = results.detect{|res| res == false}
+          result_ouput = "\nCluster build #{name}:"
+          if(failed)
+            ui.error "#{result_output} #{ui.color('FAILED', :red, :bold)}"
+          else
+            ui.info "#{result_output} #{ui.color('SUCCESS', :green, :bold)}"
           end
-          result = failed ? ['FAILED', :red, :bold] : ['SUCCESS', :green, :bold]
-          ui.info "\nCluster build #{name}: #{ui.color(*result)}"
-          cluster_instances.each do |inst|
-            failed = inst.send(:tasks).values.flatten.detect do |hash|
-              hash[:result] == false
+          results.each do |result|
+            if(result[:result])
+              ui.info "  -> #{result[:name]}: #{ui.color('SUCCESS', :green, :bold)}"
+            else
+              ui.error " -> #{result[:name]}: #{ui.color('FAILED', :red, :bold)}"
             end
-            result = failed ? ['FAILED', :red, :bold] : ['SUCCESS', :green, :bold]
-            ui.info "  -> #{inst.name}: #{ui.color(*result)}"
           end
-        else
-          ui.error "Cluster name provided does not exist: #{name}"
         end
       end
 
     end
   end
 end
+
+Vagabond::Actions.register(Vagabond::Actions::Cluster)

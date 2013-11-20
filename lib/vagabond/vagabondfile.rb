@@ -19,6 +19,7 @@ module Vagabond
 
     attr_reader :path
     attr_reader :config
+    attr_reader :missing_ok
 
     DEFAULT_KEYS = %w(defaults definitions nodes clusters specs server callbacks)
     ALIASES = Mash.new(
@@ -28,10 +29,11 @@ module Vagabond
       :server => :local_chef_server
     )
 
-    def initialize(path=nil, *args)
-      path = discover_path(Dir.pwd) unless path
+    def initialize(path=nil, args={})
+      path = discover_path(args[:command_cwd] || Dir.pwd) unless path
       @path = path
-      load_configuration!(args.include?(:allow_missing))
+      @missing_ok = args[:allow_missing]
+      load_configuration!
     end
 
     def callbacks_for(name)
@@ -41,7 +43,7 @@ module Vagabond
     end
 
     def for_node(name, *args)
-      unless(self[:nodes][name])
+      unless(self[:nodes][name] || name.to_sym == :server)
         return Mash.new if args.include?(:allow_missing)
         raise VagabondError::InvalidName.new("Requested name is not a valid node name: #{name}")
       end
@@ -50,8 +52,11 @@ module Vagabond
       else
         base = self[:defaults]
       end
-      base = Chef::Mixin::DeepMerge.merge(base, self[:nodes][name])
-      base
+      if(name.to_sym == :server)
+        Chef::Mixin::DeepMerge.merge(base, self[:server][:config] || Mash.new)
+      else
+        Chef::Mixin::DeepMerge.merge(base, self[:nodes][name])
+      end
     end
 
     def for_definition(name)
@@ -89,12 +94,7 @@ module Vagabond
       end
     end
 
-    def load_configuration!(*args)
-      unless(args.empty?)
-        no_raise = args.first == true
-        force_store = args.include?(:force_store_path)
-        no_raise ||= force_store
-      end
+    def load_configuration!
       if(@path && File.exists?(@path))
         thing = self.instance_eval(IO.read(@path), @path, 1)
         if(thing.is_a?(AttributeStruct))
@@ -103,43 +103,25 @@ module Vagabond
           @config = Mash.new(thing)
         end
       end
-      if(!@config || force_store)
-        raise 'No Vagabondfile file found!' unless no_raise
-        generate_store_path
+      unless(@config)
+        raise 'No Vagabondfile file found!' unless missing_ok
         @config = Mash[*DEFAULT_KEYS.map{|k| [k, Mash.new]}.flatten]
       end
+      generate_store_directory
     end
 
-    def build_private_store
-      unless(@_private_store_path)
-        @_private_store_path = File.join('/tmp/vagabond-solos', directory.gsub(%r{[^0-9a-zA-Z]}, '-'), 'Vagabondfile')
-        @_private_store_path = File.expand_path(@_private_store_path.gsub('-', '/'))
-        FileUtils.mkdir_p(File.dirname(@_private_store_path))
-        File.dirname(@_private_store_path)
-      end
-      File.dirname(@_private_store_path)
-    end
-
-    def generate_store_path
-      @path ||= File.expand_path(File.join(Dir.pwd, 'Vagabondfile'))
+    def generate_store_directory
       unless(@store_path)
-        build_private_store
-        @store_path = @_private_store_path
+        @store_path = File.join('/tmp/vagabond-solos', directory.gsub(%r{[^0-9a-zA-Z]}, '-'))
+        @store_path = File.expand_path(@store_path.gsub('-', '/'))
+        FileUtils.mkdir_p(File.dirname(@store_path))
       end
-      File.dirname(@store_path)
-    end
-
-    def store_path
-      @store_path || @path
-    end
-
-    def directory
-      File.dirname(@path)
     end
 
     def store_directory
-      File.dirname(@store_path || @path)
+      @store_path
     end
+    alias_method :directory, :store_directory
 
     def discover_path(path)
       d_path = Dir.glob(File.join(path, 'Vagabondfile')).first
@@ -151,8 +133,9 @@ module Vagabond
       d_path
     end
 
-    def local_chef_server?
-      self[:local_chef_server] && self[:local_chef_server][:enabled]
+    def server?
+      self[:server] && !self[:server][:disabled]
     end
+
   end
 end

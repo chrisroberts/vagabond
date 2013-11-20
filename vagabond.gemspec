@@ -11,7 +11,7 @@ Gem::Specification.new do |s|
   s.homepage = 'http://github.com/chrisroberts/vagabond'
   s.description = 'LXC driven node generation and testing tooling'
   s.require_path = 'lib'
-  s.extra_rdoc_files = ['README.md']  
+  s.extra_rdoc_files = ['README.md']
   s.files = Dir['**/*']
   s.executables = ['vagabond']
   s.add_dependency 'chef'

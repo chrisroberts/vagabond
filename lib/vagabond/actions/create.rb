@@ -1,17 +1,19 @@
 #encoding: utf-8
-require 'elecksee/ephemeral'
+
+require 'vagabond/actions'
 
 module Vagabond
   module Actions
     module Create
-      def _create
-        name_required!
-        if(lxc.exists?)
+
+      def create(name)
+        node = load_node(name)
+        if(node.exists?)
           ui.warn "Node already exists: #{name}"
-          add_link(:start)
+          add_link(:start, name)
         else
           ui.info "#{ui.color('Vagabond:', :bold)} Creating #{ui.color(name, :green)}"
-          do_create
+          do_create(node)
           ui.info ui.color('  -> CREATED!', :green)
         end
         true
@@ -19,29 +21,21 @@ module Vagabond
 
       private
 
-      def do_create
-        tmpl = config[:template]
-        if(internal_config[:template_mappings].keys.include?(tmpl))
-          tmpl = internal_config[:template_mappings][tmpl]
-        elsif(!Vagabond::BASE_TEMPLATES.include?(tmpl))
-          ui.fatal "Template requested for node does not exist: #{tmpl}"
-          raise VagabondError::InvalidTemplate.new(tmpl)
+      def do_create(node)
+        template = node.config[:template]
+        if(internal_config[:template_mappings].keys.include?(template))
+          template = internal_config[:template_mappings][template]
+        elsif(!Vagabond::BASE_TEMPLATES.include?(template))
+          ui.fatal "Template requested for node does not exist: #{template}"
+          raise VagabondError::InvalidTemplate.new(template)
         end
-        unless(config[:device])
-          config[:directory] = true
-        end
-        config[:daemon] = true
-        config[:original] = tmpl
-        config[:bind] = File.expand_path(vagabondfile.store_directory)
-        ephemeral = Lxc::Ephemeral.new(config)
-        e_name = ephemeral.name
-        @internal_config[mappings_key][name] = e_name
-        @internal_config.save
-        ephemeral.start!(:fork)
-        @lxc = Lxc.new(e_name)
-        @lxc.wait_for_state(:running)
+        internal_config[:mappings] = node.internal_name
+        internal_config.save
+        node.create
       end
 
     end
   end
 end
+
+Vagabond::Actions.register(Vagabond::Actions::Create)

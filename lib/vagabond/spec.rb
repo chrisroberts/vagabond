@@ -1,108 +1,69 @@
 #encoding: utf-8
-require 'thor'
-require 'elecksee/lxc'
-
-%w(vagabond server helpers vagabondfile internal_configuration actions/status).each do |dep|
-  require "vagabond/#{dep}"
-end
+require 'vagabond/helpers/server'
+require 'vagabond/vagabond'
 
 module Vagabond
-  class Spec < Thor
+  class Spec < Vagabond
 
-    include Thor::Actions
-    include Helpers
-    include Actions::Status
+    include Vagabond::Helpers::Server
 
-    self.class_exec(&Vagabond::CLI_OPTIONS)
-
-    def self.basename
-      'vagabond spec'
-    end
-    
-    def initialize(*args)
-      @name = nil
-      super
-      base_setup(:no_configure, :no_validate)
+    def install_actions
     end
 
-    method_option(:irl,
-      :type => :boolean,
-      :default => false,
-      :desc => 'Test In Real Life'
-    )
-    method_option(:irl_connect,
-      :type => :string,
-      :default => 'ipaddress',
-      :desc => 'Attribute to use for ssh connection'
-    )
-    method_option(:environment,
-      :type => :string,
-      :desc => 'Specify environment to restrict node detection'
-    )
-    method_option(:auto_destroy,
-      :type => :boolean,
-      :desc => 'Automatically destroy created nodes after spec tests (not valid with --irl)',
-      :default => true
-    )
-    desc 'start [CLUSTER]', 'Run specs for cluster'
-    def start(cluster=nil)
-      error = nil
-      begin
-        if(options[:irl])
-          irl_spec(cluster)
-        else
-          cluster_spec(cluster)
-          cluster_destroy(cluster) if options[:auto_destroy]
+    def spec_cluster(name)
+      server_init!
+      if(options[:in_real_life])
+        result = vagabondfile[:clusters][name].map do |node_name|
+          spec_node(node_name)
         end
-      rescue => error
-        ui.error "Unexpected error encountered: #{error}"
-        debug("#{error.class}: #{error}\n#{error.backtrace.join("\n")}")
-        raise
-      ensure
-        result = error ? ui.color('FAILED', :red, :bold) : ui.color('PASSED', :green, :bold)
-        ui.info "--> Specs for cluster #{cluster}: #{result}"
-        raise VagabondError::SpecFailed.new(error) if error
+      else
+        vagabond = Vagabond.new(options)
+        vagabond.run_action(:cluster, name)
+
+        result = run_specs(name)
+
+        vagabond = Vagabond.new(options)
+        vagabond.run_action(:destroy, name, :cluster => true)
       end
-    end
-    
-    method_option(:node,
-      :type => :string,
-      :desc => 'Destroy named node within cluster cluster'
-    )
-    desc 'destroy NAME', 'Destroy the given cluster/node'
-    def destroy(cluster)
-      options[:node] ? node_destroy(cluster, options[:node]) : cluster_destroy(cluster)
+      puts result
     end
 
-    desc 'status [NAME]', 'Show status of existing nodes'
-    def status(name=nil)
-      _status
+    def spec_node(name)
+      server_init!
+      destructive_action do
+        vagabond = Vagabond.new(options)
+        vagabond.run_action(:up, name)
+      end
+      result = apply_specs(name)
+      destructive_action do
+        vagabond = Vagabond.new(option)
+        vagabond.run_action(:destroy, name)
+      end
+      puts result
     end
 
-    desc 'init', 'Initalize spec configuration'
+    def test(cookbook)
+      ui.error 'Not currently implemented as standalone!'
+      raise VagabondErrors::NotImplemented.new('Spec#test')
+    end
+
     def init
       ui.info "Initializing spec configuration..."
       make_spec_directory
       populate_spec_directory
       ui.info "  -> #{ui.color('COMPLETE!', :green)}"
     end
-    
+
     protected
 
-    def cluster_destroy(cluster)
-      ui.info "#{ui.color('Destroying cluster:', :bold)} #{ui.color(cluster, :red)}"
-      Array(internal_config[:spec_clusters][cluster]).each do |n|
-        node_destroy(cluster, n)
+    def destructive_action
+      if(options[:in_real_life])
+        debug 'Ignoring request to execute block due to live infrastructure target'
+      else
+        yield
       end
-      ui.info ui.color(" --> Cluster #{cluster} DESTROYED", :red)
     end
 
-    def node_destroy(cluster, node_name)
-      v_n = vagabond_instance(:destroy, :cluster => cluster, :name => node_name)
-      v_n.send(:execute)
-      remove_node_from_cluster(cluster, node_name)
-    end
-    
     def make_spec_directory
       %w(role recipe).each do |leaf|
         FileUtils.mkdir_p(File.join(spec_directory, leaf))
@@ -135,99 +96,32 @@ module Vagabond
         ui.warn "Skipping file: #{file}"
       end
     end
-    
-    def mappings_key
-      :spec_mappings
-    end
-    
-    def irl_spec(cluster)
-      # TODO: Clean up this inject and spit error when nil returned
-      address = options[:irl_connect].split('.').inject(node){|k,m| m[k] || {}}
-      if(cluster && vagabondfile[:clusters][cluster])
-        nodes = vagabondfile[:clusters][cluster].map do |item_name|
-          vagabondfile.for_node(item_name, :allow_missing_node)
-        end
-        valid_runlists = nodes.map do |node|
-          node[:run_list].map do |runlist_item|
-            i = Chef::RunList::RunListItem.new(runlist_item)
-            [i, "#{i.role? ? 'roles' : 'recipes'}:#{i.name}"]
+
+    def run_specs(name)
+      nodes = vagabondfile[:clusters][name]
+      spec_config = vagabondfile[:spec][:clusters][name]    # TODO: validate both of these
+      number_of_provisions = spec_config[:provision][:times] || 1
+      number_of_provisions - 1
+      # NOTE: We start at 1 since the orginal cluster build counts as
+      # one provision
+      count = 1
+      number_of_provisions.to_i.times do
+        if(spec_config[:provision][:spec].include?(:every) || spec_config[:provision][:spec].include?("after_#{count}".to_sym))
+          nodes.each do |node_name|
+            spec_node(node_name)
           end
         end
-        valid_runlists.each do |rl|
-          query = rl.map(&:last)
-          query.push("chef_environment:#{options[:environment]}") if options[:environment]
-          search(:node, query.join(' AND ')).each do |node|
-            node_runlist = node.run_list.map(&:to_s)
-            next unless node_runlist.size == rl.size && (node_runlist - rl.map(&:first)).empty?
-            test_node!(node.name, address, node.run_list)
-          end
+        if(commands = spec_config[:after][count])
+          process_after(commands, nodes)
         end
-      else
-        query = %w(*:*)
-        if(options[:environment])
-          query << "chef_environment:#{options[:environment]}"
+        if(commands = spec_config[:after][:every])
+          process_after(commands, nodes)
         end
-        Chef::Search::Query.new(:node, query.join(' AND ')) do |nodes|
-          nodes.each do |node|
-            test_node!(node.name, address, node.run_list)
-          end
-        end
+        count += 1
       end
     end
 
-    def get_cluster(name)
-      clusters = vagabondfile[:specs][:clusters] || Mash.new
-      cluster = clusters[name] || Mash.new
-      cluster[:nodes] = (vagabondfile[:clusters][name] || []) + (cluster[:nodes] || [])
-      cluster
-    end
-    
-    def cluster_spec(cluster)
-      cluster = get_cluster(cluster)
-      
-      setup_server_if_needed
-
-      index = 0
-      test_nodes = cluster[:nodes].map do |node_name|
-        config = vagabondfile.for_node(node_name, :allow_missing)
-        config = vagabondfile.for_definition(node_name) unless config
-        if(cluster[:overrides])
-          config = Chef::Mixin::DeepMerge.merge(config, cluster[:overrides])
-        end
-        v_n = vagabond_instance(:create,
-          :platform => config[:platform],
-          :cluster => cluster,
-          :base_name => "s-#{node_name}-#{index}"
-        )
-        v_n.config = Chef::Mixin::DeepMerge.merge(v_n.config, config)
-        v_n.send(:execute)
-        index += 1
-        [v_n, v_n.lxc.name, config]
-      end
-      run_specs = [cluster[:provision] || :every].flatten.compact.map(&:to_sym)
-      after = cluster[:after] || Mash.new
-      (cluster[:provision] || 1).to_i.times do |i|
-        count = i + 1
-        test_nodes.each do |node|
-          node_inst, lxc_name, config = node
-          node_inst._provision
-          ## specs
-          if(run_specs.include?(:every) || run_specs.include?("after_#{count}".to_sym))
-            test_node!(node_inst.name, node_inst.lxc.container_ip, config)
-          end
-        end
-        if(after[:every])
-          process_after(after[:every], test_nodes.map(&:first), cluster)
-        end
-        if(after[count.to_s])
-          process_after(after[count.to_s], test_nodes.map(&:first), cluster)
-        end
-      end
-
-      destroy_server_if_needed
-    end
-
-    def process_after(after, nodes, cluster_config)
+    def process_after(after, nodes)
       if(after[:pause])
         ui.info ui.color("  Pause run... (#{after[:pause]} seconds)")
         sleep(after[:pause].to_f)
@@ -239,114 +133,94 @@ module Vagabond
         else
           if(after[:run][:on])
             after[:run][:on].each do |dest, com|
-              on_nodes = dest.map do |n|
-                nodes[cluster_config[:nodes].index(n)]
-              end.compact
-              run_coms << [com, on_nodes]
+              run_coms << [com, dest]
             end
-            after[:run].delete(:on)
           end
           # NOTE: This is just for where `:on` key is missed or people
           # just want to be lazy
           after[:run].each_pair do |dest, com|
-            on_nodes = dest.map do |n|
-              nodes[cluster_config[:nodes].index(n)]
-            end.compact
-            run_coms << [com, on_nodes]
+            run_coms << [com, dest]
           end
         end
-        run_coms.each do |com_pair|
-          com_pair.last.each do |node_inst|
-            node_inst.direct_container_command(com_pair.first, :live_stream => STDOUT)
+        run_coms.each do |command, node_or_nodes|
+          [node_or_nodes].flatten.compact.each do |node_name|
+            node = load_node(node_name)
+            debug "Running command (#{command}) on node: #{node_name}"
+            node.run_command(command, :live_stream => ui.live_stream)
           end
         end
       end
-    end
-    
-    def test_node!(name, ip_address, node_config)
-      test_files = []
-      Array(node_config[:run_list]).each do |item|
-        r_item = item.is_a?(Chef::RunList::RunListItem) ? item : Chef::RunList::RunListItem.new(item)
-        dir = File.join(File.dirname(vagabondfile.path), "spec/#{r_item.type}/#{r_item.name.sub('::', '/')}")
-        dir << '/default' if r_item.type.to_sym == :recipe && !r_item.name.include?('::')
-        test_files += Dir.glob(File.join(dir, '*.rb')).map(&:to_s)
-      end
-      Array(node_config[:custom_specs]).each do |custom|
-        dir = File.join(vagabondfile.directory, 'spec/custom', File.join(*custom.split('::')))
-        test_files += Dir.glob(File.join(dir, '*.rb')).map(&:to_s)
-      end
-      test_files.flatten.compact.each do |path|
-        ui.info "\n#{ui.color('**', :green, :bold)}  Running spec: #{path.sub("#{vagabondfile.directory}/", '')}"
-        cmd = build_command("rspec #{path}", :live_stream => STDOUT, :shellout => {:env => {'VAGABOND_TEST_HOST' => ip_address}})
-        cmd.run_command
-        cmd.error!
-      end
-    end
-    
-    def vagabond_instance(action, args={})
-      @options[:disable_name_validate] = true
-      v = Vagabond.new
-      v.options = @options
-      v.send(:setup, action, args[:name] || generated_name(args[:base_name]),
-        :ui => ui,
-        :template => args[:platform],
-        :disable_name_validate => true,
-        :ui => ui
-      )
-      if(args[:platform])
-        v.internal_config.force_bases = args[:platform]
-        v.internal_config.ensure_state
-      end
-      v.mappings_key = :spec_mappings
-      v.config = Mash.new(
-        :template => args[:platform],
-        :run_list => args[:run_list]
-      )
-      v.lxc = Lxc.new(
-        v.internal_config[v.mappings_key][v.name]
-      ) if v.internal_config[v.mappings_key][v.name]
-      add_node_to_cluster(v.name, args[:cluster])
-      v
     end
 
-    def _status
-      status = []
-      if(name)
-        clusters = [name]
+    def get_run_list_specs(node)
+      node.config[:run_list].map do |item|
+        runlist_item = Chef::RunList::RunListItem.new(item)
+        directory = File.join(
+          vagabondfile.directory,
+          'spec', runlist_item.type, runlist_item.name.sub('::', '/')
+        )
+        if(runlist_item.recipe? && !runlist_item.name.include?('::'))
+          directory = File.join(directory, 'default')
+        end
+        Dir.glob(File.join(directory, '*.rb')).map(&:to_s)
+      end.flatten
+    end
+
+    def get_custom_specs(node)
+      Array(node.config[:custom_specs]).map do |custom|
+        directory = File.join(vagabondfile.directory, 'spec/custom', *custom.split('::'))
+        Dir.glob(File.join(directory, '*.rb')).map(&:to_s)
+      end.flatten
+    end
+
+    def apply_specs(node)
+      spec_files = []
+      spec_files += get_run_list_specs(node)
+      spec_files += get_custom_specs(node)
+      nodes_for(node).each do |node|
+        if(options[:real_life_connect])
+          address = Vagabond::Nests.retreive(node, *options[:real_life_connect].split('.'))
+        else
+          address = node.address
+        end
+        spec_files.each do |path|
+          ui.info "\n#{ui.color('**', :green, :bold)}  Running spec: #{path.sub("#{vagabondfile.directory}/", '')}"
+          cmd = build_command("rspec #{path}",
+            :live_stream => ui.live_stream,
+            :shellout => {
+              :env => {
+                'VAGABOND_TEST_HOST' => address
+              }
+            }
+          )
+          cmd.run_command
+          cmd.error!
+        end
+      end
+    end
+
+    def nodes_for(node)
+      if(options[:in_real_life])
+        run_list = node.config[:run_list].map do |item|
+          runlist_item = Chef::RunList::RunListItem.new(item)
+          if(runlist_item.role?)
+            "roles:#{runlist_item.name}"
+          else
+            "recipes:#{runlist_item.name}"
+          end
+        end
+        query = run_list.dup
+        if(options[:environment])
+          query.push("chef_environment:#{options[:environment]}")
+        end
+        search(:node, query.join(' AND ')).map do |node|
+          node
+        end
       else
-        clusters = Mash.new
-        clusters.merge!(vagabondfile[:clusters] || Mash.new)
-        clusters.merge!(vagabondfile[:specs][:clusters] || Mash.new)
-        clusters = clusters.keys.sort
-      end
-      clusters.each do |cluster|
-        ui.info "#{ui.color('Status of spec cluster:', :bold)} #{ui.color(cluster, :yellow)}"
-        status = [
-          ui.color('Name', :bold),
-          ui.color('State', :bold),
-          ui.color('PID', :bold),
-          ui.color('IP', :bold)
-        ]
-        Array(internal_config[:spec_clusters][cluster]).sort.each do |n|
-          status += status_for(n)
-        end
-        puts ui.list(status, :uneven_columns_across, 4)
+        node
       end
     end
 
-    def add_node_to_cluster(node_name, cluster)
-      internal_config[:spec_clusters][cluster] ||= []
-      internal_config[:spec_clusters][cluster] |= [node_name]
-      internal_config.save
-    end
-
-    def remove_node_from_cluster(cluster, node_name)
-      internal_config[:spec_clusters][cluster] ||= []
-      internal_config[:spec_clusters][cluster] -= [node_name]
-      internal_config[mappings_key].delete(node_name)
-      internal_config.save
-    end
-    
     CONTENT_DEFAULT_SPEC_HELPER = <<-EOF
 require 'serverspec'
 require 'pathname'
@@ -361,11 +235,11 @@ RSpec.configure do |c|
       c.ssh.close if c.ssh
       c.host = host
       options = Net::SSH::Config.for(c.host)
-      c.ssh = Net::SSH.start(c.host, 'root', options.update(:keys => ['/opt/hw-lxc-config/id_rsa']))
+      c.ssh = Net::SSH.start(c.host, 'root', options.update(:keys => ['#{Settings[:ssh_key]}']))
     end
   end
 end
 EOF
-    
+
   end
 end

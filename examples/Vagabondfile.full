@@ -1,4 +1,6 @@
-Vagabond::Vagabondfile.describe do
+# -*- mode: ruby -*-
+# -*- encoding: utf-8 -*-
+Vagabondfile.describe do
   defaults do
     template 'ubuntu_1204'
     environment 'testing'

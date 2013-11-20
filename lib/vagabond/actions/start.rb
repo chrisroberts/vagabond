@@ -1,20 +1,20 @@
 #encoding: utf-8
+
+require 'vagabond/actions'
+
 module Vagabond
   module Actions
     module Start
 
-      def _start
-        name_required!
+      def start(name)
+        node = load_node(name)
         ui.info "#{ui.color('Vagabond:', :bold)} Starting node: #{ui.color(name, :green)}"
-        do_start
+        node.start
         ui.info ui.color('  -> STARTED', :green)
       end
 
-      protected
-      
-      def do_start
-        lxc.start
-      end
     end
   end
 end
+
+Vagabond::Actions.register(Vagabond::Actions::Start)

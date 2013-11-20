@@ -1,0 +1,22 @@
+# -*- mode: ruby -*-
+# -*- encoding: utf-8 -*-
+Vagabondfile.describe do
+  defaults do
+    template 'ubuntu_1204'
+  end
+  definitions do
+  end
+  nodes do
+  end
+  clusters do
+  end
+  specs do
+  end
+  server do
+    enabled true
+    zero true
+    auto_upload true
+  end
+  callbacks do
+  end
+end

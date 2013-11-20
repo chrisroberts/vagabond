@@ -1,44 +1,17 @@
 #encoding: utf-8
 require 'vagabond/vagabond'
-require 'mixlib/cli'
 require 'digest/md5'
 
 module Vagabond
 
   class Server < Vagabond
 
-    class << self
-      def basename
-        'vagabond server'
-      end
+    def run_action(action, name=nil, name_args=[], options={})
+      args = [name, name_args].flatten(1).compact
+      super(action, 'server', args, options)
     end
 
-    self.class_exec(false, &Vagabond::COMMANDS)
-
-    def initialize(*args)
-      super
-      @name = 'server'
-      @base_template = 'ubuntu_1204' # TODO: Make this dynamic
-      setup('status')
-    end
-
-    desc 'server stop', 'Stops the local Chef server'
-    def stop
-      if(lxc.exists?)
-        if(lxc.running?)
-          ui.info 'Shutting down Chef server container...'
-          lxc.shutdown
-          ui.info 'Chef server container shut down!'
-        else
-          ui.error 'Chef server container not currently running'
-        end
-      else
-        ui.error 'Chef server container has not been created'
-      end
-    end
-
-    desc 'auto_upload', 'Uploads all assets'
-    def auto_upload
+    def auto_upload(*args)
       ui.info 'Auto uploading all assets to local Chef server...'
       upload_roles
       upload_databags
@@ -47,13 +20,12 @@ module Vagabond
       ui.info ui.color('  -> All assets uploaded!', :green)
     end
 
-    desc 'upload_roles', 'Upload all roles'
-    def upload_roles
+    def upload_roles(*args)
       am_uploading('roles') do
-        if(File.directory?(File.join(base_dir, 'roles')))
+        if(File.directory?(File.join(vagabondfile.directory, 'roles')))
           %w(rb json js).each do |ext|
-            next if Dir.glob(File.join(base_dir, "roles", "*.#{ext}")).size == 0
-            cmd = knife_command("role from file #{File.join(base_dir, "roles/*.#{ext}")}")
+            next if Dir.glob(File.join(vagabondfile.directory, "roles", "*.#{ext}")).size == 0
+            cmd = knife_command("role from file #{File.join(vagabondfile.directory, "roles/*.#{ext}")}")
             cmd.run_command
             cmd.error!
           end
@@ -61,11 +33,10 @@ module Vagabond
       end
     end
 
-    desc 'upload_databags', 'Upload all data bags'
-    def upload_databags
+    def upload_databags(*args)
       am_uploading('data bags') do
-        if(File.directory?(File.join(base_dir, 'data_bags')))
-          Dir.glob(File.join(base_dir, "data_bags/*")).each do |b|
+        if(File.directory?(File.join(vagabondfile.directory, 'data_bags')))
+          Dir.glob(File.join(vagabondfile.directory, "data_bags/*")).each do |b|
             next if %w(. ..).include?(b) || !File.directory?(b)
             coms = [
               "data bag create #{File.basename(b)}",
@@ -80,13 +51,12 @@ module Vagabond
       end
     end
 
-    desc 'upload_environments', 'Upload all environments'
-    def upload_environments
+    def upload_environments(*args)
       am_uploading('environments') do
-        if(File.directory?(File.join(base_dir, 'environments')))
+        if(File.directory?(File.join(vagabondfile.directory, 'environments')))
           %w(rb json js).each do |ext|
-            next if Dir.glob(File.join(base_dir, "environments", "*.#{ext}")).size == 0
-            cmd = knife_command("environment from file #{File.join(base_dir, "environments/*.#{ext}")}")
+            next if Dir.glob(File.join(vagabondfile.directory, "environments", "*.#{ext}")).size == 0
+            cmd = knife_command("environment from file #{File.join(vagabondfile.directory, "environments/*.#{ext}")}")
             cmd.run_command
             cmd.error!
           end
@@ -94,12 +64,11 @@ module Vagabond
       end
     end
 
-    desc 'upload_cookbooks', 'Upload all cookbooks'
-    def upload_cookbooks
+    def upload_cookbooks(*args)
       am_uploading('cookbooks') do
-        if(vagabondfile[:local_chef_server][:librarian])
+        if(vagabondfile[:server][:librarian])
           librarian_upload
-        elsif(vagabondfile[:local_chef_server][:berkshelf])
+        elsif(vagabondfile[:server][:berkshelf])
           berks_upload
         else
           if(File.exists?(File.join(vagabondfile.directory, 'Cheffile')))
@@ -115,11 +84,8 @@ module Vagabond
 
     private
 
-    def validate!
-    end
-
-    def setup(action, name=nil, *args)
-      super(action, 'server', *args)
+    def server_validate!(*args)
+      true
     end
 
     def am_uploading(thing)
@@ -147,49 +113,40 @@ module Vagabond
       base
     end
 
-    def do_create
-      config = Mash.new
-      # TODO: Pull custom IP option if provided
-      config[:daemon] = true
-      config[:original] = server_base
-
-      ephemeral = Lxc::Ephemeral.new(config)
-      e_name = ephemeral.name
-      internal_config[mappings_key][name] = e_name
-      ephemeral.start!(:fork)
-      @lxc = Lxc.new(e_name)
-      @lxc.wait_for_state(:running)
-    end
-
-    def do_provision
-      if(vagabondfile[:local_chef_server][:zero] || options[:force_zero])
+    def do_provision(node, opts={})
+      server_opts = opts.dup
+      server_opts[:extras] = [
+        "--sync-directory \"#{internal_config.cookbook_path}:/var/chef-host/cookbooks\""
+      ]
+      # ensure we have a clean directory to sync to
+      node.direct_command('rm -rf /var/chef-host/cookbooks')
+      if(vagabondfile[:server][:zero])
         ui.info ui.color('  -> Bootstrapping chef-zero...', :cyan)
-        tem_file = File.expand_path(File.join(File.dirname(__FILE__), 'bootstraps/server-zero.erb'))
-        knife_config :server_url => "http://#{lxc.container_ip(20, true)}"
+        super(node,
+          server_opts.merge(
+            :custom_template => File.expand_path(File.join(File.dirname(__FILE__), 'bootstraps/server-zero.erb'))
+          )
+        )
+        knife_config :server_url => "http://#{node.address}"
       else
         ui.info ui.color('  -> Bootstrapping erchef...', :cyan)
-        tem_file = File.expand_path(File.join(File.dirname(__FILE__), 'bootstraps/server.erb'))
-        knife_config :server_url => "https://#{lxc.container_ip(20, true)}"
+        super(node,
+          server_opts.merge(
+            :custom_template => File.expand_path(File.join(File.dirname(__FILE__), 'bootstraps/server.erb'))
+          )
+        )
+        knife_config :server_url => "https://#{node.address}"
       end
-      # Scrub before bootstrap
-      direct_container_command('rm -rf /var/chef-host/cookbooks')
-      # And bootstrap
-      cmd = knife_command(
-        "bootstrap #{lxc.container_ip(10, true)} --sync-directory " <<
-        "\"#{internal_config.cookbook_path}:/var/chef-host/cookbooks\" --template-file " <<
-        "#{tem_file} -i #{Settings[:ssh_key]}"
-      )
-      cmd.run_command
-      cmd.error!
-      ui.info ui.color('  -> COMPLETE', :green)
-      auto_upload if vagabondfile[:local_chef_server][:auto_upload]
+      if(vagabondfile[:server][:auto_upload])
+        run_action(:auto_upload)
+      end
     end
 
     def berks_upload
       ui.info 'Cookbooks being uploaded via berks'
-      if(vagabondfile[:local_chef_server][:berkshelf].is_a?(Hash))
-        berks_opts = vagabondfile[:local_chef_server][:berkshelf][:options]
-        berks_path = vagabondfile[:local_chef_server][:berkshelf][:path]
+      if(vagabondfile[:server][:berkshelf].is_a?(Hash))
+        berks_opts = vagabondfile[:server][:berkshelf][:options]
+        berks_path = vagabondfile[:server][:berkshelf][:path]
       end
       berk_uploader = Uploader::Berkshelf.new(
         vagabondfile, vagabondfile.build_private_store, options.merge(

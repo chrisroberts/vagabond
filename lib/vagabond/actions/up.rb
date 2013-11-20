@@ -1,56 +1,37 @@
 #encoding: utf-8
+
+require 'vagabond/actions'
+
 module Vagabond
   module Actions
     module Up
-      class << self
-        def included(klass)
-          klass.class_eval do
-            class << self
-              def _up_options
-                [[:auto_provision, :type => :boolean, :default => true]]
-              end
-            end
-          end
-        end
+
+      def do_up(name)
+        node = load_node(name)
+        run_action(:create, name)
+        run_action(:provision, name)
       end
 
-      def _up
-        name_required!
-        if(lxc.exists?)
-          if(lxc.running?)
-            ui.warn "Node already exists and is running: #{name}"
-          else
-            ui.info "#{ui.color('Vagabond:', :bold)} Starting node: #{ui.color(name, :green)}"
-            lxc.start
-            ui.info ui.color('  -> STARTED', :green)
-          end
-        end
+      def up(name)
         if(options[:parallel])
-          # TODO: Need strategy for chains
-          @threads[:up] ||= []
-          t_holder = Mash.new
-          @threads[:up] << t_holder.update(
+          task_holder = Mash.new
+          dup_opts = options.dup
+          options[:parallel] = false
+          ephemeral = self.class.new(options)
+          tasks[:up] << task_holder.update(
+            :name => name,
             :thread => Thread.new{
               sleep(0.01)
-              _create
-              begin
-                do_provision if options[:auto_provision]
-                t_holder[:result] = true
-              rescue => e
-                t_holder[:result] = false
-              end
+              task_holder[:result] = ephemeral.do_up(name)
             }
           )
         else
-          if(!lxc.exists?)
-            add_link(:create)
-          elsif(!lxc.running?)
-            add_link(:start)
-          end
-          add_link(:provision) if options[:auto_provision]
+          do_up(name)
         end
       end
 
     end
   end
 end
+
+Vagabond::Actions.register(Vagabond::Actions::Up)
