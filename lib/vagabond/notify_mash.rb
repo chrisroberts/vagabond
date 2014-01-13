@@ -1,4 +1,4 @@
-require 'chef/mash'
+require 'vagabond'
 
 class NotifyMash < BasicObject
 
@@ -21,5 +21,5 @@ class NotifyMash < BasicObject
     end
     result
   end
-  
+
 end

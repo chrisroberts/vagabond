@@ -1,22 +1,17 @@
 #encoding: utf-8
-require 'vagabond/constants'
 
-Dir.glob(File.join(File.dirname(__FILE__), 'helpers/*.rb')).each do |path|
-  require "vagabond/helpers/#{File.basename(path).sub('.rb', '')}"
-end
+require 'vagabond'
 
 module Vagabond
   module Helpers
-    class << self
-      
-      def included(klass)
-        ::Vagabond::Helpers.constants.each do |konst|
-          const = ::Vagabond::Helpers.const_get(konst)
-          next unless const.is_a?(Module)
-          klass.send(:include, const)
-        end
-      end
-      
-    end
+
+    autoload :Callbacks, 'vagabond/helpers/callbacks'
+    autoload :Chains, 'vagabond/helpers/chains'
+    autoload :Commands, 'vagabond/helpers/commands'
+    autoload :Knife, 'vagabond/helpers/knife'
+    autoload :Naming, 'vagabond/helpers/naming'
+    autoload :Nests, 'vagabond/helpers/nests'
+    autoload :Server, 'vagabond/helpers/server'
+
   end
 end

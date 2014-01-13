@@ -1,13 +1,13 @@
 #encoding: utf-8
-Dir.new(File.join(File.dirname(__FILE__), 'uploader')).each do |file|
-  next if file.start_with?('.') || !file.end_with?('.rb')
-  require "vagabond/uploader/#{file}"
-end
 
-require 'vagabond/helpers'
+require 'vagabond'
 
 module Vagabond
   class Uploader
+
+    autoload :Berkshelf, 'vagabond/uploaders/berkshelf'
+    autoload :Knife, 'vagabond/uploaders/knife'
+    autoload :Librarian, 'vagabond/uploaders/librarian'
 
     attr_reader :store
     attr_reader :options
@@ -15,7 +15,7 @@ module Vagabond
     attr_reader :vagabondfile
 
     include Helpers
-    
+
     def initialize(vagabondfile, base_directory, options={})
       @store = base_directory
       @options = Mash.new(options)
@@ -28,6 +28,6 @@ module Vagabond
 
     def upload
     end
-    
+
   end
 end

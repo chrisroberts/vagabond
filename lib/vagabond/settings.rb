@@ -1,4 +1,4 @@
-require 'chef/mash'
+require 'vagabond'
 
 module Vagabond
   class Settings

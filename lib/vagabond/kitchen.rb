@@ -6,9 +6,7 @@ require 'kitchen/busser'
 require 'kitchen/loader/yaml'
 require 'vagabond/monkey/kitchen_config'
 
-require 'vagabond/helpers/server'
-require 'vagabond/vagabond'
-require 'vagabond/server'
+require 'vagabond'
 
 module Vagabond
   class Kitchen < Vagabond

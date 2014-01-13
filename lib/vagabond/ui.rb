@@ -1,3 +1,5 @@
+
+require 'vagabond'
 require 'stringio'
 require 'chef/knife/core/ui'
 

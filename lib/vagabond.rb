@@ -1,1 +1,1 @@
-require 'vagabond/version'
+require 'vagabond/autoloader'

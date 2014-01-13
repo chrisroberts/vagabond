@@ -1,5 +1,5 @@
 #encoding: utf-8
-require 'vagabond/vagabond'
+require 'vagabond'
 require 'digest/md5'
 
 module Vagabond

@@ -1,9 +1,6 @@
 #encoding: utf-8
 
-# load all our libs
-%w(actions constants errors helpers internal_configuration ui uploader vagabondfile).each do |lib|
-  require "vagabond/#{lib}"
-end
+require 'vagabond'
 
 module Vagabond
   class Core
@@ -13,7 +10,11 @@ module Vagabond
 
     include Mixlib::CLI
 
-    include Helpers
+    include Helpers::Callbacks
+    include Helpers::Chains
+    include Helpers::Commands
+    include Helpers::Naming
+    include Helpers::Nests
 
     attr_reader :options, :action, :driver
 

@@ -1,6 +1,7 @@
 #encoding: utf-8
 
 require 'vagabond'
+require 'shellwords'
 
 module Vagabond
   class Knife < Vagabond

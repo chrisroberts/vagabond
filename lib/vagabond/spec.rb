@@ -1,6 +1,6 @@
 #encoding: utf-8
-require 'vagabond/helpers/server'
-require 'vagabond/vagabond'
+
+require 'vagabond'
 
 module Vagabond
   class Spec < Vagabond

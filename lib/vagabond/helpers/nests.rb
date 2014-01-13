@@ -1,6 +1,8 @@
 module Vagabond
   module Nests
+
     module Methods
+
       def retreive(collection, *args)
         unless(collection.is_a?(Hash))
           raise TypeError.new("Expecting Hash collection. Got #{collection.class}")
@@ -9,6 +11,7 @@ module Vagabond
           memo[key.to_s] || memo[key.to_sym] || break
         end
       end
+
     end
 
     class << self
@@ -17,5 +20,6 @@ module Vagabond
       end
       include Methods
     end
+
   end
 end

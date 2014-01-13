@@ -1,10 +1,21 @@
-Dir.glob(File.join(File.dirname(__FILE__), 'actions', '*.rb')).each do |file|
-  lib = File.basename(file).sub('.rb', '')
-  require "vagabond/actions/#{lib}"
-end
+require 'vagabond'
 
 module Vagabond
   module Actions
+
+    autoload :Cluster, 'vagabond/actions/cluster'
+    autoload :Create, 'vagabond/actions/create'
+    autoload :Destroy, 'vagabond/actions/destroy'
+    autoload :Freeze, 'vagabond/actions/freeze'
+    autoload :Init, 'vagabond/actions/init'
+    autoload :Provision, 'vagabond/actions/provision'
+    autoload :Rebuild, 'vagabond/actions/rebuild'
+    autoload :Ssh, 'vagabond/actions/ssh'
+    autoload :Start, 'vagabond/actions/start'
+    autoload :Status, 'vagabond/actions/status'
+    autoload :Thaw, 'vagabond/actions/thaw'
+    autoload :Up, 'vagabond/actions/up'
+
     class << self
 
       # Array of registered modules

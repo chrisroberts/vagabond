@@ -5,16 +5,13 @@ require 'digest/sha2'
 require 'chef'
 require 'chef/mixin/deep_merge'
 
-require 'vagabond/helpers'
-require 'vagabond/constants'
-require 'vagabond/version'
-require 'vagabond/notify_mash'
+require 'vagabond'
 
 module Vagabond
   class InternalConfiguration
 
     DEFAULT_ERCHEF_VERSION = '11.0.8'
-    
+
     class << self
       attr_accessor :host_provisioned
 
@@ -24,12 +21,12 @@ module Vagabond
     end
 
     include Helpers
-    
+
     attr_reader :config
     attr_reader :ui
     attr_reader :options
     attr_accessor :force_bases
-    
+
     def initialize(vagabondfile, ui, options, args={})
       @vagabondfile = vagabondfile
       @checksums = Mash.new
@@ -117,7 +114,7 @@ module Vagabond
       @config[k] = v
       save
     end
-    
+
     def create_store
       FileUtils.mkdir_p(store_path)
     end
@@ -229,7 +226,7 @@ module Vagabond
         end
       end
     end
-    
+
     def cache_path
       unless(@cache_path)
         FileUtils.mkdir_p(@cache_path = File.join(store_path, 'chef_cache'))
@@ -258,7 +255,7 @@ module Vagabond
         File.join(File.dirname(cookbook_path), 'Cheffile')
       )
     end
-    
+
     def cookbook_vendor_required?
       need_vendor = !File.exists?(vendor_cheffile_path)
       need_vendor ||= get_checksum(vendor_cheffile_path) != get_checksum(cheffile_path)
@@ -280,7 +277,7 @@ module Vagabond
       spec = Gem::Specification.find_by_name('vagabond', ::Vagabond::VERSION.version)
       ::Vagabond::VERSION.segments.last.odd?
     end
-      
+
     def install_cookbooks
       begin
         if(cookbook_vendor_required?)
@@ -301,7 +298,7 @@ module Vagabond
         raise VagabondError::LibrarianHostInstallFailed.new(e)
       end
     end
-    
+
     def run_solo
       unless(self.class.host_provisioned?)
         begin
@@ -324,7 +321,7 @@ module Vagabond
     def config_path
       File.join(store_path, 'vagabond.json')
     end
-    
+
     def save
       mode = File.exists?(config_path) ? 'r+' : 'w+'
       File.open(config_path, mode) do |file|
@@ -374,7 +371,7 @@ module Vagabond
       end
       n
     end
-    
+
     def cookbook_attributes(cookbook, namespace=true)
       @_attr_cache ||= Mash.new
       unless(@_attr_cache[cookbook])
@@ -393,7 +390,7 @@ module Vagabond
       end
       @_attr_cache[cookbook]
     end
-    
+
     def make_knife_config_if_required(force=false)
       if(@vagabondfile.local_chef_server? || force)
         unless(knife_config_available?)

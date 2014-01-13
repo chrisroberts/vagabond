@@ -1,5 +1,5 @@
 #encoding: utf-8
-require 'vagabond/core'
+require 'vagabond'
 
 module Vagabond
   class Vagabond < Core

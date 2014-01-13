@@ -1,4 +1,4 @@
-require 'vagabond/node_interface'
+require 'vagabond'
 
 module Vagabond
   class Node
