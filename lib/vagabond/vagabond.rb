@@ -20,7 +20,7 @@ module Vagabond
   class Vagabond < Thor
 
     DISABLE_HOST_SOLO_ON = %w(status init)
-    
+
     include Thor::Actions
     include Helpers
 
@@ -28,7 +28,7 @@ module Vagabond
       klass = Actions.const_get(const)
       include klass if klass.is_a?(Module)
     end
-    
+
     attr_accessor :mappings_key
     attr_accessor :lxc
     attr_accessor :config
@@ -58,7 +58,7 @@ module Vagabond
         :type => :string,
         :desc => 'Provide path to Vagabondfile'
       )
-      
+
       class_option(:local_server,
         :type => :boolean,
         :default => true,
@@ -78,7 +78,7 @@ module Vagabond
     # name:: Name of vagabond
     # config:: Hash configuration
     #
-    # Creates an instance    
+    # Creates an instance
     def initialize(*args)
       super
       @threads = Mash.new
@@ -128,18 +128,18 @@ module Vagabond
         end
       end
     end
-    
+
     def version
       setup_ui
       ui.info "#{ui.color('Vagabond:', :yellow, :bold)} - Advocating idleness and work-shyness"
-      ui.info "  #{ui.color('Version:', :blue)} - #{VERSION.version} (#{VERSION.codename})"
+      ui.info "  #{ui.color('Version:', :blue)} - #{VERSION.version} (#{CODENAME})"
       exit
     end
-    
+
     def execute
       self.send("_#{action}")
     end
-    
+
     def setup(action, name=nil, *args)
       @action = action
       @name = name
@@ -171,7 +171,7 @@ module Vagabond
       )
       raise VagabondError::NodeProvisionFailed.new("Failed to provision: #{name}") unless cmd
     end
-    
+
     def validate!
       if(name.to_s == 'server')
         ui.fatal "RESERVED node name supplied: #{ui.color(name, :red)}"
@@ -184,14 +184,14 @@ module Vagabond
         raise VagabondError::InvalidName.new(name)
       end
     end
-    
+
     def check_existing!
       if(lxc.exists?)
         ui.error "LXC: #{name} already exists!"
         true
       end
     end
-    
+
     def base_dir
       File.dirname(vagabondfile.path)
     end
