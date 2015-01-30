@@ -1,63 +1,72 @@
 #encoding: utf-8
 
-require 'vagabond/actions'
+require 'vagabond'
 
 module Vagabond
-  module Actions
-    module Provision
+  class Command
+    # Provision node
+    class Provision < Command
 
-      def provision(name)
-        node = load_node(name)
-        if(node.exists?)
-          if(node.running?)
-            do_provision
+      # Provision node
+      def run!
+        arguments.each do |name|
+          unless(node(name).exists?)
+            ui.warn "Node does not currently exist: #{name} (performing no tasks)"
           else
-            ui.error "Node is not currently running: #{name}"
-            raise NodeNotRunning.new(name)
+            run_action "Provisioning #{ui.color(name, COLORS[:yellow])}" do
+              provision(node(name))
+              nil
+            end
+            run_callbacks(node(name))
           end
-        else
-          ui.error "Node not created: #{name}"
-          raise NodeNotCreated.new(name)
         end
       end
 
-      private
+      # Provision the given node
+      #
+      # @param node [Node]
+      # @return [TrueClass, FalseClass]
+      def provision(node)
+        case node.configuration[:provision_via].to_s
+        else
+          provision_via_chef(node)
+        end
+      end
 
-      def do_provision(node, opts={})
-        ui.info "#{ui.color('Vagabond:', :bold)} Provisioning node: #{ui.color(node.name, :magenta)}"
-        bootstrap = ["bootstrap #{node.address} -N #{node.name} -i #{Settings[:ssh_key]}"]
-        bootstrap << "--no-host-key-verify --run-list \"#{node.config[:run_list].join(', ')}\""
-        if(node.config[:environment])
-          bootstrap << "-E #{config[:environment]}"
-        end
-        if(node.config[:no_lazy_load])
-          no_lazy_load_bootstrap = File.join(File.dirname(__FILE__), '..', 'bootstraps/no_lazy_load.erb')
-          bootstrap << "--template-file #{no_lazy_load_bootstrap}"
-        elsif(node.config[:chef_10])
-          chef_10_bootstrap = File.join(File.dirname(__FILE__), '..', 'bootstraps/chef_10_compat_config.erb')
-          bootstrap << "--template-file #{chef_10_bootstrap}"
-        elsif(opts[:custom_bootstrap])
-          bootstrap << "--template-file #{opts[:custom_bootstrap]}"
-        end
-        if(node.attributes)
-          bootstrap << "-j '#{attributes}'"
-        end
-        if(opts[:extras])
-          bootstrap += Array(opts[:extras]).flatten.compact
-        end
-        cmd = knife_command(bootstrap.join(' '), :live_stream => ui.live_stream, :timeout => 2000)
-        cmd.run_command
-        unless(cmd.stdout.include?('FATAL: Stacktrace'))
-          ui.info ui.color('  -> PROVISIONED', :magenta)
+      # Provision node via Chef
+      #
+      # @param node [Node]
+      # @return [TrueClass, FalseClass]
+      def provision_via_chef(node)
+        if(server_node)
+          bootstrap = node.configuration[:chef].to_smash # convert to ensure dup
+          cmd = [
+            "knife bootstrap #{node.address} -N #{[node.classification, node.name].compact.join('-')}",
+            "-i #{vagabondfile.ssh_key} -x #{vagabondfile.ssh_user} --no-host-verify-key"
+          ]
+          if(bootstrap[:run_list])
+            cmd << "--run-list \"#{bootstrap.delete(:run_list).join(', ')}\""
+          end
+          if(bootstrap.delete(:no_lazy_load))
+            cmd << "--template-file #{File.join(File.dirname(__FILE__), '..', 'bootstraps/no_lazy_load.erb')}"
+          elsif(bootstrap.delete(:chef_10))
+            cmd << "--template-file #{File.join(File.dirname(__FILE__), '..', 'bootstraps/chef_10_compat_config.erb')}"
+          elsif(bootstrap[:bootstrap_template])
+            cmd << "--template-file #{bootstrap.delete(:bootstrap_template)}"
+          end
+          if(bootstrap[:attributes])
+            cmd << "-j '#{MultiJson.dump(bootstrap.delete[:attributes])}'"
+          end
+          bootstrap.each do |flag, value|
+            cmd << "--#{flag.gsub('_', '-')} '#{value}'"
+          end
+          host_command(cmd.join(' '))
           true
         else
-          ui.info ui.color('  -> PROVISION FAILED', :red)
-          raise VagabondError::NodeProvisionFailed.new("Failed to provision: #{name}")
+          raise Error::NodeNotRunning.new('No Chef server instance located to provision against!')
         end
       end
 
     end
   end
 end
-
-Vagabond::Actions.register(Vagabond::Actions::Provision)
