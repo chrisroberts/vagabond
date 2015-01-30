@@ -107,11 +107,41 @@ Bogo::Cli::Setup.define do
   end
 
   command :server do
-    self.instance_exec(&common)
     description 'Chef server'
 
+    command :create do
+      self.instance_exec(&common)
+      description 'Create local Chef server'
+      run do |opts, args|
+        Vagabond::Command::Server::Create.new(opts, args).execute!
+      end
+    end
+
+    command :destroy do
+      self.instance_exec(&common)
+      description 'Destroy local Chef server'
+      run do |opts, args|
+        Vagabond::Command::Server::Destroy.new(opts, args).execute!
+      end
+    end
+
+    command :status do
+      self.instance_exec(&common)
+      description 'Status of Chef server'
+      run do |opts, args|
+        Vagabond::Command::Server::Create.new(opts, args).execute!
+      end
+    end
+
     command :upload do
-      description 'Upload all resources to chef server'
+      self.instance_exec(&common)
+      description 'Upload resources to chef server'
+
+      on :C, :cookbooks, 'Upload cookbooks', :default => true
+      on :R, :roles, 'Upload roles', :default => true
+      on :E, :environments, 'Upload environments', :default => true
+      on :D, 'data-bags', 'Upload data bags', :default => true
+
       run do |opts, args|
         Vagabond::Command::Server::Upload.new(opts, args).execute!
       end
@@ -120,7 +150,7 @@ Bogo::Cli::Setup.define do
   end
 
   command :spec do
-    description 'Run serverspec'
+    description 'Run infrastructure specs'
 
     command :cluster do
       self.instance_exec(&common)
@@ -160,8 +190,9 @@ Bogo::Cli::Setup.define do
 
   end
 
-  command :kitchen do
-    description 'Run test kitchen'
+  command :test do
+    description 'Run cookbook tests'
+
     command :test do
       self.instance_exec(&common)
       on :P, :platform=, 'Platform to test'
@@ -200,4 +231,5 @@ Bogo::Cli::Setup.define do
       Vagabond::Command::Init.new(opts, args).execute!
     end
   end
+
 end
