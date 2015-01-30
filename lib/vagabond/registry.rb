@@ -13,9 +13,10 @@ module Vagabond
       attribute :test_clusters, Smash, :default => Smash.new
       attribute :templates, Smash, :default => Smash.new
       attribute :dev_mode, Integer, :default => Time.now.to_i
+      attribute :version, String, :default => Vagabond::VERSION.version
     end
 
-    attribute :entries, Smash, :default => Smash.new
+    attribute :entries, Smash, :default => Smash.new, :coerce => lambda{|v| Smash[v.map{|k,v| [k, Entry.new(v)]}]}
 
     # Save the registry to disk
     #
