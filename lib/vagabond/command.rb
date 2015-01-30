@@ -121,6 +121,13 @@ module Vagabond
       end
     end
 
+    # @return [Node] Chef server node if available
+    def server_node
+      memoize(:server) do
+        # Something
+      end
+    end
+
     private
 
     # Wrap block execution around file lock
