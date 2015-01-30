@@ -1,3 +1,8 @@
 source 'https://rubygems.org'
 
-gem 'vagrant', :git => 'git://github.com/mitchellh/vagrant', :tag => 'v1.2.1'
+gem 'bogo', path: '/home/spox/Projects/chrisroberts/bogo'
+gem 'bogo-ui', path: '/home/spox/Projects/chrisroberts/bogo-ui'
+gem 'bogo-cli', path: '/home/spox/Projects/chrisroberts/bogo-cli'
+gem 'elecksee', path: '/home/spox/Projects/chrisroberts/elecksee'
+
+gemspec

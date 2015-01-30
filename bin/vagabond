@@ -1,210 +1,203 @@
 #!/usr/bin/env ruby
-require 'gli'
 
-include GLI::App
+require 'vagabond'
 
-program_desc 'Vagabond'
+Bogo::Cli::Setup.define do
 
-version Vagabond::VERSION.version
+  description 'Build and test infrastructure layouts'
 
-desc 'Enable debug mode'
-switch [:d, :debug]
-
-desc 'Force host provision'
-switch 'force-solo'
-
-desc 'Turn on color output'
-switch [:c, :color]
-default_value true
-
-desc 'Path to vagabond file'
-flag [:f, :vagabondfile]
-
-desc 'Enable local chef server usage if available'
-switch [:l, 'local-server']
-default_value true
-
-desc 'Enable callbacks'
-switch :callbacks
-default_value true
-
-desc 'Automatically provision nodes'
-switch 'auto-provision'
-default_value true
-
-desc 'Add delay between provisions (helpful for indexing)'
-flag 'delay'
-default_value 0
-
-desc 'Build nodes in parallel'
-flag 'parallel'
-
-desc 'Build cluster of nodes'
-arg_name 'cluster_name'
-command :cluster do |c|
-end
-
-desc 'Create node'
-arg_name 'node_name'
-command :create do |c|
-end
-
-desc 'Destroy cluster of nodes referenced by provided name'
-flag 'cluster'
-
-desc 'Destroy node'
-arg_name 'node_name', :multiple
-command :destroy do |c|
-end
-
-desc 'Freeze node'
-arg_name 'node_name'
-command :freeze do |c|
-end
-
-desc 'Provision node'
-arg_name 'node_name'
-command :provision do |c|
-end
-
-desc 'Rebuild node'
-arg_name 'node_name'
-command :rebuild do |c|
-end
-
-desc 'SSH to node (or run provided command)'
-arg_name 'node_name'
-arg_name 'ssh_command', :optional
-command :ssh do |c|
-end
-
-desc 'Start node'
-arg_name 'node_name'
-command :start do |c|
-end
-
-desc 'Status of given node or all nodes'
-arg_name 'node_name', :optional
-command :status do |c|
-end
-
-desc 'Thaw node'
-arg_name 'node_name'
-command :thaw do |c|
-end
-
-desc 'Auto provision node'
-flag 'auto-provision'
-default_value true
-
-desc 'Create and provision node'
-arg_name 'node_name'
-command :up do |c|
-end
-
-command :server do |c|
-
-  c.desc 'Upload all discovered assets to server'
-  c.command :auto_upload do |c|
+  # Version output
+  on :v, :version, 'Print version' do
+    puts "vagabond [Version: #{Vagabond::VERSION}] <#{Vagabond::VERSION_NAME}>"
+    exit 0
   end
 
-  c.desc 'Upload all roles to server'
-  c.command :upload_roles do |c|
+  # Common options
+  common = lambda do
+    on :d, :debug, 'Enable debug mode'
+    on :F, 'force-provision', 'Force host provision'
+    on :c, :color, 'Enable color output'
+    on :f, :vagabondfile=, 'Path to vagabondfile'
+    on :l, 'local-chef-server', 'Enable local chef server if available', :default => true
+    on :C, :callbacks, 'Enable callbacks', :default => true
+    on :x, :delay=, 'Add delay between provisions'
+    on :p, :parallel, 'Build nodes in parallel'
+    on :L, 'lock-file=', 'Global lock file (probably shouldn\'t change this)', :default => '/tmp/.vagabond.lck'
   end
 
-  c.desc 'Upload all data bags to server'
-  c.command :upload_databags do |c|
+  command :cluster do
+    self.instance_exec(&common)
+    description 'Build cluster of nodes'
+    on :D, :destroy, 'Destroy cluster of nodes'
+    run do |opts, args|
+      Vagabond::Command::Cluster.new(opts, args).execute!
+    end
   end
 
-  c.desc 'Upload all environments to server'
-  c.command :upload_environments do |c|
+  command :create do
+    self.instance_exec(&common)
+    description 'Create node'
+    run do |opts, args|
+      Vagabond::Command::Create.new(opts, args).execute!
+    end
   end
 
-  c.desc 'Upload all cookbooks to server'
-  c.command :upload_cookbooks do |c|
+  command :up do
+    self.instance_exec(&common)
+    description 'Create and provision node'
+    run do |opts, args|
+      Vagabond::Command::Up.new(opts, args).execute!
+    end
   end
 
+  command :destroy do
+    self.instance_exec(&common)
+    description 'Destroy node'
+    run do |opts, args|
+      Vagabond::Command::Destroy.new(opts, args).execute!
+    end
+  end
+
+  command :freeze do
+    self.instance_exec(&common)
+    description 'Freeze node'
+    run do |opts, args|
+      Vagabond::Command::Freeze.new(opts, args).execute!
+    end
+  end
+
+  command :thaw do
+    self.instance_exec(&common)
+    description 'Thaw node'
+    run do |opts, args|
+      Vagabond::Command::Thaw.new(opts, args).execute!
+    end
+  end
+
+  command :provision do
+    self.instance_exec(&common)
+    description 'Provision node'
+    run do |opts, args|
+      Vagabond::Command::Provision.new(opts, args).execute!
+    end
+  end
+
+  command :rebuild do
+    self.instance_exec(&common)
+    description 'Rebuild node'
+    run do |opts, args|
+      Vagabond::Command::Rebuild.new(opts, args).execute!
+    end
+  end
+
+  command :ssh do
+    self.instance_exec(&common)
+    description 'SSH to node'
+    run do |opts, args|
+      Vagabond::Command::Ssh.new(opts, args).execute!
+    end
+  end
+
+  command :status do
+    self.instance_exec(&common)
+    description 'Status of node'
+    run do |opts, args|
+      Vagabond::Command::Status.new(opts, args).execute!
+    end
+  end
+
+  command :server do
+    self.instance_exec(&common)
+    description 'Chef server'
+
+    command :upload do
+      description 'Upload all resources to chef server'
+      run do |opts, args|
+        Vagabond::Command::Server::Upload.new(opts, args).execute!
+      end
+    end
+
+  end
+
+  command :spec do
+    description 'Run serverspec'
+
+    command :cluster do
+      self.instance_exec(&common)
+      on :I, 'in-real-life', 'Run specs against live, remote infrastructure'
+      on :C, 'in-real-life-ssh-attribute', 'Node attribute to use as address for SSH connection'
+      on :E, :environment=, 'Restrict to given chef environment'
+      on :A, 'auto-destroy', 'Destroy cluster after successful spec'
+      run do |opts, args|
+        Vagabond::Command::Spec::Cluster.new(opts, args).execute!
+      end
+    end
+
+    command :node do
+      self.instance_exec(&common)
+      description 'Run specs on existing node'
+      run do |opts, args|
+        Vagabond::Command::Spec::Node.new(opts, args).execute!
+      end
+    end
+
+    command :init do
+      self.instance_exec(&common)
+      description 'Initialize spec setup'
+      on :f, :force, 'Overwrite existing files'
+      run do |opts, args|
+        Vagabond::Command::Spec::Init.new(opts, args).execute!
+      end
+    end
+
+    command :cleanup do
+      self.instance_exec(&common)
+      description 'Cleanup any text kitchen related nodes'
+      run do |opts, args|
+        Vagabond::Command::Kitchen::Cleanup.new(opts, args).execute!
+      end
+    end
+
+  end
+
+  command :kitchen do
+    description 'Run test kitchen'
+    command :test do
+      self.instance_exec(&common)
+      on :P, :platform=, 'Platform to test'
+      on :s, :suites=, 'Suites to run (comma separated)'
+      on :C, :cluster=, 'Cluster to run kitchen tests'
+      on :N, 'direct-node', 'Run kitchen cookbook tests on existing node'
+      on :A, 'auto-cleanup', 'Automatically cleanup nodes, even on failure'
+      run do |opts, args|
+        Vagabond::Command::Kitchen::Test.new(opts, args).execute!
+      end
+    end
+
+    command :cleanup do
+      self.instance_exec(&common)
+      description 'Cleanup any text kitchen related nodes'
+      run do |opts, args|
+        Vagabond::Command::Kitchen::Cleanup.new(opts, args).execute!
+      end
+    end
+
+  end
+
+  command :knife do
+    self.instance_exec(&common)
+    description 'Proxy knife commands via vagabond'
+    run do |opts, args|
+      Vagabond::Command::Knife.new(opts, args).execute!
+    end
+  end
+
+  command :init do
+    self.instance_exec(&common)
+    description 'Initialize vagabond setup'
+    on :f, :force, 'Overwrite existing files'
+    run do |opts, args|
+      Vagabond::Command::Init.new(opts, args).execute!
+    end
+  end
 end
-
-command :spec do |c|
-
-  c.desc 'Run specs against real infrastructure'
-  c.switch 'in-real-life'
-  c.desc 'Attribute to use for SSH connection with --in-real-life'
-  c.flag 'real-life-connect'
-  c.desc 'Restrict to given environment'
-  c.flag 'environment'
-  c.desc 'Automatically destroy cluster after spec'
-  c.flag 'auto-destroy'
-  c.default_value true
-  c.desc 'Run specs against cluster'
-  c.arg_name 'cluster_name'
-  c.command :cluster do
-  end
-
-  c.desc 'Run specs against node'
-  c.arg_name 'node_name'
-  c.command :node do
-  end
-
-  c.desc 'Run specs against cookbook'
-  c.arg_name 'cookbook_name', :optional
-  c.command :test do
-  end
-
-  c.desc 'Initialize directory for spec'
-  c.command :init do
-  end
-
-end
-
-command :kitchen do |c|
-
-  c.desc 'Specify platform to test'
-  c.flag :platform
-  c.desc 'Suites to run'
-  c.flag :suites
-  c.desc 'Run tests in parallel'
-  c.flag :parallel
-  c.desc 'Cluster to run'
-  c.flag :cluster
-  c.desc 'Run kitchen tests on cookbook'
-  c.arg_name 'cookbook_name', :optional
-  c.command :test do |sub_c|
-  end
-
-  c.desc 'Destroy all nodes related to test'
-  c.arg_name 'cookbook_name', :optional
-  c.command :teardown do |sub_c|
-  end
-
-end
-
-command :knife do
-end
-
-command :init do
-end
-
-pre do |global,command,options,args|
-  # Pre logic here
-  # Return true to proceed; false to abort and not call the
-  # chosen command
-  # Use skips_pre before a command to skip this block
-  # on that command only
-  true
-end
-
-post do |global,command,options,args|
-  # Post logic here
-  # Use skips_post before a command to skip this
-  # block on that command only
-end
-
-on_error do |exception|
-  # Error logic here
-  # return false to skip default error handling
-  true
-end
-
-exit run(ARGV)

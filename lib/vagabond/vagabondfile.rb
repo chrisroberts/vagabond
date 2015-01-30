@@ -1,140 +1,116 @@
 #encoding: utf-8
-require 'chef/mash'
-require 'attribute_struct'
+
+require 'vagabond'
+require 'fileutils'
 
 module Vagabond
-  class Vagabondfile
+  # Infrastructure description file
+  class Vagabondfile < Bogo::Config
 
-    class << self
-      def describe(&block)
-        inst = AttributeStruct.new
-        if(block.arity != 1)
-          inst.instance_exec(&block)
-        else
-          inst.instance_exec(inst, &block)
-        end
-        inst
+    include Bogo::Memoization
+
+    attribute :defaults, Smash, :coerce => proc{|v| v.to_smash }
+    attribute :definitions, Smash, :coerce => proc{|v| v.to_smash }
+    attribute :nodes, Smash, :coerce => proc{|v| v.to_smash }
+    attribute :clusters, Smash, :coerce => proc{|v| v.to_smash }
+    attribute :specs, Smash, :coerce => proc{|v| v.to_smash }
+    attribute :server, Smash, :coerce => proc{|v| v.to_smash }
+    attribute :callbacks, Smash, :coerce => proc{|v| v.to_smash }
+    attribute :global_cache, String, :default => '/tmp/.vagabond-cache'
+
+    # Create new instance
+    #
+    # @param path [String] path to vagabond file
+    # @return [self]
+    def initialize(path=nil)
+      unless(path)
+        path = discover_vagabondfile
       end
-    end
-
-    attr_reader :path
-    attr_reader :config
-    attr_reader :missing_ok
-
-    DEFAULT_KEYS = %w(defaults definitions nodes clusters specs server callbacks)
-    ALIASES = Mash.new(
-      :boxes => :nodes,
-      :nodes => :boxes,
-      :local_chef_server => :server,
-      :server => :local_chef_server
-    )
-
-    def initialize(path=nil, args={})
-      path = discover_path(args[:command_cwd] || Dir.pwd) unless path
       @path = path
-      @missing_ok = args[:allow_missing]
-      load_configuration!
+      super(path)
+      immutable!
+      FileUtils.mkdir_p(get(:global_cache))
     end
 
+    # File identifier
+    #
+    # @return [String]
+    def fid
+      memoize(:fid) do
+        Base64.urlsafe_encode64(path)
+      end
+    end
+
+    # Callbacks defined for node name
+    #
+    # @param name [String, Symbol] node name
+    # @return [Smash]
     def callbacks_for(name)
-      callbacks = self[:callbacks] || Mash.new
-      callbacks = Chef::Mixin::DeepMerge.merge(callbacks, for_node(name, :allow_missing)[:callbacks])
-      callbacks
+      fetch(:callbacks, Smash.new).deep_merge(
+        for_node(name, :allow_missing).fetch(
+          :callbacks, Smash.new
+        )
+      )
     end
 
+    # Configuration for defined node name
+    #
+    # @param name [String, Symbol] node name
+    # @return [Smash]
     def for_node(name, *args)
-      unless(self[:nodes][name] || name.to_sym == :server)
-        return Mash.new if args.include?(:allow_missing)
-        raise VagabondError::InvalidName.new("Requested name is not a valid node name: #{name}")
-      end
-      if(self[:nodes][name][:definition])
-        base = for_definition(self[:nodes][name][:definition])
+      if(name.to_s == 'server')
+        raise Error::InvalidName.new('The `server` name is reserved and cannot be used')
+      elsif(get(:nodes, name).nil? && !args.include?(:allow_missing))
+        raise Error::InvalidName.new("Requested name not defined within nodes list (`#{name}`)")
       else
-        base = self[:defaults]
-      end
-      if(name.to_sym == :server)
-        Chef::Mixin::DeepMerge.merge(base, self[:server][:config] || Mash.new)
-      else
-        Chef::Mixin::DeepMerge.merge(base, self[:nodes][name])
+        node = get(:nodes, name)
+        if(node[:definition])
+          base = for_definition(node[:definition])
+        else
+          base = get(:defaults)
+        end
+        base.deep_merge(node)
       end
     end
 
+    # Definition for defined node name
+    #
+    # @param name [String, Symbol] node name
+    # @return [Smash]
     def for_definition(name)
-      base = self[:defaults]
-      unless(self[:definitions][name])
-        raise VagabondError::InvalidName.new("Requested name is not a valid definition name: #{name}")
+      definition = get(:definitions, name)
+      unless(definition)
+        raise Error::InvalidName.new("Requested name not defined within definitions list (`#{name}`)")
       end
-      base = Chef::Mixin::DeepMerge.merge(base, self[:definitions][name])
-      base
+      get(:defaults).deep_merge(definition)
     end
 
-    def [](k)
-      if(DEFAULT_KEYS.include?(k.to_s))
-        @config[k] ||= Mash.new
-      end
-      aliased(k) || @config[k]
+    # @return [String] directory containing vagabondfile
+    def directory
+      File.dirname(path)
     end
 
-    def aliased(k)
-      if(ALIASES.has_key?(k))
-        v = [@config[k], @config[ALIASES[k]]].compact
-        if(v.size > 1)
-          case v.first
-          when Array
-            m = :|
-          when Hash, Mash
-            m = :merge
-          else
-            m = :+
-          end
-          v.inject(&m)
-        else
-          v.first
-        end
-      end
-    end
-
-    def load_configuration!
-      if(@path && File.exists?(@path))
-        thing = self.instance_eval(IO.read(@path), @path, 1)
-        if(thing.is_a?(AttributeStruct))
-          @config = Mash.new(thing._dump)
-        else
-          @config = Mash.new(thing)
-        end
-      end
-      unless(@config)
-        raise 'No Vagabondfile file found!' unless missing_ok
-        @config = Mash[*DEFAULT_KEYS.map{|k| [k, Mash.new]}.flatten]
-      end
-      generate_store_directory
-    end
-
-    def generate_store_directory
-      unless(@store_path)
-        @store_path = File.join('/tmp/vagabond-solos', directory.gsub(%r{[^0-9a-zA-Z]}, '-'))
-        @store_path = File.expand_path(@store_path.gsub('-', '/'))
-        FileUtils.mkdir_p(File.dirname(@store_path))
-      end
-    end
-
-    def store_directory
-      @store_path
-    end
-    alias_method :directory, :store_directory
-
-    def discover_path(path)
-      d_path = Dir.glob(File.join(path, 'Vagabondfile')).first
-      unless(d_path)
-        cut_path = path.split(File::SEPARATOR)
-        cut_path.pop
-        d_path = discover_path(cut_path.join(File::SEPARATOR)) unless cut_path.empty?
-      end
-      d_path
-    end
-
+    # @return [TrueClass, FalseClass] local server enabled
     def server?
-      self[:server] && !self[:server][:disabled]
+      !get(:server, :disabled)
+    end
+
+    private
+
+    # @return [String] path to file
+    def discover_vagabondfile
+      cwd = File.expand_path(Dir.pwd)
+      file_path = nil
+      while(!cwd.empty? && file_path.nil?)
+        file_path = File.join(cwd, 'Vagabondfile')
+        unless(File.exists?(file_path))
+          file_path = nil
+          splits = cwd.split(File::SEPARATOR)
+          splits.pop
+          cwd = splits.join(File::SEPARATOR)
+        end
+      end
+      file_path
     end
 
   end

@@ -1,27 +1,47 @@
 #encoding: utf-8
 module Vagabond
-  class VagabondError < StandardError
+  class Error < StandardError
+
     class << self
+      # @return [Integer] exit code
       attr_accessor :exit_code
+
+      def inherited(klass)
+        @@errors ||= []
+        @@errors << klass
+        klass.exit_code = @@errors.index(klass) + 1
+      end
     end
+
+    # @return [Integer] exit code
     def exit_code
       self.class.exit_code
     end
-  end
 
-  class VagabondError
-    %w(
-        reserved_name invalid_name invalid_base_template
-        invalid_action invalid_template kitchen_missing_yml
-        kitchen_no_cookbook_args kitchen_too_many_args
-        kitchen_invalid_platform missing_node_name cluster_invalid
-        kitchen_test_failed host_provision_failed spec_failed
-        node_provision_failed librarian_host_install_failed
-        echef_base_missing node_not_running node_not_created
-        invalid_request command_failed node_not_frozen not_implemented
-    ).each_with_index do |klass_name, i|
-      klass = klass_name.split('_').map(&:capitalize).join
-      self.class_eval("class #{klass} < VagabondError; self.exit_code = #{i + 1}; end")
-    end
+    class ReservedName < Error; end
+    class InvalidName < Error; end
+    class InvalidBaseTemplate < Error; end
+    class InvalidAction < Error; end
+    class InvalidTemplate < Error; end
+    class KitchenMissingYml < Error; end
+    class KitchenNoCookbookArgs < Error; end
+    class KitchenTooManyArgs < Error; end
+    class KitchenInvalidPlatform < Error; end
+    class MissingNodeName < Error; end
+    class ClusterInvalid < Error; end
+    class KitchenTestFailed < Error; end
+    class HostProvisionFailed < Error; end
+    class SpecFailed < Error; end
+    class NodeProvisionFailed < Error; end
+    class LibrarianHostInstallFailed < Error; end
+    class ErchefBaseMissing < Error; end
+    class NodeNotRunning < Error; end
+    class NodeNotCreated < Error; end
+    class InvalidRequest < Error; end
+    class CommandFailed < Error; end
+    class NodeNotFrozen < Error; end
+    class NotImplemented < Error; end
+    class ProcessLocked < Error; end
+
   end
 end

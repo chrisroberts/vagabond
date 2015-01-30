@@ -1,0 +1,22 @@
+# -*- mode: ruby -*-
+# -*- encoding: utf-8 -*-
+Configuration.new do
+  defaults do
+  end
+  definitions do
+  end
+  nodes do
+    test_node do
+      template 'ubuntu_1204'
+    end
+  end
+  server do
+    enabled true
+  end
+  clusters do
+  end
+  spec do
+  end
+  callbacks do
+  end
+end

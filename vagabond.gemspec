@@ -12,15 +12,13 @@ Gem::Specification.new do |s|
   s.description = 'LXC driven node generation and testing tooling'
   s.require_path = 'lib'
   s.extra_rdoc_files = ['README.md']
-  s.files = Dir['**/*']
-  s.executables = ['vagabond']
+  s.files = Dir['{lib,bin}/**/**/*'] + %w(vagabond.gemspec README.md CHANGELOG.md LICENSE)
+  s.executables << 'vagabond'
+  s.add_dependency 'bogo-cli'
   s.add_dependency 'chef'
   s.add_dependency 'librarian-chef'
-  s.add_dependency 'test-kitchen', '>= 1.0.0.alpha'
-  s.add_dependency 'thor'
-  s.add_dependency 'uuidtools'
-  s.add_dependency 'elecksee', '>= 1.0.10'
-  s.add_dependency 'serverspec', '>= 0.6.3'
-  s.add_dependency 'attribute_struct'
+  s.add_dependency 'test-kitchen'
+  s.add_dependency 'serverspec'
+  s.add_dependency 'elecksee', '>= 1.1.2'
   s.add_dependency 'knife-bootstrapsync'
 end

@@ -1,141 +1,139 @@
-require 'vagabond/node_interface'
+require 'vagabond'
 
 module Vagabond
   class Node
 
-    attr_reader :name, :internal_name, :config, :interface
+    include Bogo::Memoization
+    include Utils::Configuration
 
-    def initialize(name, args={})
-      @name = name
-      @internal_name = generate_name
-      @config = args[:config] || Mash.new
-      @interface = NodeInterface.build(args[:driver], internal_name)
-      @ui = args[:ui] || Ui.ui || Ui::Cli.new
+    # @return [String] node name
+    attr_reader :name
+    # @return [String] specialized node classification
+    attr_reader :classification
+
+    def initialize(name, vagabondfile, registry, classification=nil)
+      @name = name.to_s
+      @classification = classification.to_s if classification
+      @vagabondfile = vagabondfile
+      @registry = registry
+      @mapped_name = [classification, name].compact.map(&:to_s).join('__')
+    end
+
+    def configuration
+      memoize(:configuration) do
+        vagabondfile.for_node(name)
+      end
     end
 
     # Run command on node
-    def run_command(cmd, args={})
-    end
-
-    def run_solo(data_directory)
-      ui.info "#{ui.color('Vagabond:', :bold)} Provisioning node: #{ui.color(name, :magenta)}"
-      interface.available?(:wait => 20)
-      result = run_command(
-        "chef-solo -c #{File.join(data_directory, 'solo.rb')} -j #{File.join(data_directory, 'dna.json')}",
-        :live_stream => stdout
-      )
-      raise VagabondError::NodeProvisionFailed.new("Failed to provision: #{name}") unless result
-    end
-
-    # Helper to allow common access style
-    def run_list
-      config[:run_list]
-    end
-
-    # Return attributes defined for node in JSON form
-    # (Use for bootstraps)
-    def attributes
-      if(config[:attributes])
-        if(config[:attributes].is_a?(Hash))
-          JSON.dump(config[:attributes])
-        else
-          config[:attributes].to_s
-        end
+    #
+    # @param command [String] command to run
+    # @return [Object]
+    def run(command)
+      if(exists?)
+        box = proxy.connection
+        box.disable_safe_mode
+        box.execute(command).stdout.join("\n")
       end
     end
 
-    # Returns if node exists
+    # Instance of node exists
+    #
+    # @return [TrueClass, FalseClass]
     def exists?
-    end
-
-    # Returns if node is running
-    def running?
-    end
-
-    def address
+      !!proxy && proxy.exists?
     end
 
     def state
+      exists? ? proxy.state : 'N/A'
     end
 
-    def pid
-    end
-
-
-    def create
-      ## s
-              unless(config[:device])
-          config[:directory] = true
-        end
-        config[:daemon] = true
-        config[:original] = tmpl
-        config[:bind] = File.expand_path(vagabondfile.store_directory)
-        ephemeral = Lxc::Ephemeral.new(config)
-        e_name = ephemeral.name
-        @internal_config[mappings_key][name] = e_name
-        @internal_config.save
-        ephemeral.start!(:fork)
-        @lxc = Lxc.new(e_name)
-        @lxc.wait_for_state(:running)
-
-    end
-
-    def destroy
-
-      end
-
-      def do_destroy
-        lxc.shutdown if lxc.running?
-        ui.info 'Waiting for graceful shutdown and cleanup...'
-        5.times do
-          break unless lxc.exists?
-          sleep(1)
-        end
-        if(lxc.exists?)
-          com = "#{options[:sudo]}lxc-destroy -n #{lxc.name}"
-          debug(com)
-          cmd = Mixlib::ShellOut.new(com, :live_stream => options[:debug])
-          cmd.run_command
-          force_umount_if_required!
-        end
-        internal_config[mappings_key].delete(name)
-        internal_config.save
-      end
-
-      def force_umount_if_required!
-        mount = %x{mount}.split("\n").find_all do |line|
-          line.include?(lxc.name)
-        end
-        unless(mount.empty?)
-          ui.info ui.color('  -> Failed to unmount some resources. Forcing manually.', :yellow)
-          %w(rootfs ephemeralbind).each do |mnt|
-            com = "#{options[:sudo]}umount /var/lib/lxc/#{lxc.name}/#{mnt}"
-            debug(com)
-            cmd = Mixlib::ShellOut.new(com, :live_stream => options[:debug])
-            cmd.run_command
-            com = "#{options[:sudo]}lxc-destroy -n #{lxc.name}"
-            debug(com)
-            cmd = Mixlib::ShellOut.new(com, :live_stream => options[:debug])
-            cmd.run_command
-          end
-          # check for tmpfs and umount too
-          tmp = mount.detect{|x|x.include?('rootfs')}.scan(%r{upperdir=[^,]+}).first.to_s.split('=').last
-          if(tmp)
-            com = "#{options[:sudo]}umount #{tmp}"
-            debug(com)
-            cmd = Mixlib::ShellOut.new(com, :live_stream => options[:debug])
-            cmd.run_command
-          end
-        end
+    # Create instance of node
+    #
+    # @return [TrueClass, FalseClass]
+    def create!
+      unless(exists?)
+        instance = Lxc::Ephemeral.new(
+          :original => configuration[:template],
+          :directory => true,
+          :bind => configuration[:bind],
+          :union => configuration[:union],
+          :daemon => true
+        )
+        instance.start!(:detach)
+        current = local_registry.fetch(:nodes, Smash.new)
+        local_registry.set(:nodes, current.merge(mapped_name => instance.name))
+        registry.save!
+        true
+      else
+        false
       end
     end
 
-    def start
+    # Destroy instance of node
+    #
+    # @return [TrueClass, FalseClass]
+    def destroy!
+      if(exists?)
+        proxy.destroy
+        if(local_registry[:nodes])
+          local_registry[:nodes].delete(mapped_name)
+          registry.save!
+        end
+        true
+      else
+        false
+      end
     end
 
+    def method_missing(m_name, *args, &block)
+      if(proxy.respond_to?(m_name))
+        proxy.send(m_name, *args, &block)
+      else
+        super
+      end
+    end
 
-    def stdout
-      $stdout
+    def address
+      exists? ? proxy.container_ip : 'N/A'
+    end
+
+    def freeze
+      if(exists?)
+        proxy.freeze
+      end
+    end
+
+    def thaw
+      if(exists?)
+        proxy.unfreeze
+      end
+    end
+
+    protected
+
+    # @return [Object]
+    def proxy
+      if(internal_name)
+        memoize(:proxy) do
+          Lxc.new(internal_name)
+        end
+      end
+    end
+
+    # @return [String] physical instance name
+    def internal_name
+      local_registry.get(:nodes, mapped_name)
+    end
+
+    # @return [String] classification name
+    def mapped_name
+      @mapped_name
+    end
+
+    # @return [Vagabondfile]
+    def vagabondfile
+      @vagabondfile
     end
 
   end

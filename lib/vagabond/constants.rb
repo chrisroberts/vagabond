@@ -1,8 +1,8 @@
 #encoding: utf-8
-require 'chef/mash'
+require 'vagabond'
 
 module Vagabond
-  COLORS = Mash.new(
+  COLORS = Smash.new(
     :success => :green,
     :create => :green,
     :setup => :blue,
@@ -10,7 +10,7 @@ module Vagabond
     :failed => :red,
     :verified => :yellow,
     :converged => :magenta,
-    :destroyed => :red,
+    :destroy => :red,
     :kitchen => [:cyan, :bold]
   )
 end
