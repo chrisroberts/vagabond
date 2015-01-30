@@ -17,32 +17,7 @@ module Vagabond
           vagabondfile
         rescue => e
           run_action 'Writing initial Vagabondfile' do
-            File.open('Vagabondfile', 'w+') do |file|
-              file.write <<-EOF
-# -*- mode: ruby -*-
-# -*- encoding: utf-8 -*-
-Configuration.new do
-  defaults do
-  end
-  definitions do
-  end
-  nodes do
-    test_node do
-      template 'ubuntu_1204'
-    end
-  end
-  server do
-    enabled true
-  end
-  clusters do
-  end
-  spec do
-  end
-  callbacks do
-  end
-end
-EOF
-            end
+            write_vagabondfile
             nil
           end
         end
@@ -114,6 +89,40 @@ EOF
       # @return [String] global cookbook collection
       def cookbook_path
         File.join(vagabondfile[:global_cache], 'cookbooks')
+      end
+
+
+      # Write empty vagabond file to CWD
+      #
+      # @return [TrueClass]
+      def write_vagabondfile
+        File.open('Vagabondfile', 'w+') do |file|
+          file.write <<-EOF
+# -*- mode: ruby -*-
+# -*- encoding: utf-8 -*-
+Configuration.new do
+  defaults do
+  end
+  definitions do
+  end
+  nodes do
+    test_node do
+      template 'ubuntu_1204'
+    end
+  end
+  server do
+    enabled true
+  end
+  clusters do
+  end
+  spec do
+  end
+  callbacks do
+  end
+end
+EOF
+        end
+        true
       end
 
     end
