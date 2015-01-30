@@ -84,7 +84,10 @@ module Vagabond
       if(callbacks[action])
         [callbacks[action]].flatten.compact.each do |cmd|
           cmd = cmd.gsub('${NAME}', node.name)
-          node.run(cmd)
+          run_action "Running #{action} callback `#{cmd}`" do
+            host_command(cmd, :cwd => File.dirname(vagabondfile.path))
+            nil
+          end
         end
         true
       else
