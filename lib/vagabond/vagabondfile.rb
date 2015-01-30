@@ -17,6 +17,9 @@ module Vagabond
     attribute :server, Smash, :coerce => proc{|v| v.to_smash }
     attribute :callbacks, Smash, :coerce => proc{|v| v.to_smash }
     attribute :global_cache, String, :default => '/tmp/.vagabond-cache'
+    attribute :ssh_user, String, :default => 'root'
+    attribute :ssh_key, String, :default => File.join(ENV['HOME'], '.ssh/lxc_container_rsa')
+    attribute :ssh_strict, String, :default => 'no'
 
     # Create new instance
     #
