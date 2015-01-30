@@ -14,7 +14,7 @@ module Vagabond
         else
           if(arguments.size == 1)
             run_action "Establishing SSH connection to #{ui.color(arguments.first, :green)}" do
-              exec("#{Lxc.sudo}ssh root@#{node(arguments.first).address} -i /opt/hw-lxc-config/id_rsa -oStrictHostKeyChecking=no")
+              exec("#{Lxc.sudo}ssh #{vagabondfile.ssh_user}@#{node(arguments.first).address} -i #{vagabondfile.ssh_key} -oStrictHostKeyChecking=#{vagabondfile.ssh_strict}")
             end
           else
             cmd = arguments.slice(1, arguments.size).join(' ')
@@ -22,7 +22,6 @@ module Vagabond
               node(arguments.first).run(cmd)
             end
           end
-          run_callbacks(node(name))
         end
       end
 
