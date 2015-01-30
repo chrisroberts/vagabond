@@ -15,4 +15,4 @@ end
 require 'vagabond/version'
 require 'vagabond/constants'
 
-Lxc.use_sudo = true
+Lxc.use_sudo = system('which rvmsudo > /dev/null') ? 'rvmsudo' : true
