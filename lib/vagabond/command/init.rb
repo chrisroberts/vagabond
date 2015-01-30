@@ -8,6 +8,12 @@ module Vagabond
     # Initialize host system
     class Init < Command
 
+      # Set action as serial
+      def initialize(*_)
+        super
+        @serial = true
+      end
+
       # Default version of chef server to provision
       DEFAULT_CHEF_SERVER_VERSION='11.2.6'
 
@@ -26,7 +32,10 @@ module Vagabond
             File.join(File.dirname(File.dirname(__FILE__)), 'Cheffile'),
             File.join(vagabondfile[:global_cache], 'Cheffile')
           )
-          host_command('librarian-chef install', :cwd => vagabondfile[:global_cache])
+          if(File.exists?(cheflock = File.join(vagabondfile[:global_cache], 'Cheffile.lock')))
+            File.delete(cheflock)
+          end
+          host_command('librarian-chef update', :cwd => vagabondfile[:global_cache])
           nil
         end
         run_action 'Provisioning host system' do
@@ -77,12 +86,19 @@ module Vagabond
           config.set(:server, :erchefs, [DEFAULT_CHEF_SERVER_VERSION])
         end
         config[:host_cookbook_store] = cookbook_path
-        config[:run_list] = ['recipe[vagabond]']
+        config.set(:container_key, :users, [ENV['USER']].compact)
         dna_path = File.join(
           vagabondfile[:global_cache],
           "#{vagabondfile.fid}-dna.json"
         )
-        File.write(dna_path, MultiJson.dump(config))
+        File.write(dna_path,
+          MultiJson.dump(
+            :run_list => [
+              'recipe[vagabond]'
+            ],
+            :vagabond => config
+          )
+        )
         dna_path
       end
 
