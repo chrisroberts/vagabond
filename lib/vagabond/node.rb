@@ -61,7 +61,7 @@ module Vagabond
           :daemon => true
         )
         instance.start!(:detach)
-        current = local_registry.fetch(:nodes, Smash.new)
+        current = local_registry.fetch(:nodes, Registry::Entry.new)
         local_registry.set(:nodes, current.merge(mapped_name => instance.name))
         registry.save!
         true
