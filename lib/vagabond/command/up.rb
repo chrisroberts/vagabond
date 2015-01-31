@@ -1,37 +1,26 @@
 #encoding: utf-8
 
-require 'vagabond/actions'
+require 'vagabond'
 
 module Vagabond
-  module Actions
-    module Up
+  class Command
+    # Create and provision
+    class Up < Command
 
-      def do_up(name)
-        node = load_node(name)
-        run_action(:create, name)
-        run_action(:provision, name)
-      end
-
-      def up(name)
-        if(options[:parallel])
-          task_holder = Mash.new
-          dup_opts = options.dup
-          options[:parallel] = false
-          ephemeral = self.class.new(options)
-          tasks[:up] << task_holder.update(
-            :name => name,
-            :thread => Thread.new{
-              sleep(0.01)
-              task_holder[:result] = ephemeral.do_up(name)
-            }
-          )
-        else
-          do_up(name)
-        end
+      # Create and provision node(s)
+      def run!
+        # Creation is serial so do all creates up front
+        Create.new(options.merge(:ui => ui), arguments).execute!
+        arguments.map do |name|
+          runners << Thread.new do
+            Provision.new(options.merge(:ui), [name]).execute!
+          end
+          unless(options[:parallel])
+            runners.last.join
+          end
+        end.map(&:join)
       end
 
     end
   end
 end
-
-Vagabond::Actions.register(Vagabond::Actions::Up)

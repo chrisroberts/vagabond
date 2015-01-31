@@ -1,21 +1,20 @@
 #encoding: utf-8
 
-require 'vagabond/actions'
+require 'vagabond'
 
 module Vagabond
-  module Actions
-    module Rebuild
+  class Command
+    # Rebuild a node
+    class Rebuild < Command
 
-      def rebuild(name)
-        node = load_node(name)
-        ui.info "#{ui.color('Vagabond:', :bold)} Rebuilding #{ui.color(name, :blue)}"
-        run_action(:destroy, name)
-        run_action(:up, name, :auto_provision => true)
-        ui.info "#{ui.color('Vagabond:', :bold)} Rebuild of #{name} - #{ui.color('COMPLETE', :blue)}"
+      # Destroy and rebuild node
+      def run!
+        arguments.each do |name|
+          Destroy.new(options.merge(:ui => ui), [name]).execute!
+          Up.new(options.merge(:ui => ui), [name]).execute!
+        end
       end
-
     end
+
   end
 end
-
-Vagabond::Actions.register(Vagabond::Actions::Rebuild)
