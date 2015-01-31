@@ -8,7 +8,6 @@ module Vagabond
     # a specific directory on the system)
     class Entry < Bogo::Config
       attribute :nodes, Smash, :default => Smash.new
-      attribute :test_nodes, Smash, :default => Smash.new
       attribute :clusters, Smash, :default => Smash.new
       attribute :test_clusters, Smash, :default => Smash.new
       attribute :templates, Smash, :default => Smash.new
