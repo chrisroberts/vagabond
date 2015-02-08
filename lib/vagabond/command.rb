@@ -25,6 +25,7 @@ module Vagabond
     autoload :Create, 'vagabond/command/create'
     autoload :Cluster, 'vagabond/command/cluster'
 
+    # @return [TrueClass, FalseClass] serial execution
     attr_reader :serial
 
     # Run the requested action.
@@ -85,8 +86,12 @@ module Vagabond
         [callbacks[action]].flatten.compact.each do |cmd|
           cmd = cmd.gsub('${NAME}', node.name)
           run_action "Running #{action} callback `#{cmd}`" do
-            host_command(cmd, :cwd => File.dirname(vagabondfile.path))
-            nil
+            begin
+              host_command(cmd, :cwd => File.dirname(vagabondfile.path))
+              nil
+            rescue Error::CommandFailed => e
+              "#{ui.color('ERROR:', :red)} #{e}"
+            end
           end
         end
         true
