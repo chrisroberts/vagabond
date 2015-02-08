@@ -129,7 +129,7 @@ module Vagabond
     # @return [Node] Chef server node if available
     def server_node
       memoize(:server) do
-        # Something
+        node(:server)
       end
     end
 
