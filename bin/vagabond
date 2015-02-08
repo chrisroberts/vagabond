@@ -21,14 +21,14 @@ Bogo::Cli::Setup.define do
     on :l, 'local-chef-server', 'Enable local chef server if available', :default => true
     on :C, :callbacks, 'Enable callbacks', :default => true
     on :x, :delay=, 'Add delay between provisions'
-    on :p, :parallel, 'Build nodes in parallel'
     on :L, 'lock-file=', 'Global lock file (probably shouldn\'t change this)', :default => '/tmp/.vagabond.lck'
   end
 
   command :cluster do
     self.instance_exec(&common)
-    description 'Build cluster of nodes'
+    on :p, :parallel, 'Build nodes in parallel'
     on :D, :destroy, 'Destroy cluster of nodes'
+    description 'Build cluster of nodes'
     run do |opts, args|
       Vagabond::Command::Cluster.new(opts, args).execute!
     end
@@ -44,6 +44,7 @@ Bogo::Cli::Setup.define do
 
   command :up do
     self.instance_exec(&common)
+    on :p, :parallel, 'Build nodes in parallel'
     description 'Create and provision node'
     run do |opts, args|
       Vagabond::Command::Up.new(opts, args).execute!
@@ -107,31 +108,6 @@ Bogo::Cli::Setup.define do
   end
 
   command :server do
-    description 'Chef server'
-
-    command :create do
-      self.instance_exec(&common)
-      description 'Create local Chef server'
-      run do |opts, args|
-        Vagabond::Command::Server::Create.new(opts, args).execute!
-      end
-    end
-
-    command :destroy do
-      self.instance_exec(&common)
-      description 'Destroy local Chef server'
-      run do |opts, args|
-        Vagabond::Command::Server::Destroy.new(opts, args).execute!
-      end
-    end
-
-    command :status do
-      self.instance_exec(&common)
-      description 'Status of Chef server'
-      run do |opts, args|
-        Vagabond::Command::Server::Create.new(opts, args).execute!
-      end
-    end
 
     command :upload do
       self.instance_exec(&common)
