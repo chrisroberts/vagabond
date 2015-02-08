@@ -12,14 +12,14 @@ module Vagabond
         arguments.each do |name|
           if(cluster(name))
             if(options[:destroy])
-              info "Destroying cluster #{ui.color(name, :red)}:"
+              info "Destroying cluster #{ui.color(name, COLORS[:destroy])}:"
               cluster(name).each do |n_name|
-                run_action "Destroying cluster node #{ui.color(n_name, :red)}" do
+                run_action "Destroying cluster node #{ui.color(n_name, COLORS[:destroy])}" do
                   node(n_name, :clusters).destroy!
                 end
               end
             else
-              info "Building cluster #{ui.color(name, :green)}:"
+              info "Building cluster #{ui.color(name, COLORS[:create])}:"
               Up.new(options.merge(:ui => ui), cluster(name)).execute!
             end
           else
