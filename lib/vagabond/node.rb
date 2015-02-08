@@ -19,6 +19,7 @@ module Vagabond
       @mapped_name = [classification, name].compact.map(&:to_s).join('__')
     end
 
+    # @return [Smash] node configuration
     def configuration
       memoize(:configuration) do
         vagabondfile.for_node(name)
@@ -44,6 +45,7 @@ module Vagabond
       !!proxy && proxy.exists?
     end
 
+    # @return [String, Symbol] state of node
     def state
       exists? ? proxy.state : 'N/A'
     end
@@ -86,6 +88,7 @@ module Vagabond
       end
     end
 
+    # Instance proxy helper
     def method_missing(m_name, *args, &block)
       if(proxy.respond_to?(m_name))
         proxy.send(m_name, *args, &block)
@@ -94,16 +97,19 @@ module Vagabond
       end
     end
 
+    # @return [String] address of node
     def address
       exists? ? proxy.container_ip : 'N/A'
     end
 
+    # @return [TrueClass, FalseClass] freeze node
     def freeze
       if(exists?)
         proxy.freeze
       end
     end
 
+    # @return [TrueClass, FalseClass] thaw node
     def thaw
       if(exists?)
         proxy.unfreeze
