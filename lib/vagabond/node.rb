@@ -22,7 +22,12 @@ module Vagabond
     # @return [Smash] node configuration
     def configuration
       memoize(:configuration) do
-        vagabondfile.for_node(name)
+        if(server?)
+          n_config = vagabondfile.for_node(name, :allow_missing)
+          config_server!(n_config)
+        else
+          vagabondfile.for_node(name)
+        end
       end
     end
 
@@ -116,6 +121,11 @@ module Vagabond
       end
     end
 
+    # @return [TrueClass, FalseClass]
+    def server?
+      name == 'server' && classification.nil?
+    end
+
     protected
 
     # @return [Object]
@@ -140,6 +150,32 @@ module Vagabond
     # @return [Vagabondfile]
     def vagabondfile
       @vagabondfile
+    end
+
+    # If node is server, check if enabled and merge configuration if
+    # enabled or error out if server is disabled
+    #
+    # @param conf [Smash]
+    # @return [Smash]
+    def config_server!(conf)
+      if(server?)
+        if(vagabondfile.get(:server, :enabled))
+          if(vagabondfile.get(:server, :zero))
+            original = 'ubuntu_1204'
+          else
+            version = vagabondfile.fetch(:server, :version, Vagabond::Command::Init::DEFAULT_CHEF_SERVER_VERSION)
+            original = "vb-server-#{version.tr('.', '_')}"
+          end
+          conf.merge(
+            :original => original,
+            :bind => File.join(vagabondfile[:global_cache], 'cookbooks')
+          )
+        else
+          raise Error::ServerDisabled.new 'Server is configured as disabled!'
+        end
+      else
+        conf
+      end
     end
 
   end
