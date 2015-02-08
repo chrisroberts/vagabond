@@ -107,7 +107,6 @@ module Vagabond
         File.join(vagabondfile[:global_cache], 'cookbooks')
       end
 
-
       # Write empty vagabond file to CWD
       #
       # @return [TrueClass]
