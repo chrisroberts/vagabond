@@ -64,11 +64,11 @@ module Vagabond
       if(get(:nodes, name).nil? && !args.include?(:allow_missing))
         raise Error::InvalidName.new("Requested name not defined within nodes list (`#{name}`)")
       else
-        node = get(:nodes, name)
+        node = fetch(:nodes, name, Smash.new)
         if(node[:definition])
           base = for_definition(node[:definition])
         else
-          base = get(:defaults)
+          base = fetch(:defaults, Smash.new)
         end
         base.deep_merge(node)
       end
