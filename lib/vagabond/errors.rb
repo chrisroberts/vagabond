@@ -42,6 +42,7 @@ module Vagabond
     class NodeNotFrozen < Error; end
     class NotImplemented < Error; end
     class ProcessLocked < Error; end
+    class ServerDisabled < Error; end
 
   end
 end
