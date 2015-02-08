@@ -38,7 +38,7 @@ module Vagabond
       # @param node [Node]
       # @return [TrueClass, FalseClass]
       def provision_via_chef(node)
-        if(server_node?(node))
+        if(node.server?)
           provision_chef_server(node)
         else
           if(server_node)
@@ -49,17 +49,11 @@ module Vagabond
         end
       end
 
-      # @return [TrueClass, FalseClass] node is Chef server
-      def server_node?(node)
-        node.name == 'server' && node.classification.nil?
-      end
-
       # Provision as chef server node
       #
       # @param node [Node]
       # @return [TrueClass]
       def provision_chef_server(node)
-
       end
 
       # Provision as chef client node
