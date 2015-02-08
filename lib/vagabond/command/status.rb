@@ -6,17 +6,25 @@ module Vagabond
   class Command
     class Status < Command
 
+      # Provide all discoverable nodes
+      #
+      # @return [Array<String>]
+      def nodes
+        (vagabondfile.nodes.keys + local_registry.fetch(:nodes, {}).keys).uniq
+      end
+
+      # Display current status
       def run!
         if(arguments.empty?)
           ui.info "Node Status:"
           Bogo::Ui::Table.new(ui, self) do
             table(:border => false) do
               row(:header => true) do
-                column 'Name', :align => 'left', :width => vagabondfile.nodes.keys.map(&:length).max + 3
+                column 'Name', :align => 'left', :width => nodes.map(&:length).max + 3
                 column 'IP', :align => 'center', :width => 20
                 column 'State', :align => 'right', :padding => 3, :width => 15
               end
-              vagabondfile.nodes.keys.sort.each do |name|
+              nodes.sort.each do |name|
                 row do
                   column name, :bold => node(name).exists?
                   column node(name).exists? ? node(name).address : '-'
