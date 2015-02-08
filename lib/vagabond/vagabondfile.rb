@@ -61,9 +61,7 @@ module Vagabond
     # @param name [String, Symbol] node name
     # @return [Smash]
     def for_node(name, *args)
-      if(name.to_s == 'server')
-        raise Error::InvalidName.new('The `server` name is reserved and cannot be used')
-      elsif(get(:nodes, name).nil? && !args.include?(:allow_missing))
+      if(get(:nodes, name).nil? && !args.include?(:allow_missing))
         raise Error::InvalidName.new("Requested name not defined within nodes list (`#{name}`)")
       else
         node = get(:nodes, name)
