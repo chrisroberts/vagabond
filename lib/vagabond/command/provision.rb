@@ -28,6 +28,7 @@ module Vagabond
       # @return [TrueClass, FalseClass]
       def provision(node)
         case node.configuration[:provision_via].to_s
+        when false
         else
           provision_via_chef(node)
         end
@@ -54,16 +55,39 @@ module Vagabond
       # @param node [Node]
       # @return [TrueClass]
       def provision_chef_server(node)
+        bootstrap = node.configuration.fetch(:chef, {}).to_smash
+        # ensure cookbook directory is clean
+        node.run('rm -rf /var/chef-host/cookbooks')
+        node.run('mkdir -p /var/chef-host/cookbooks')
+        # link cookbooks
+        node.run("ln -s #{File.join(vagabondfile[:global_cache], 'cookbooks')} /var/chef-host/cookbooks")
+        cmd = [
+          "knife bootstrap #{node.address} -N server",
+          "-i #{vagabondfile.ssh_key} -x #{vagabondfile.ssh_user} --no-host-key-verify"
+        ]
+        template = File.expand_path(
+          node.configuration[:zero] ? 'bootstraps/server-zero.erb' : 'bootstraps/server.erb',
+          File.dirname(File.dirname(__FILE__))
+        )
+        cmd << "--template-file #{template}"
+        if(bootstrap[:attributes])
+          cmd << "-j '#{MultiJson.dump(bootstrap.delete[:attributes])}'"
+        end
+        bootstrap.each do |flag, value|
+          cmd << "--#{flag.gsub('_', '-')} '#{value}'"
+        end
+        host_command(cmd.join(' '))
+        true
       end
 
       # Provision as chef client node
       #
       # @return [TrueClass]
       def provision_chef_node(node)
-        bootstrap = node.configuration[:chef].to_smash # convert to ensure dup
+        bootstrap = node.configuration.fetch(:chef, {}).to_smash # convert to ensure dup
         cmd = [
           "knife bootstrap #{node.address} -N #{[node.classification, node.name].compact.join('-')}",
-          "-i #{vagabondfile.ssh_key} -x #{vagabondfile.ssh_user} --no-host-verify-key"
+          "-i #{vagabondfile.ssh_key} -x #{vagabondfile.ssh_user} --no-host-key-verify"
         ]
         if(bootstrap[:run_list])
           cmd << "--run-list \"#{bootstrap.delete(:run_list).join(', ')}\""
