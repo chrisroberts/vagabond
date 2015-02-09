@@ -161,7 +161,7 @@ module Vagabond
       if(server?)
         if(vagabondfile.get(:server, :enabled))
           if(vagabondfile.get(:server, :zero))
-            original = 'ubuntu_1204'
+            original = 'vb-zero-server'
           else
             version = vagabondfile.fetch(:server, :version, Vagabond::Command::Init::DEFAULT_CHEF_SERVER_VERSION)
             original = "vb-server-#{version.tr('.', '_')}"
