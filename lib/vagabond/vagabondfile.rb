@@ -2,6 +2,7 @@
 
 require 'vagabond'
 require 'fileutils'
+require 'digest/sha1'
 
 module Vagabond
   # Infrastructure description file
@@ -40,7 +41,7 @@ module Vagabond
     # @return [String]
     def fid
       memoize(:fid) do
-        Base64.urlsafe_encode64(path)
+        Digest::SHA1.hexdigest(Base64.urlsafe_encode64(path))[0,20]
       end
     end
 
