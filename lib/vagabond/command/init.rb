@@ -15,7 +15,7 @@ module Vagabond
       end
 
       # Default version of chef server to provision
-      DEFAULT_CHEF_SERVER_VERSION='11.2.6'
+      DEFAULT_CHEF_SERVER_VERSION = '11.1.1'
 
       # Initialize host system
       def run!
@@ -70,6 +70,8 @@ module Vagabond
       def write_dna_json
         config = Smash.new
         vagabondfile.fetch(:nodes, Smash.new).map(&:last).map{|i| i[:template]}.compact.each do |t|
+          # TODO: add node read stuffs back so we can inspect attributes
+          next if t.count('_') > 1
           config.set(:bases, t, :enabled, true)
         end
         vagabondfile.fetch(:templates, Smash.new).each do |t_name, t_opts|
@@ -79,8 +81,8 @@ module Vagabond
             t_opts[:memory] = Smash.new(:ram => memory.to_s)
           end
           template_name = "#{t_name}_#{vagabondfile.fid}"
-          config[:customs][template_name] = t_opts
-          local_registry[:templates][t_name] = template_name
+          config.set(:customs, template_name, t_opts)
+          local_registry.set(:templates, t_name, template_name)
         end
         if(vagabondfile.server? && !vagabondfile.get(:server, :zero))
           config.set(:server, :erchefs, [DEFAULT_CHEF_SERVER_VERSION])
