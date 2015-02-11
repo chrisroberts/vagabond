@@ -82,7 +82,7 @@ module Vagabond
     # @return [TrueClass, FalseClass]
     def destroy!
       if(exists?)
-        proxy.destroy
+        proxy.stop
         if(local_registry[:nodes])
           local_registry[:nodes].delete(mapped_name)
           registry.save!
@@ -167,7 +167,7 @@ module Vagabond
             original = "vb-server-#{version.tr('.', '_')}"
           end
           conf.merge(
-            :original => original,
+            :template => original,
             :bind => File.join(vagabondfile[:global_cache], 'cookbooks')
           )
         else
