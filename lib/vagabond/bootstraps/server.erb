@@ -56,6 +56,7 @@ echo "
 ) > /tmp/chef-server.json
 
 chef-solo -j /tmp/chef-server.json -c /etc/chef-solo-host.rb
+RESULT=$?
 
 rm -rf /tmp/chef-server-setup
 
@@ -63,4 +64,6 @@ echo "**********************************************"
 echo "* NOTE: Update chef_server_url in knife.rb!  *"
 echo "*   IP: ${IPADDR}                       *"
 echo "**********************************************"
+
+exit ${RESULT}
 '
