@@ -12,12 +12,13 @@ module Vagabond
         # Creation is serial so do all creates up front
         Create.new(options.merge(:ui => ui), arguments).execute!
         arguments.map do |name|
-          runners << Thread.new do
+          thread = Thread.new do
             Provision.new(options.merge(:ui), [name]).execute!
           end
           unless(options[:parallel])
-            runners.last.join
+            thead.join
           end
+          thread
         end.map(&:join)
       end
 
