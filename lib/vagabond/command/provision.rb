@@ -58,7 +58,7 @@ module Vagabond
         bootstrap = node.configuration.fetch(:chef, {}).to_smash
         # ensure cookbook directory is clean
         node.run('rm -rf /var/chef-host/cookbooks')
-        node.run('mkdir -p /var/chef-host/cookbooks')
+        node.run('mkdir -p /var/chef-host')
         # link cookbooks
         node.run("ln -s #{File.join(vagabondfile[:global_cache], 'cookbooks')} /var/chef-host/cookbooks")
         cmd = [
