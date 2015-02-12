@@ -84,29 +84,29 @@ module Vagabond
       #
       # @return [TrueClass]
       def provision_chef_node(node)
+        server_required!
         bootstrap = node.configuration.fetch(:chef, {}).to_smash # convert to ensure dup
-        cmd = [
-          "knife bootstrap #{node.address} -N #{[node.classification, node.name].compact.join('-')}",
+        cmd = "bootstrap #{node.address} -N #{[node.classification, node.name].compact.join('-')} " <<
           "-i #{vagabondfile.ssh_key} -x #{vagabondfile.ssh_user} --no-host-key-verify"
-        ]
+        cmd = cmd.split(' ')
         if(bootstrap[:run_list])
-          cmd << "--run-list \"#{bootstrap.delete(:run_list).join(', ')}\""
+          cmd.push('--run-list').push(bootstrap.delete(:run_list).join(', '))
         end
         if(bootstrap.delete(:no_lazy_load))
-          cmd << "--template-file #{File.join(File.dirname(__FILE__), '..', 'bootstraps/no_lazy_load.erb')}"
+          cmd.push('--template-file').push("#{File.join(File.dirname(__FILE__), '..', 'bootstraps/no_lazy_load.erb')}")
         elsif(bootstrap.delete(:chef_10))
-          cmd << "--template-file #{File.join(File.dirname(__FILE__), '..', 'bootstraps/chef_10_compat_config.erb')}"
+          cmd.push('--template-file').push("#{File.join(File.dirname(__FILE__), '..', 'bootstraps/chef_10_compat_config.erb')}")
         elsif(bootstrap[:bootstrap_template])
-          cmd << "--template-file #{bootstrap.delete(:bootstrap_template)}"
+          cmd.push('--template-file').push(bootstrap.delete(:bootstrap_template))
         end
         if(bootstrap[:attributes])
-          cmd << "-j '#{MultiJson.dump(bootstrap.delete(:attributes))}'"
+          cmd.push('-j').push(MultiJson.dump(bootstrap.delete(:attributes)))
         end
-        cmd << "--server-url https://#{server_node.address}"
         bootstrap.each do |flag, value|
-          cmd << "--#{flag.gsub('_', '-')} '#{value}'"
+          cmd.push("--#{flag.gsub('_', '-')}").push("'#{value}'")
         end
-        host_command(cmd.join(' '))
+        ui.puts
+        Knife.new(options.merge(:ui => ui), cmd).execute!
         true
       end
 

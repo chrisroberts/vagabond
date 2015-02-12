@@ -19,7 +19,6 @@ module Vagabond
           else
             cmd = arguments.slice(1, arguments.size).join(' ')
             run_action "Sending command \"#{cmd}\" to #{ui.color(arguments.first, :green)}" do
-              ui.puts
               node(arguments.first).run(cmd)
             end
           end
