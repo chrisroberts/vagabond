@@ -23,6 +23,7 @@ chmod 600 /etc/chef/validation.pem
 
 chef-server-ctl stop
 chef-server-ctl uninstall
+CHEF_SERVER_VERSION=`grep version-manifest-json /opt/chef-server/version-manifest.txt | tr -d "[:alpha:] -"`
 rm -rf ~/*
 rm -rf /opt/chef-server
 rm -rf /var/opt/chef-server
@@ -33,13 +34,14 @@ IPADDR=`ip addr show eth0 | grep "inet " | awk -F" " '\''{print $2}'\'' | sed -e
 echo "
 {
   \"chef-server\": {
+    \"version\": \"${CHEF_SERVER_VERSION}\",
     \"configuration\": {
       \"chef_server_webui\": {
         \"enable\": false
+      },
+      \"erchef\": {
+        \"s3_url_ttl\": 3600
       }
-    },
-    \"erchef\": {
-      \"s3_url_ttl\": 3600
     }
   },
   \"chef_server_populator\": {
