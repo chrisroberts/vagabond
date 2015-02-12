@@ -113,10 +113,8 @@ Bogo::Cli::Setup.define do
       self.instance_exec(&common)
       description 'Upload resources to chef server'
 
-      on :C, :cookbooks, 'Upload cookbooks', :default => true
-      on :R, :roles, 'Upload roles', :default => true
-      on :E, :environments, 'Upload environments', :default => true
-      on :D, 'data-bags', 'Upload data bags', :default => true
+      on :r, :resolve, 'Resolve cookbooks', :default => true
+      on :R, :resolver, 'Resolver to use', :default => 'librarian'
 
       run do |opts, args|
         Vagabond::Command::Server::Upload.new(opts, args).execute!
