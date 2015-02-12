@@ -100,8 +100,9 @@ module Vagabond
           cmd << "--template-file #{bootstrap.delete(:bootstrap_template)}"
         end
         if(bootstrap[:attributes])
-          cmd << "-j '#{MultiJson.dump(bootstrap.delete[:attributes])}'"
+          cmd << "-j '#{MultiJson.dump(bootstrap.delete(:attributes))}'"
         end
+        cmd << "--server-url https://#{server_node.address}"
         bootstrap.each do |flag, value|
           cmd << "--#{flag.gsub('_', '-')} '#{value}'"
         end
