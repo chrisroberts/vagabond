@@ -15,7 +15,7 @@ module Vagabond
       end
 
       # Default version of chef server to provision
-      DEFAULT_CHEF_SERVER_VERSION = '11.1.1'
+      DEFAULT_CHEF_SERVER_VERSION = '11.1.6'
 
       # Initialize host system
       def run!
