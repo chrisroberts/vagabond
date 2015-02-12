@@ -13,10 +13,10 @@ module Vagabond
         Create.new(options.merge(:ui => ui), arguments).execute!
         arguments.map do |name|
           thread = Thread.new do
-            Provision.new(options.merge(:ui), [name]).execute!
+            Provision.new(options.merge(:ui => ui), [name]).execute!
           end
           unless(options[:parallel])
-            thead.join
+            thread.join
           end
           thread
         end.map(&:join)
