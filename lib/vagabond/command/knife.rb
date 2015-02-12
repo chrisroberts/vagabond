@@ -13,7 +13,10 @@ module Vagabond
         ui.info "`knife #{arguments.join(' ')}`:"
         cmd = ['knife', *arguments]
         cmd.push('--server-url').push("https://#{server_node.address}")
-        host_command(cmd, :stream => true)
+        host_command(cmd,
+          :stream => true,
+          :cwd => options.fetch(:knife_cwd, Dir.pwd)
+        )
       end
 
     end
