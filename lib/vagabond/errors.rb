@@ -43,6 +43,7 @@ module Vagabond
     class NotImplemented < Error; end
     class ProcessLocked < Error; end
     class ServerDisabled < Error; end
+    class UnknownResolver < Error; end
 
   end
 end
