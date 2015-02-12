@@ -133,6 +133,13 @@ module Vagabond
       end
     end
 
+    # Ensure server node is available
+    def server_required!
+      unless(server_node)
+        raise NodeNotCreated.new 'Server node must be created and provisioned! (`vagabond up server`)'
+      end
+    end
+
     private
 
     # Wrap block execution around file lock
