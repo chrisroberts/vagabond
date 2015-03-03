@@ -27,6 +27,7 @@ CHEF_SERVER_VERSION=`grep version-manifest-json /opt/chef-server/version-manifes
 rm -rf ~/*
 rm -rf /opt/chef-server
 rm -rf /var/opt/chef-server
+rm /tmp/.s.PGSQL*
 dpkg -i /var/chef-host/chef-server*
 
 IPADDR=`ip addr show eth0 | grep "inet " | awk -F" " '\''{print $2}'\'' | sed -e "s/\/24//"`
