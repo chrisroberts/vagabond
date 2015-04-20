@@ -156,9 +156,9 @@ Bogo::Cli::Setup.define do
 
     command :cleanup do
       self.instance_exec(&common)
-      description 'Cleanup any text kitchen related nodes'
+      description 'Cleanup any spec related nodes'
       run do |opts, args|
-        Vagabond::Command::Kitchen::Cleanup.new(opts, args).execute!
+        Vagabond::Command::Spec::Cleanup.new(opts, args).execute!
       end
     end
 
@@ -181,7 +181,7 @@ Bogo::Cli::Setup.define do
 
     command :cleanup do
       self.instance_exec(&common)
-      description 'Cleanup any text kitchen related nodes'
+      description 'Cleanup any test kitchen related nodes'
       run do |opts, args|
         Vagabond::Command::Kitchen::Cleanup.new(opts, args).execute!
       end
