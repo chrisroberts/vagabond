@@ -46,20 +46,14 @@ module Vagabond
         def spec_file_content
           output = <<-EOF
 require 'serverspec'
-require 'pathname'
-require 'net/ssh'
 
-include Serverspec::Helper::Ssh
+set :backend, :ssh
 
 RSpec.configure do |c|
   c.before do
-    host = ENV['VAGABOND_TEST_HOST']
-    if(c.host != host)
-      c.ssh.close if c.ssh
-      c.host = host
-      options = Net::SSH::Config.for(c.host)
-      c.ssh = Net::SSH.start(c.host, 'root', options.update(:keys => ['#{vagabondfile.ssh_key}']))
-    end
+    c.host = ENV['VAGABOND_TEST_HOST']
+    c.ssh_options = {:user => 'root'}
+    c.ssh_options[:keys] = ['#{vagabondfile.ssh_key}']
   end
 end
 EOF
