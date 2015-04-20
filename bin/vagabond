@@ -114,7 +114,7 @@ Bogo::Cli::Setup.define do
       description 'Upload resources to chef server'
 
       on :r, :resolve, 'Resolve cookbooks', :default => true
-      on :R, :resolver, 'Resolver to use', :default => 'librarian'
+      on :R, :resolver=, 'Resolver to use', :default => 'librarian'
 
       run do |opts, args|
         Vagabond::Command::Server::Upload.new(opts, args).execute!
@@ -129,7 +129,7 @@ Bogo::Cli::Setup.define do
     command :cluster do
       self.instance_exec(&common)
       on :I, 'in-real-life', 'Run specs against live, remote infrastructure'
-      on :C, 'in-real-life-ssh-attribute', 'Node attribute to use as address for SSH connection'
+      on :C, 'in-real-life-ssh-attribute=', 'Node attribute to use as address for SSH connection'
       on :E, :environment=, 'Restrict to given chef environment'
       on :A, 'auto-destroy', 'Destroy cluster after successful spec'
       run do |opts, args|
