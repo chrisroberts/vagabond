@@ -51,9 +51,9 @@ set :backend, :ssh
 
 RSpec.configure do |c|
   c.before do
-    c.host = ENV['VAGABOND_TEST_HOST']
-    c.ssh_options = {:user => 'root'}
-    c.ssh_options[:keys] = ['#{vagabondfile.ssh_key}']
+    c.host = ENV['VAGABOND_SPEC_HOST']
+    c.ssh_options = {:user => ENV.fetch('VAGABOND_SPEC_USER', 'root')}
+    c.ssh_options[:keys] = [ENV.fetch('VAGABOND_SPEC_KEY', '#{vagabondfile.ssh_key}')]
   end
 end
 EOF
