@@ -7,6 +7,7 @@ module Vagabond
 
       autoload :Cluster, 'vagabond/command/spec/cluster'
       autoload :Init, 'vagabond/command/spec/init'
+      autoload :Infra, 'vagabond/command/spec/infra'
       autoload :Node, 'vagabond/command/spec/node'
 
       # @return [String] path to spec directory
@@ -28,7 +29,7 @@ module Vagabond
               :stream => true,
               :cwd => vagabondfile.directory,
               :environment => {
-                'VAGABOND_TEST_HOST' => node.address
+                'VAGABOND_SPEC_HOST' => node.address
               }
             )
             ui.info "Completed spec #{ui.color(slim_path, :green, :bold)}"
@@ -42,7 +43,21 @@ module Vagabond
 
       # @return [Array<String>] paths of specs
       def specs_for(node)
-        specs = node.configuration.fetch(:chef, :run_list, []).map do |item|
+        specs = run_list_specs(
+          node.configuration.fetch(:chef, :run_list, [])
+        )
+        specs += node.configuration.fetch(:specs, :custom, []).map do |item|
+          Dir.glob(File.join(spec_directory, 'custom', *item.split('::'), '*.rb'))
+        end.flatten.compact
+        specs
+      end
+
+      # Locate valid specs for given run list
+      #
+      # @param run_list [Array<String>]
+      # @return [Array<String>] spec file paths
+      def run_list_specs(run_list)
+        run_list.map do |item|
           if(item.start_with?('recipe'))
             r_name = item.sub('recipe[', '').sub(']', '')
             r_name = r_name.split('@').first
@@ -54,10 +69,6 @@ module Vagabond
             Dir.glob(File.join(spec_directory, 'role', r_name, '*.rb'))
           end
         end.flatten.compact
-        specs += node.configuration.fetch(:specs, :custom, []).map do |item|
-          Dir.glob(File.join(spec_directory, 'custom', *item.split('::'), '*.rb'))
-        end.flatten.compact
-        specs
       end
 
     end
