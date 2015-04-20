@@ -21,7 +21,7 @@ module Vagabond
       def apply(node)
         ui.info "Running specs on node #{ui.color(node.name, :bold)}"
         specs_for(node).each do |spec_path|
-          ui.info "Running spec #{spec_path}"
+          ui.info "Running spec #{spec_path.sub(/#{Regexp.escape(vagabondfile.directory)}\/?/, '')}"
           host_command("rspec #{spec_path}",
             :stream => true,
             :cwd => vagabondfile.directory,
@@ -40,13 +40,13 @@ module Vagabond
         specs = node.configuration.fetch(:chef, :run_list, []).map do |item|
           if(item.start_with?('recipe'))
             r_name = item.sub('recipe[', '').sub(']', '')
-            r_name = item.split('@').first
+            r_name = r_name.split('@').first
             c_name, r_name = r_name.split('::')
             r_name = 'default' unless r_name
-            Dir.glob(File.join(spec_directory, 'recipes', c_name, r_name, '*.rb'))
+            Dir.glob(File.join(spec_directory, 'recipe', c_name, r_name, '*.rb'))
           else # Role
             r_name = item.sub('role[', '').sub(']', '')
-            Dir.glob(File.join(spec_directory, 'roles', r_name, '*.rb'))
+            Dir.glob(File.join(spec_directory, 'role', r_name, '*.rb'))
           end
         end.flatten.compact
         specs += node.configuration.fetch(:specs, :custom, []).map do |item|
