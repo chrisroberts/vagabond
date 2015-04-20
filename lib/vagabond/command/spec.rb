@@ -19,21 +19,25 @@ module Vagabond
       # @param node [Vagabond::Node]
       # @return [TrueClass]
       def apply(node)
-        ui.info "Running specs on node #{ui.color(node.name, :bold)}"
-        specs_for(node).each do |spec_path|
-          slim_path = spec_path.sub(/#{Regexp.escape(vagabondfile.directory)}\/?/, '')
-          ui.info "Running spec #{slim_path}"
-          host_command("rspec #{spec_path}",
-            :stream => true,
-            :cwd => vagabondfile.directory,
-            :environment => {
-              'VAGABOND_TEST_HOST' => node.address
-            }
-          )
-          ui.info "Completed spec #{ui.color(slim_path, :green, :bold)}"
+        if(node.exists?)
+          ui.info "Running specs on node #{ui.color(node.name, :bold)}"
+          specs_for(node).each do |spec_path|
+            slim_path = spec_path.sub(/#{Regexp.escape(vagabondfile.directory)}\/?/, '')
+            ui.info "Running spec #{slim_path}"
+            host_command("rspec #{spec_path}",
+              :stream => true,
+              :cwd => vagabondfile.directory,
+              :environment => {
+                'VAGABOND_TEST_HOST' => node.address
+              }
+            )
+            ui.info "Completed spec #{ui.color(slim_path, :green, :bold)}"
+          end
+          ui.info "Completed specs on node #{ui.color(node.name, :bold, :green)}"
+          true
+        else
+          raise Error::NodeNotRunning.new("Node is not currently available for spec: #{node.name}")
         end
-        ui.info "Completed specs on node #{ui.color(node.name, :bold, :green)}"
-        true
       end
 
       # @return [Array<String>] paths of specs
