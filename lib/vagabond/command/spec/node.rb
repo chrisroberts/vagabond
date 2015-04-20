@@ -6,7 +6,7 @@ module Vagabond
       # Run specs on single node
       class Node < Spec
 
-        # Create node
+        # Run specs
         def run!
           arguments.each do |name|
             ui.info "Running single node spec on #{ui.color(name, :bold)}"

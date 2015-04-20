@@ -6,7 +6,7 @@ module Vagabond
       # Run specs on a cluster
       class Cluster < Spec
 
-        # Create node
+        # Run specs
         def run!
           if(arguments.size == 1)
             c_name = arguments.first
