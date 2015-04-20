@@ -117,6 +117,9 @@ module Vagabond
       process = ChildProcess.build(*cmd)
       process.io.inherit! if args[:stream] || options[:debug] || ENV['DEBUG']
       process.cwd = args[:cwd] if args[:cwd]
+      args.fetch(:environment, {}).each do |k,v|
+        process.environment[k] = v
+      end
       process.start
       process.wait
       unless(process.exit_code == 0)
