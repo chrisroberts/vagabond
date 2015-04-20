@@ -21,7 +21,8 @@ module Vagabond
       def apply(node)
         ui.info "Running specs on node #{ui.color(node.name, :bold)}"
         specs_for(node).each do |spec_path|
-          ui.info "Running spec #{spec_path.sub(/#{Regexp.escape(vagabondfile.directory)}\/?/, '')}"
+          slim_path = spec_path.sub(/#{Regexp.escape(vagabondfile.directory)}\/?/, '')
+          ui.info "Running spec #{slim_path}"
           host_command("rspec #{spec_path}",
             :stream => true,
             :cwd => vagabondfile.directory,
@@ -29,7 +30,7 @@ module Vagabond
               'VAGABOND_TEST_HOST' => node.address
             }
           )
-          ui.info "Completed spec #{ui.color(spec_path, :green, :bold)}"
+          ui.info "Completed spec #{ui.color(slim_path, :green, :bold)}"
         end
         ui.info "Completed specs on node #{ui.color(node.name, :bold, :green)}"
         true
