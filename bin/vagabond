@@ -128,8 +128,7 @@ Bogo::Cli::Setup.define do
 
     command :cluster do
       self.instance_exec(&common)
-      on :I, 'in-real-life', 'Run specs against live, remote infrastructure'
-      on :C, 'in-real-life-ssh-attribute=', 'Node attribute to use as address for SSH connection'
+      description 'Run specs on cluster'
       on :E, :environment=, 'Restrict to given chef environment'
       on :A, 'auto-destroy', 'Destroy cluster after successful spec'
       run do |opts, args|
@@ -137,9 +136,21 @@ Bogo::Cli::Setup.define do
       end
     end
 
+    command :infra do
+      self.instance_exec(&common)
+      description 'Run specs on existing infrastructure'
+      on :A, 'ssh-attribute=', 'Node attribute for SSH address'
+      on :P, 'ssh-port=', 'Port for SSH connection'
+      on :U, 'ssh-user=', 'Username for SSH connection'
+      on :K, 'ssh-key=', 'Key for SSH connection'
+      run do |opts, args|
+        Vagabond::Command::Spec::Infra.new(opts, args).execute!
+      end
+    end
+
     command :node do
       self.instance_exec(&common)
-      description 'Run specs on existing node'
+      description 'Run specs on individual nodes'
       run do |opts, args|
         Vagabond::Command::Spec::Node.new(opts, args).execute!
       end
