@@ -3,6 +3,6 @@ Batali.define do
 
   cookbook 'vagabond', git: 'https://github.com/chrisroberts/chef-vagabond.git', ref: 'develop'
   cookbook 'lxc', git: 'https://github.com/hw-cookbooks/lxc.git', ref: 'develop'
-  cookbook 'chef-server-populator', '0.3.0'
-  cookbook 'chef-server', '2.0.0'
+  cookbook 'chef-server-populator', '0.4.0'
+  cookbook 'chef-server', '2.1.4'
 end
