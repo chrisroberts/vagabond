@@ -118,13 +118,16 @@ module Vagabond
         unless(File.exists?(config_file))
           ui.warn 'No configuration file found for knife!'
           ui.confirm 'Create knife configuration and client/validator pem files'
-          FileUtils.mkdir_p(File.dirname(config_file))
+          FileUtils.mkdir_p(File.join(File.dirname(config_file), 'checksums'))
           require 'openssl'
           File.open(config_file, 'w') do |file|
             file.puts "node_name '#{ENV['USER']}'"
             file.puts "client_key '#{File.join(File.dirname(config_file), 'client.pem')}'"
             file.puts "validation_client_name 'vagabond-validator'"
             file.puts "validation_key '#{File.join(File.dirname(config_file), 'validation.pem')}'"
+            file.puts "cache_type 'BasicFile'"
+            file.puts "cache_options :path => '#{File.join(File.dirname(config_file), 'checksums')}'"
+            file.puts "cookbook_path '#{File.join(vagabondfile.directory, 'cookbooks')}'"
           end
           File.open(File.join(File.dirname(config_file), 'client.pem'), 'w') do |file|
             file.write OpenSSL::PKey::RSA.new(2048).export
