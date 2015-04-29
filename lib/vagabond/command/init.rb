@@ -29,13 +29,13 @@ module Vagabond
         end
         run_action 'Install required cookbooks' do
           FileUtils.cp(
-            File.join(File.dirname(File.dirname(__FILE__)), 'Cheffile'),
-            File.join(vagabondfile[:global_cache], 'Cheffile')
+            File.join(File.dirname(File.dirname(__FILE__)), 'Batali'),
+            File.join(vagabondfile[:global_cache], 'Batali')
           )
-          if(File.exists?(cheflock = File.join(vagabondfile[:global_cache], 'Cheffile.lock')))
+          if(File.exists?(cheflock = File.join(vagabondfile[:global_cache], 'batali.manifest')))
             File.delete(cheflock)
           end
-          host_command('librarian-chef update', :cwd => vagabondfile[:global_cache])
+          host_command('batali update', :cwd => vagabondfile[:global_cache])
           nil
         end
         run_action 'Provisioning host system' do
