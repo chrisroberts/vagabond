@@ -76,6 +76,7 @@ module Vagabond
         bootstrap.each do |flag, value|
           cmd << "--#{flag.gsub('_', '-')} '#{value}'"
         end
+        ensure_chef_config!
         host_command(cmd.join(' '))
         true
       end
@@ -108,6 +109,32 @@ module Vagabond
         ui.puts
         Knife.new(options.merge(:ui => ui), cmd).execute!
         true
+      end
+
+      # Check for local knife configuration and if none exists, create
+      # a new one with new keys for client and validation
+      def ensure_chef_config!
+        config_file = File.join(vagabondfile.directory, '.chef', 'knife.rb')
+        unless(File.exists?(config_file))
+          ui.warn 'No configuration file found for knife!'
+          ui.confirm 'Create knife configuration and client/validator pem files'
+          FileUtils.mkdir_p(File.dirname(config_file))
+          require 'openssl'
+          File.open(config_file, 'w') do |file|
+            file.puts "node_name '#{ENV['USER']}'"
+            file.puts "client_key '#{File.join(File.dirname(config_file), 'client.pem')}'"
+            file.puts "validation_client_name 'vagabond-validator'"
+            file.puts "validation_key '#{File.join(File.dirname(config_file), 'validation.pem')}'"
+          end
+          File.open(File.join(File.dirname(config_file), 'client.pem'), 'w') do |file|
+            file.write OpenSSL::PKey::RSA.new(2048).export
+          end
+          FileUtils.chmod(0600, File.join(File.dirname(config_file), 'client.pem'))
+          File.open(File.join(File.dirname(config_file), 'validation.pem'), 'w') do |file|
+            file.write OpenSSL::PKey::RSA.new(2048).export
+          end
+          FileUtils.chmod(0600, File.join(File.dirname(config_file), 'validation.pem'))
+        end
       end
 
     end
