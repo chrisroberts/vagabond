@@ -16,3 +16,4 @@ require 'vagabond/version'
 require 'vagabond/constants'
 
 Lxc.use_sudo = system('which rvmsudo > /dev/null') ? 'rvmsudo' : true
+Lxc.default_ssh_key = File.join(Dir.home, '.ssh/lxc_container_rsa')
