@@ -68,6 +68,7 @@ module Vagabond
           :daemon => true
         )
         instance.start!(:detach)
+        instance.lxc.wait_for_state(:running)
         current = local_registry.fetch(:nodes, Registry::Entry.new)
         local_registry.set(:nodes, current.merge(mapped_name => instance.name))
         registry.save!
